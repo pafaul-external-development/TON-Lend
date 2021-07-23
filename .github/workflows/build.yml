@@ -3,9 +3,9 @@ name: "Build smart contracts"
 on: push
 
 jobs:
-  runs-on: ubuntu-latest
-
   install_solc:
+    runs-on: ubuntu-latest
+    
     steps:
       - uses: actions/setup-node@v2
         with:
