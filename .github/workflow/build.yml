@@ -1,0 +1,46 @@
+name: "Build smart contracts"
+
+on: push
+
+jobs:
+  runs-on: ubuntu-latest
+
+  install_solc:
+    steps:
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 12
+
+      - name: Clone Solidity compiler
+        uses: actions/checkout@master
+        with:
+          repository: broxus/TON-Solidity-Compiler
+
+      - name: Build TON-Solidity-Compiler
+        run: |
+          pushd $(pwd)
+          cd TON-Solidity-Compiler
+          sh ./compiler/scripts/install_deps.sh
+          mkdir build
+          cd build
+          cmake ../compiler/ -DCMAKE_BUILD_TYPE=Release
+          cmake --build . -- -j8
+          cd ..
+          sh ./compiler/scripts/install_lib_variable.sh
+          popd
+
+
+      - name: Clone Solidity linker
+        uses: actions/checkout@master
+        with:
+          repository: tonlabs/TVM-linker
+
+      - name: Build Solidity linker
+        run: |
+          curl https://sh.rustup.rs -sSf | sh
+
+  build_contracts:
+    needs: install_solc
+
+  publish_artifacts:
+    needs: build_contracts
