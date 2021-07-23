@@ -38,9 +38,3 @@ jobs:
       - name: Build Solidity linker
         run: |
           curl https://sh.rustup.rs -sSf | sh
-
-  build_contracts:
-    needs: install_solc
-
-  publish_artifacts:
-    needs: build_contracts
