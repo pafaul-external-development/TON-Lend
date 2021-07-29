@@ -15,4 +15,6 @@ interface IOracleService {
 
     function changeOwnerPubkey(uint256 newOwnerPubkey) virtual external;
     function changeOwnerAddress(address newOwnerAddress) virtual external;
+
+    function setTIP3ControllerAddress(address newTip3Controller) virtual external;
 }

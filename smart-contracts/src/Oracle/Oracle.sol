@@ -24,6 +24,7 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
 
     // Service info
     uint32 private codeVersion; 
+    address tip3Controller;
 
     // Base functions
     constructor() public {
@@ -47,6 +48,11 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
     function changeOwnerAddress(address newOwnerAddress) override external onlyOwner {
         tvm.accept();
         ownerAddress = newOwnerAddress;
+    }
+
+    function setTIP3ControllerAddress(address newTip3Controller) override external onlyOwner {
+        tvm.accept();
+        tip3Controller = newTip3Controller;
     }
 
     // Update price functions
@@ -81,7 +87,7 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
     }
 
     // Manage markets
-    function addMarket(address market, address swapPairAddress, bool isLeft) override external onlyOwner {
+    function addMarket(address market, address swapPairAddress, bool isLeft) override external trusted {
         tvm.accept();
         swapPairToMarket[swapPairAddress] = market;
         prices[market] = MarketPriceInfo(market, swapPair, isLeft, 0);
@@ -89,14 +95,21 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
     }
 
     function removeMarket(address market) virtual external onlyOwner {
-
+        tvm.accept();
+        delete swapPairToMarket[prices[market].swapPairAddress];
+        delete prices[market];
     }
 
     // Modifiers
     modifier onlyOwner() {
         require(msg.sender == onwerAddress || msg.pubkey() == ownerPubkey);
         _;
-    }    
+    }
+
+    modifier trusted() {
+        require(msg.sender == ownerAddress || msg.sender == tip3Controller || msg.pubkey() == ownerPubkey);
+        _;
+    }
 
     modifier onlyTrustedSwapPair() {
         require(swapPairToMarket.exists(msg.sender));
