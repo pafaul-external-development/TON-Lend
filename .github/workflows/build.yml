@@ -3,9 +3,9 @@ name: "Build smart contracts"
 on: push
 
 jobs:
-  runs-on: ubuntu-latest
-
   install_solc:
+    runs-on: ubuntu-latest
+    
     steps:
       - uses: actions/setup-node@v2
         with:
@@ -38,9 +38,3 @@ jobs:
       - name: Build Solidity linker
         run: |
           curl https://sh.rustup.rs -sSf | sh
-
-  build_contracts:
-    needs: install_solc
-
-  publish_artifacts:
-    needs: build_contracts
