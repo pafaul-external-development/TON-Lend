@@ -59,6 +59,8 @@ contract TIP3Controller is ITIP3ControllerMarketInteractions, ITIP3ControllerMar
                     2. mapping(address => address) wallets
      */
     function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion_, uint8 contractType_) override external onlyRoot correctContractType(contractType_) {
+        contractCodeVersion = codeVersion_;
+        
         TvmBuilder builder;
         builder.store(root);
         builder.store(platformType);
