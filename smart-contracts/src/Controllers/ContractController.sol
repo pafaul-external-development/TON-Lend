@@ -1,12 +1,15 @@
-pragma ton-solc ^0.39.0;
+pragma ton-solidity >= 0.39.0;
 pragma AbiHeader time;
 pragma AbiHeader expire;
 pragma AbiHeader pubkey;
 
 import "./interfaces/ICCCodeManager.sol";
 
+import "./libraries/PlatformCodes.sol";
+
 import "../utils/Platform/Platform.sol";
 import "../utils/interfaces/IUpgradableContract.sol";
+
 
 contract ContractController is IContractControllerCodeManager {
     mapping(uint8 => CodeStorage) contractCodes;
@@ -25,35 +28,40 @@ contract ContractController is IContractControllerCodeManager {
         }
     }
 
-    function setContractDeployCost(uint8 contractType, uint128 deployCost) virtual external contractTypeExists(contractType, true) {
+    function setContractDeployCost(uint8 contractType, uint128 deployCost) override external contractTypeExists(contractType, true) {
         tvm.accept();
         contractCodes[contractType].deployCost = deployCost;
     }
 
     function createContract(uint8 contractType, TvmCell initialData, TvmCell params) override external contractTypeExists(contractType, true) {
-        require(msg.value >= contractCodes[contractType.deployCost]);
+        require(msg.value >= contractCodes[contractType].deployCost);
         tvm.accept();
         address newContract = new Platform{
-            root: address(this),
-            platformType: contractType,
-            initialData: initialData
-        }{value: contractCodes[contractType].deployCost, bounce: false}(contractCodes[contractType].code, params);
+            varInit: {
+                root: address(this),
+                platformType: contractType,
+                platformCode: contractCodes[PlatformCodes.PLATFORM].code,
+                initialData: initialData
+            },
+            value: contractCodes[contractType].deployCost,
+            code: contractCodes[PlatformCodes.PLATFORM].code
+        }(contractCodes[contractType].code, params, address(this));
     }
 
-    function updateContract(uint8 contractType, address contractAddress, TvmCell updateParams) override external contractTypeExists(contactType, true) {
+    function updateContract(uint8 contractType, address contractAddress, TvmCell updateParams) override external contractTypeExists(contractType, true) {
         tvm.accept();
         IUpgradableContract(contractAddress).upgradeContractCode{
             value: msg.value,
             bounce: true
-        }(contractCodes[contractType].code, contractCodes[contractType].codeVersion, contractType);
+        }(contractCodes[contractType].code, updateParams, contractCodes[contractType].codeVersion, contractType);
     }
 
     function getCodeVersion(uint8 contractType) override external responsible contractTypeExists(contractType, true) returns (uint32) {
-        return {value: CostConstants.MARKET_INITIAL_UPDATE_PRICE, bounce: false} contractCodes[contractType].codeVersion;
+        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } contractCodes[contractType].codeVersion;
     }
 
     function getCodeStorage(uint8 contractType) override external responsible contractTypeExists(contractType, true) returns (CodeStorage) {
-        return {value: CostConstants.MARKET_INITIAL_UPDATE_PRICE, bounce: false} (contractCodes[contractType]);
+        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } (contractCodes[contractType]);
     }
 
     // modifiers

@@ -1,7 +1,6 @@
-pragma ton-solidity ^0.39.0;
+pragma ton-solidity >= 0.39.0;
 
 import "../libraries/MsgFlag.sol";
-
 
 contract Platform {
     address static root;
@@ -17,7 +16,7 @@ contract Platform {
         }
     }
 
-    function initialize(TvmCell params, address sendGasTo) private {
+    function initialize(TvmCell code, TvmCell params, address sendGasTo) private {
 
         TvmBuilder builder;
 
@@ -25,11 +24,12 @@ contract Platform {
         builder.store(platformType);
         builder.store(sendGasTo);
 
-        builder.store(initialData);  // ref 1
-        builder.store(params);       // ref 2
+        builder.store(platformCode); // ref 1
+        builder.store(initialData);  // ref 2
+        builder.store(params);       // ref 3
 
-        tvm.setcode(platformCode);
-        tvm.setCurrentCode(platformCode);
+        tvm.setcode(code);
+        tvm.setCurrentCode(code);
 
         onCodeUpgrade(builder.toCell());
     }
