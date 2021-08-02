@@ -7,6 +7,7 @@ import "./interfaces/IUserAccount.sol";
 import "./interfaces/IUserAccountDataOperations.sol";
 
 import "../utils/interfaces/IUpgradableContract.sol";
+import "../utils/libraries/MsgFlag.sol";
 
 contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableContract {
     address msigOwner;
@@ -37,12 +38,13 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
      */
     function onCodeUpgrade(TvmCell data) private {
         TvmSlice dataSlice = data.toSlice();
-        (address root, uint8 contractType, address sendGasTo) = dataSlice.decode(address, uint8, address);
+        address sendGasTo;
+        (root, contractType, sendGasTo) = dataSlice.decode(address, uint8, address);
         contractCodeVersion = 0;
 
         platformCode = dataSlice.loadRef();         // Loading platform code
-        TvmSlice data = dataSlice.loadRefAsSlice();
-        (msigOwner) = dataSlice.decode(address);
+        TvmSlice ownerData = dataSlice.loadRefAsSlice();
+        (msigOwner) = ownerData.decode(address);
 
         address(msigOwner).transfer({ value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS });
     }
@@ -64,7 +66,7 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
 
         TvmBuilder builder;
         builder.store(root);
-        builder.store(platformType);
+        builder.store(contractType);
         builder.store(platformCode);
 
         TvmBuilder userDataBuilder;
@@ -73,47 +75,56 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
         userDataMapping.store(userData);
         userDataBuilder.store(userDataMapping.toCell());
         builder.store(userDataBuilder.toCell());
+
+        tvm.setcode(code);
+        tvm.setCurrentCode(code);
+        
         onCodeUpgrade(builder.toCell());
     }
 
-    function getOwner() external responsible view returns(address) {
+    function getOwner() external override responsible view returns(address) {
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } msigOwner;
     }
 
-    function enterMarket(address market) external responsible view returns(address) onlyOwner {
+    function enterMarket(address market) external override responsible view onlyOwner returns(address) {
 
     }
 
-    function getAllData(TvmCell request) external responsible view returns (TvmCell, bool) {
+    function getAllData(TvmCell request) external override responsible view returns (TvmCell, bool) {
 
     }
-    function getProvideData(TvmCell request) external responsible view returns (TvmCell, bool) {
+    function getProvideData(TvmCell request) external override responsible view returns (TvmCell, bool) {
 
     }
-    function getBorrowData(TvmCell request) external responsible view returns (TvmCell, bool) {
+    function getBorrowData(TvmCell request) external override responsible view returns (TvmCell, bool) {
 
     }
-    function getRepayData(TvmCell request) external responsible view returns (TvmCell, bool) {
+    function getRepayData(TvmCell request) external override responsible view returns (TvmCell, bool) {
 
     }
-    function getLiquidationData(TvmCell request) external responsible view returns (TvmCell, bool) {
+    function getLiquidationData(TvmCell request) external override responsible view returns (TvmCell, bool) {
 
     }
 
-    function writeProvideData(TvmCell data) external responsible returns (TvmCell, bool) {
+    function writeProvideData(TvmCell data) external override responsible returns (TvmCell, bool) {
 
     }
-    function writeBorrowData(TvmCell data) external responsible returns (TvmCell, bool) {
+    function writeBorrowData(TvmCell data) external override responsible returns (TvmCell, bool) {
 
     }
-    function writeRepayData(TvmCell data) external responsible returns (TvmCell, bool) {
+    function writeRepayData(TvmCell data) external override responsible returns (TvmCell, bool) {
 
     }
-    function writeLiquidationData(TvmCell data) external responsible returns (TvmCell, bool) {
+    function writeLiquidationData(TvmCell data) external override responsible returns (TvmCell, bool) {
 
     }
 
     // modifiers
+    modifier onlyRoot() {
+        require(msg.sender == root);
+        _;
+    }
+
     modifier onlyOwner() {
         require(msg.sender == msigOwner);
         _;

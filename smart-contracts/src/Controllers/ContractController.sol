@@ -33,7 +33,7 @@ contract ContractController is IContractControllerCodeManager {
         contractCodes[contractType].deployCost = deployCost;
     }
 
-    function createContract(uint8 contractType, TvmCell initialData, TvmCell params) override external contractTypeExists(contractType, true) returns (address) {
+    function createContract(uint8 contractType, TvmCell initialData, TvmCell params) override external responsible contractTypeExists(contractType, true) returns (address) {
         require(msg.value >= contractCodes[contractType].deployCost);
         tvm.accept();
         address newContract = new Platform{
@@ -65,11 +65,11 @@ contract ContractController is IContractControllerCodeManager {
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } (contractCodes[contractType]);
     }
 
-    function calculateFutureAddress(uint8 contractType, TvmCell initialData) override external responsilbe returns (address) {
+    function calculateFutureAddress(uint8 contractType, TvmCell initialData) override external responsible returns (address) {
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } address(tvm.hash(_buildInitialData(contractType, initialData)));
     }
 
-    function _buildInitialData(uint8 contractType, TvmCell initialData) private returns (TvmCell) {
+    function _buildInitialData(uint8 contractType, TvmCell initialData) private view returns (TvmCell) {
         return tvm.buildStateInit({
             contr: Platform,
             varInit: {

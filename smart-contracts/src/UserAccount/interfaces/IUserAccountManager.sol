@@ -4,4 +4,6 @@ interface IUserAccountManager {
     function createUserAccount(address tonWallet) external responsible view returns (address);
 
     function calculateUserAccountAddress(address tonWallet) external responsible view returns (address);
+
+    function getAddressCallback(address resultAddress) external view;
 }

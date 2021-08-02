@@ -5,12 +5,15 @@ pragma AbiHeader time;
 
 import "./interfaces/IUserAccountManager.sol";
 
+import "../Controllers/interfaces/IReceiveAddressCallback.sol";
 import "../Controllers/interfaces/ICCCodeManager.sol";
 import "../Controllers/libraries/PlatformCodes.sol";
 
 import "../utils/interfaces/IUpgradableContract.sol";
+import "../utils/libraries/MsgFlag.sol";
+import "../utils/Platform/Platform.sol";
 
-contract UserAccountManager {
+contract UserAccountManager is IUpgradableContract, IReceiveAddressCallback {
     // Information for update
     address root;
     uint8 contractType;
@@ -37,6 +40,9 @@ contract UserAccountManager {
         builder.store(contractType);
         builder.store(platformCode);
 
+        tvm.setcode(code);
+        tvm.setCurrentCode(code);
+
         onCodeUpgrade(builder.toCell());
     }
 
@@ -59,20 +65,25 @@ contract UserAccountManager {
 
     function createUserAccount(address tonWallet) external responsible view returns (address) {
         TvmCell empty;
-        ICCCodeManager(root).createContract{
+        IContractControllerCodeManager(root).createContract{
             value: 0,
             bounce: false,
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.REMAINING_GAS,
+            callback: this.getDeployedAddressCallback
         }(PlatformCodes.USER_ACCOUNT, _buildUserAccountInitialData(tonWallet), empty);
     }
 
+    // TODO: return remaining gas to owner
+    function getDeployedAddressCallback(address) external override onlyRoot {
+        revert();
+    }
 
     // address calculation functions
     function calculateUserAccountAddress(address tonWallet) external responsible view returns (address) {
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } address(tvm.hash(_buildUserAccountData(tonWallet)));
     }
 
-    function _buildUserAccountData(address tonWallet) private returns (TvmCell data) {
+    function _buildUserAccountData(address tonWallet) private view returns (TvmCell data) {
         TvmCell userData = _buildUserAccountInitialData(tonWallet);
         return tvm.buildStateInit({
             contr: Platform,
@@ -87,7 +98,7 @@ contract UserAccountManager {
         });
     }
 
-    function _buildUserAccountInitialData(address tonWallet) private returns (TvmCell data) {
+    function _buildUserAccountInitialData(address tonWallet) private pure returns (TvmCell data) {
         TvmBuilder userData;
         userData.store(tonWallet);
         return userData.toCell();
@@ -96,6 +107,11 @@ contract UserAccountManager {
     // modifiers
     modifier correctContractType(uint8 contractType_) {
         require(contractType == contractType_);
+        _;
+    }
+
+    modifier onlyRoot() {
+        require(msg.sender == root);
         _;
     }
 }
