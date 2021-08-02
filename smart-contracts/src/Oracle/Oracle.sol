@@ -61,7 +61,7 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
     function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion_, uint8 contractType_) override external onlyRoot correctContractType(contractType_) {
         tvm.accept();
 
-        codeVersion = codeVersion_;
+        contractCodeVersion = codeVersion_;
 
         TvmBuilder builder;
         builder.store(root);
