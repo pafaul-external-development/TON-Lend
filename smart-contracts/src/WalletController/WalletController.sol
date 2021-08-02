@@ -3,8 +3,8 @@ pragma AbiHeader pubkey;
 pragma AbiHeader expire;
 pragma AbiHeader time;
 
-import "./interfaces/ITIP3ControllerMarketInteractions.sol";
-import "./interfaces/ITIP3ControllerMarketManagement.sol";
+import "./interfaces/IWalletControllerMarketInteractions.sol";
+import "./interfaces/IWalletControllerMarketManagement.sol";
 
 import "../utils/interfaces/IUpgradableContract.sol";
 import "../utils/interfaces/ITokenWalletDeployedCallback.sol";

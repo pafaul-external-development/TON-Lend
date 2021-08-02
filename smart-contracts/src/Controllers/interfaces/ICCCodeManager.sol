@@ -11,12 +11,13 @@ interface IContractControllerCodeManager {
     }
     
     function addContractCode(uint8 contractType, TvmCell code, uint32 codeVersion, uint128 deployCost) external;
-    function createContract(uint8 contractType, TvmCell initialData, TvmCell params) external;
+    function createContract(uint8 contractType, TvmCell initialData, TvmCell params) external responsible returns (address);
     function updateContractCode(uint8 contractType, TvmCell code, uint32 codeVersion) external;
     function updateContract(uint8 contractType, address contractAddress, TvmCell updateParams) external;
 
     function getCodeVersion(uint8 contractType) external responsible returns (uint32);
     function getCodeStorage(uint8 contractType) external responsible returns (CodeStorage);
+    function calculateFutureAddress(uint8 contractType, TvmCell initialData) external responsilbe returns (address);
 
     function setContractDeployCost(uint8 contractType, uint128 deployCost) external;
 }

@@ -33,7 +33,7 @@ contract ContractController is IContractControllerCodeManager {
         contractCodes[contractType].deployCost = deployCost;
     }
 
-    function createContract(uint8 contractType, TvmCell initialData, TvmCell params) override external contractTypeExists(contractType, true) {
+    function createContract(uint8 contractType, TvmCell initialData, TvmCell params) override external contractTypeExists(contractType, true) returns (address) {
         require(msg.value >= contractCodes[contractType].deployCost);
         tvm.accept();
         address newContract = new Platform{
@@ -45,7 +45,8 @@ contract ContractController is IContractControllerCodeManager {
             },
             value: contractCodes[contractType].deployCost,
             code: contractCodes[PlatformCodes.PLATFORM].code
-        }(contractCodes[contractType].code, params, address(this));
+        }(contractCodes[contractType].code, params);
+        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } newContract;
     }
 
     function updateContract(uint8 contractType, address contractAddress, TvmCell updateParams) override external contractTypeExists(contractType, true) {
@@ -62,6 +63,24 @@ contract ContractController is IContractControllerCodeManager {
 
     function getCodeStorage(uint8 contractType) override external responsible contractTypeExists(contractType, true) returns (CodeStorage) {
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } (contractCodes[contractType]);
+    }
+
+    function calculateFutureAddress(uint8 contractType, TvmCell initialData) override external responsilbe returns (address) {
+        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } address(tvm.hash(_buildInitialData(contractType, initialData)));
+    }
+
+    function _buildInitialData(uint8 contractType, TvmCell initialData) private returns (TvmCell) {
+        return tvm.buildStateInit({
+            contr: Platform,
+            varInit: {
+                root: address(this),
+                platformType: contractType,
+                platformCode: contractCodes[PlatformCodes.PLATFORM].code,
+                initialData: initialData
+            },
+            pubkey: 0,
+            code: contractCodes[PlatformCodes.PLATFORM].code
+        });
     }
 
     // modifiers

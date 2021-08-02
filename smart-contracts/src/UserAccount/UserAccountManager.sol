@@ -5,6 +5,9 @@ pragma AbiHeader time;
 
 import "./interfaces/IUserAccountManager.sol";
 
+import "../Controllers/interfaces/ICCCodeManager.sol";
+import "../Controllers/libraries/PlatformCodes.sol";
+
 import "../utils/interfaces/IUpgradableContract.sol";
 
 contract UserAccountManager {
@@ -55,11 +58,39 @@ contract UserAccountManager {
     }
 
     function createUserAccount(address tonWallet) external responsible view returns (address) {
-
+        TvmCell empty;
+        ICCCodeManager(root).createContract{
+            value: 0,
+            bounce: false,
+            flag: MsgFlag.REMAINING_GAS
+        }(PlatformCodes.USER_ACCOUNT, _buildUserAccountInitialData(tonWallet), empty);
     }
 
+
+    // address calculation functions
     function calculateUserAccountAddress(address tonWallet) external responsible view returns (address) {
-        
+        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } address(tvm.hash(_buildUserAccountData(tonWallet)));
+    }
+
+    function _buildUserAccountData(address tonWallet) private returns (TvmCell data) {
+        TvmCell userData = _buildUserAccountInitialData(tonWallet);
+        return tvm.buildStateInit({
+            contr: Platform,
+            varInit: {
+                root: root,
+                platformType: PlatformCodes.USER_ACCOUNT,
+                platformCode: platformCode,
+                initialData: userData
+            },
+            pubkey: 0,
+            code: platformCode
+        });
+    }
+
+    function _buildUserAccountInitialData(address tonWallet) private returns (TvmCell data) {
+        TvmBuilder userData;
+        userData.store(tonWallet);
+        return userData.toCell();
     }
 
     // modifiers

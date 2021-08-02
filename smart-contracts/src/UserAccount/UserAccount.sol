@@ -43,6 +43,8 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
         platformCode = dataSlice.loadRef();         // Loading platform code
         TvmSlice data = dataSlice.loadRefAsSlice();
         (msigOwner) = dataSlice.decode(address);
+
+        address(msigOwner).transfer({ value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS });
     }
 
     /*  Upgrade data for version 1 (from 0):
@@ -81,7 +83,6 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
     function enterMarket(address market) external responsible view returns(address) onlyOwner {
 
     }
-
 
     function getAllData(TvmCell request) external responsible view returns (TvmCell, bool) {
 
