@@ -78,7 +78,7 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
 
         tvm.setcode(code);
         tvm.setCurrentCode(code);
-        
+
         onCodeUpgrade(builder.toCell());
     }
 
@@ -93,15 +93,19 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
     function getAllData(TvmCell request) external override responsible view returns (TvmCell, bool) {
 
     }
+
     function getProvideData(TvmCell request) external override responsible view returns (TvmCell, bool) {
 
     }
+
     function getBorrowData(TvmCell request) external override responsible view returns (TvmCell, bool) {
 
     }
+
     function getRepayData(TvmCell request) external override responsible view returns (TvmCell, bool) {
 
     }
+
     function getLiquidationData(TvmCell request) external override responsible view returns (TvmCell, bool) {
 
     }
@@ -109,12 +113,15 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
     function writeProvideData(TvmCell data) external override responsible returns (TvmCell, bool) {
 
     }
+
     function writeBorrowData(TvmCell data) external override responsible returns (TvmCell, bool) {
 
     }
+
     function writeRepayData(TvmCell data) external override responsible returns (TvmCell, bool) {
 
     }
+
     function writeLiquidationData(TvmCell data) external override responsible returns (TvmCell, bool) {
 
     }
