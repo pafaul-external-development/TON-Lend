@@ -2,6 +2,7 @@ const initializeLocklift = require("../../initializeLocklift");
 const { writeContractData } = require("../../migration/manageContractData");
 
 const configuration = require('../../scripts.conf');
+const extendContractToGiver = require("../modules/GiverWrapper");
 
 async function main() {
     let locklift = initializeLocklift(configuration.pathToLockliftConfig, configuration.network);
@@ -15,6 +16,8 @@ async function main() {
     });
 
     writeContractData(giver, './giverData.js');
+
+    let giverContract = extendContractToGiver(giver);
 }
 
 main().then(
