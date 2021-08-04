@@ -14,12 +14,12 @@ module.exports = {
 
                 // See the TON client specification for all available options
                 network: {
-                    server_address: 'http://localhost/',
-                    wait_for_timeout: 2000
+                    server_address: 'http://localhost:80/',
+                    endpoints: ['http://localhost:80']
                 },
 
                 abi: {
-                    message_expiration_timeout: 30000
+                    message_expiration_timeout: 1200000
                 }
             },
             // This giver is default local-node giver
@@ -31,7 +31,7 @@ module.exports = {
             // Use tonos-cli to generate your phrase
             // !!! Never commit it in your repos !!!
             keys: {
-                phrase: '',
+                phrase: 'melody clarify hand pause kit economy bind behind grid witness cheap tomorrow',
                 amount: 20,
             }
         },
