@@ -1,7 +1,7 @@
 module.exports = {
     compiler: {
         // Specify path to your TON-Solidity-Compiler
-        path: '/usr/bin/solc-ton',
+        path: '/usr/bin/solc',
     },
     linker: {
         // Path to your TVM Linker
@@ -11,10 +11,16 @@ module.exports = {
         // You can use TON labs graphql endpoints or local node
         local: {
             ton_client: {
+
                 // See the TON client specification for all available options
                 network: {
                     server_address: 'http://localhost/',
+                    wait_for_timeout: 2000
                 },
+
+                abi: {
+                    message_expiration_timeout: 30000
+                }
             },
             // This giver is default local-node giver
             giver: {

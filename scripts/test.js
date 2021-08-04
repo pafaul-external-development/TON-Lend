@@ -1,5 +1,5 @@
 async function main() {
-    let locklift = await require('./initialize_locklift')('./l.conf.js', 'local');
+    let locklift = await require('./initializeLocklift')('./l.conf.js', 'local');
     console.log('a');
 }
 

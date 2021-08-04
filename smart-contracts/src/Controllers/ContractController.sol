@@ -14,6 +14,11 @@ import "../utils/interfaces/IUpgradableContract.sol";
 contract ContractController is IContractControllerCodeManager {
     mapping(uint8 => CodeStorage) contractCodes;
 
+    // TODO: tmp solution
+    constructor() public {
+        tvm.accept();
+    }
+
     // Contract code managing functions
     function addContractCode(uint8 contractType, TvmCell code, uint32 codeVersion, uint128 deployCost) override external contractTypeExists(contractType, false) {
         tvm.accept();
