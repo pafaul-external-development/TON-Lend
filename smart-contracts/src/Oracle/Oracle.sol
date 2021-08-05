@@ -33,11 +33,8 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
     uint256 private ownerPubkey;
     address private ownerAddress;
 
-    // Service info
-    uint32 private codeVersion; 
-    address tip3Controller;
-
-    // Base functions
+    /*********************************************************************************************************/
+    // Base functions - for deploying and upgrading contract
     // We are using Platform so constructor is not available
     constructor() public {
         revert();
@@ -57,6 +54,12 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
                     2. mapping(address => address) swapPairToMarket
             3. updateParams
 
+     */
+    /**
+     * @param code New contract code
+     * @param updateParams Extrenal parameters used during update
+     * @param codeVersion_ New code version
+     * @param contractType_ Contract type of received update
      */
     function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion_, uint8 contractType_) override external onlyRoot correctContractType(contractType_) {
         tvm.accept();
@@ -106,7 +109,10 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
                 bits:
                     uint256 ownerPubkey
                     address ownerAddress
-                    address tip3Controller
+     */
+    
+    /**
+     * @param data Data builded in upgradeContractCode
      */
     function onCodeUpgrade(TvmCell data) private {
         TvmSlice dataSlice = data.toSlice();
@@ -116,9 +122,10 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
 
         platformCode = dataSlice.loadRef();         // Loading platform code
         TvmSlice ref = dataSlice.loadRefAsSlice();  // Loading initial parameters
-        (ownerPubkey, ownerAddress, tip3Controller) = ref.decode(uint256, address, address);
+        (ownerPubkey, ownerAddress) = ref.decode(uint256, address);
     }
 
+    /*********************************************************************************************************/
     // Service functions
     function getVersion() override external responsible view returns (uint32) { 
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } codeVersion;
@@ -128,27 +135,36 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } OracleServiceInformation(codeVersion, ownerAddress, ownerPubkey);
     }
 
+    /**
+     * @param newOwnerPubkey New pubkey that can update market prices and manage markets
+     */
     function changeOwnerPubkey(uint256 newOwnerPubkey) override external onlyOwner {
         tvm.accept();
         ownerPubkey = newOwnerPubkey;
     }
 
+    /**
+     * @param newOwnerAddress New address that can update market prices and manage markets
+     */
     function changeOwnerAddress(address newOwnerAddress) override external onlyOwner {
         tvm.accept();
         ownerAddress = newOwnerAddress;
     }
 
-    function setTIP3ControllerAddress(address newTip3Controller) override external onlyOwner {
-        tvm.accept();
-        tip3Controller = newTip3Controller;
-    }
-
+    /*********************************************************************************************************/
     // Update price functions
+    /**
+     * @param market Address of market to update
+     * @param costToUSD Cost of token to USD
+     */
     function externalUpdatePrice(address market, uint256 costToUSD) override external onlyOwner {
         tvm.accept();
         prices[market].priceToUSD = costToUSD;
     }
 
+    /**
+     * @param market Address of market to update
+     */
     function internalUpdatePrice(address market) override external {
         tvm.rawReserve(msg.value, 2);
         IDexPair(prices[market].swapPair).getBalances{
@@ -159,26 +175,39 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
         }();
     }
 
-    function internalFullUpdate() override external {
-
-    }
-
+    /**
+     * @param updatedPrice Received price information
+     */
     function internalGetUpdatedPrice(IDexPairBalances updatedPrice) override external onlyTrustedSwapPair {
         tvm.rawReserve(msg.value, 2);
         address affectedMarket = swapPairToMarket[msg.sender];
         prices[affectedMarket].priceToUSD = prices[affectedMarket].isLeft ? updatedPrice.left_balance/updatedPrice.right_balance : updatedPrice.right_balance/updatedPrice.left_balance;
     }
 
+    /*********************************************************************************************************/
     // Get market price info
+    /**
+     * @param market Address of market
+     * @param paylod Payload attached to message (contains information about operation)
+     */
     function getMarketPrice(address market, TvmCell payload) override external responsible view returns(uint256, TvmCell) {
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } (prices[market].priceToUSD, payload);
     }
 
+    /**
+     * @param payload Payload attached to message (contains information about operation)
+     */
     function getAllMarketsPrices(TvmCell payload) override external responsible view returns (mapping(address => MarketPriceInfo), TvmCell) {
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } (prices, payload);
     }
 
+    /*********************************************************************************************************/
     // Manage markets
+    /**
+     * @param market Address of market
+     * @param swapPairAddress Address of swap pair to fetch price information from
+     * @param isLeft Is token on the left side or on the right (check internalGetUpdatedPrice)
+     */
     function addMarket(address market, address swapPairAddress, bool isLeft) override external trusted {
         tvm.accept();
         swapPairToMarket[swapPairAddress] = market;
@@ -186,12 +215,16 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
         this.internalUpdatePrice{value: CostConstants.MARKET_INITIAL_UPDATE_PRICE, bounce: false}(market);
     }
 
+    /**
+     * @param market Address of market
+     */
     function removeMarket(address market) override external onlyOwner {
         tvm.accept();
         delete swapPairToMarket[prices[market].swapPair];
         delete prices[market];
     }
 
+    /*********************************************************************************************************/
     // Modifiers
     modifier onlyOwner() {
         require(msg.sender == ownerAddress || msg.pubkey() == ownerPubkey);
@@ -199,7 +232,7 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
     }
 
     modifier trusted() {
-        require(msg.sender == ownerAddress || msg.sender == tip3Controller || msg.pubkey() == ownerPubkey);
+        require(msg.sender == ownerAddress || msg.sender == root || msg.pubkey() == ownerPubkey);
         _;
     }
 
@@ -213,6 +246,9 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
         _;
     }
 
+    /**
+     * @param contractType_ Received contractType parameter
+     */
     modifier correctContractType(uint8 contractType_) {
         require(contractType == contractType_);
         _;

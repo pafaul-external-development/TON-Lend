@@ -15,7 +15,6 @@ struct MarketPriceInfo {
 interface IOracleUpdatePrices {
     function externalUpdatePrice(address market, uint256 costToUSD) external;
     function internalUpdatePrice(address market) external;
-    function internalFullUpdate() external;
 
     function internalGetUpdatedPrice(IDexPairBalances updatedPrice) external;
 }

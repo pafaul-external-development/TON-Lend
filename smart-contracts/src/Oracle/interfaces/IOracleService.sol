@@ -15,6 +15,4 @@ interface IOracleService {
 
     function changeOwnerPubkey(uint256 newOwnerPubkey) external;
     function changeOwnerAddress(address newOwnerAddress) external;
-
-    function setTIP3ControllerAddress(address newTip3Controller) external;
 }
