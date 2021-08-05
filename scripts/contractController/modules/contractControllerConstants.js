@@ -21,8 +21,8 @@ const contractInfo = {
         deployTonCost: 5,
         id: 1
     },
-    TIP3_CONTROLLER: {
-        name: 'TIP3Controller',
+    WALLET_CONTROLLER: {
+        name: 'WalletController',
         deployTonCost: 5,
         id: 2
     },

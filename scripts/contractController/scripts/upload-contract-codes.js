@@ -1,8 +1,10 @@
+const { ContractController, extendContractToContractController } = require("../modules/contractControllerWrapper");
+
 const initializeLocklift = require("../../initializeLocklift");
 const { loadContractData } = require("../../migration/manageContractData");
+
 const configuration = require("../../scripts.conf");
 const { contractInfo } = require("../modules/contractControllerConstants");
-const { ContractController, extendContractToContractController } = require("../modules/contractControllerWrapper");
 
 async function main() {
     let locklift = await initializeLocklift(configuration.pathToLockliftConfig, configuration.network);

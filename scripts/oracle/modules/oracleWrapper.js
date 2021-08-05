@@ -35,13 +35,6 @@ class Oracle extends Contract {
 
     /**
      * 
-     * @param {String} newTip3Controller 
-     * @returns {Promise<Object>}
-     */
-    async setTIP3ControllerAddress(newTip3Controller) {};
-
-    /**
-     * 
      * @param {String} market 
      * @param {String} costToUSD 
      * @returns {Promise<Object>}
@@ -125,16 +118,6 @@ function extendContractToOracle(contract) {
             method: 'changeOwnerPubkey',
             params: {
                 newOwnerPubkey: newOwnerPubkey
-            },
-            keyPair: contract.keyPair
-        })
-    }
-
-    contract.setTIP3ControllerAddress = async function(newTip3Controller) {
-        return await contract.run({
-            method: 'setTIP3ControllerAddress',
-            params: {
-                newTip3Controller: newTip3Controller
             },
             keyPair: contract.keyPair
         })
