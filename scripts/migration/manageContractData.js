@@ -1,7 +1,8 @@
 const fs = require('fs');
 const { Locklift } = require("locklift/locklift");
 const Contract = require('locklift/locklift/contract');
-const { createContractData } = require('./createContractData');
+
+const scriptConfiguration = require('../scripts.conf');
 
 /**
  * @typedef ContractData
@@ -53,7 +54,7 @@ async function loadContractFromData(locklift, contractData, config) {
  * @param {String} filename
  */
 function writeContractData(contract, filename) {
-    fs.writeFileSync(filename, JSON.stringify(createContractData(contract), null, '\t'));
+    fs.writeFileSync(filename, JSON.stringify(createContractData(contract, scriptConfiguration), null, '\t'));
 }
 
 /**
