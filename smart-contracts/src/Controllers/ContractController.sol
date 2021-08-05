@@ -6,6 +6,7 @@ pragma AbiHeader pubkey;
 import "./interfaces/ICCCodeManager.sol";
 
 import "./libraries/PlatformCodes.sol";
+import "./libraries/ContractControllerErrorCodes.sol";
 
 import "../utils/Platform/Platform.sol";
 import "../utils/interfaces/IUpgradableContract.sol";
@@ -76,7 +77,7 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
      * @param params Parameters for smart contract deployment
      */
     function createContract(uint8 contractType, TvmCell initialData, TvmCell params) override external responsible contractTypeExists(contractType, true) returns (address) {
-        require(msg.value >= contractCodes[contractType].deployCost);
+        require(msg.value >= contractCodes[contractType].deployCost, ContractControllerErrorCodes.ERROR_MSG_VALUE_LOW);
         tvm.accept();
         address newContract = new Platform{
             varInit: {
@@ -153,7 +154,7 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
      * @param exists Does contractType exist in contractCodes mapping
      */
     modifier contractTypeExists(uint8 contractType, bool exists) {
-        require(contractCodes.exists(contractType) == exists);
+        require(contractCodes.exists(contractType) == exists, exists == true? ContractControllerErrorCodes.ERROR_CONTRACT_TYPE_DOES_NOT_EXIST : ContractControllerErrorCodes.ERROR_CONTRACT_TYPE_ALREADY_EXISTS);
         _;
     }
 }
