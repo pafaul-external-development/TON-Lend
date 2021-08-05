@@ -9,6 +9,7 @@ import "./interfaces/IOracleReturnPrices.sol";
 import "./interfaces/IOracleManageMarkets.sol";
 
 import "./libraries/CostConstants.sol";
+import "./libraries/OracleErrorCodes.sol";
 
 import "../utils/libraries/MsgFlag.sol";
 import "../utils/Dex/IDexPair.sol";
@@ -226,23 +227,23 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
 
     /*********************************************************************************************************/
     // Modifiers
+    modifier onlyRoot() {
+        require(msg.sender == root, OracleErrorCodes.ERROR_NOT_ROOT);
+        _;
+    }
+
     modifier onlyOwner() {
-        require(msg.sender == ownerAddress || msg.pubkey() == ownerPubkey);
+        require(msg.sender == ownerAddress || msg.pubkey() == ownerPubkey, OracleErrorCodes.ERROR_NOT_OWNER);
         _;
     }
 
     modifier trusted() {
-        require(msg.sender == ownerAddress || msg.sender == root || msg.pubkey() == ownerPubkey);
+        require(msg.sender == ownerAddress || msg.sender == root || msg.pubkey() == ownerPubkey, OracleErrorCodes.ERROR_NOT_TRUSTED);
         _;
     }
 
     modifier onlyTrustedSwapPair() {
-        require(swapPairToMarket.exists(msg.sender));
-        _;
-    }
-
-    modifier onlyRoot() {
-        require(msg.sender == root);
+        require(swapPairToMarket.exists(msg.sender), OracleErrorCodes.ERROR_NOT_KNOWN_SWAP_PAIR);
         _;
     }
 
@@ -250,7 +251,7 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
      * @param contractType_ Received contractType parameter
      */
     modifier correctContractType(uint8 contractType_) {
-        require(contractType == contractType_);
+        require(contractType == contractType_, OracleErrorCodes.ERROR_INVALID_CONTRACT_TYPE);
         _;
     }
 }

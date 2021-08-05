@@ -5,6 +5,8 @@ pragma AbiHeader time;
 
 import "./interfaces/IUserAccountManager.sol";
 
+import "./libraries/UserAccountErrorCodes.sol";
+
 import "../Controllers/interfaces/IReceiveAddressCallback.sol";
 import "../Controllers/interfaces/ICCCodeManager.sol";
 import "../Controllers/libraries/PlatformCodes.sol";
@@ -20,6 +22,8 @@ contract UserAccountManager is IUpgradableContract, IReceiveAddressCallback {
     uint32 contractCodeVersion;
     TvmCell platformCode;
 
+    /*********************************************************************************************************/
+    // Functions for deployment and upgrade
     // Contract is deployed via platform
     constructor() public { revert(); }
 
@@ -63,6 +67,8 @@ contract UserAccountManager is IUpgradableContract, IReceiveAddressCallback {
         platformCode = dataSlice.loadRef();         // Loading platform code
     }
 
+    /*********************************************************************************************************/
+    // Functions for user account
     function createUserAccount(address tonWallet) external responsible view returns (address) {
         TvmCell empty;
         IContractControllerCodeManager(root).createContract{
@@ -104,14 +110,15 @@ contract UserAccountManager is IUpgradableContract, IReceiveAddressCallback {
         return userData.toCell();
     }
 
+    /*********************************************************************************************************/
     // modifiers
-    modifier correctContractType(uint8 contractType_) {
-        require(contractType == contractType_);
+    modifier onlyRoot() {
+        require(msg.sender == root, UserAccountErrorCodes.ERROR_NOT_ROOT);
         _;
     }
 
-    modifier onlyRoot() {
-        require(msg.sender == root);
+    modifier correctContractType(uint8 contractType_) {
+        require(contractType == contractType_, UserAccountErrorCodes.ERROR_INVALID_CONTRACT_TYPE);
         _;
     }
 }
