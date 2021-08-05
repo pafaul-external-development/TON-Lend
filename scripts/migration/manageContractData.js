@@ -34,14 +34,14 @@ function createContractData(contract, configuration) {
 /**
  * 
  * @param {Locklift} locklift 
- * @param {ContractData} contractData
  * @param {import('../scripts.conf').ScriptConfiguration} config
+ * @param {ContractData} contractData
  */
-async function loadContractFromData(locklift, contractData, config) {
+async function loadContractFromData(locklift, config, contractData) {
     let contract = await locklift.factory.getContract(contractData.name, config.buildDirectory);
     if (contractData.network == config.network) {
-        contract.address = contractData.address;
-        contract.keyPair = contractData.keyPair;
+        contract.setAddress(contractData.address);
+        contract.setKeyPair(contractData.keyPair);
     }
 
     return contract;
