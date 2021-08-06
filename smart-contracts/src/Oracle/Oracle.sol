@@ -15,6 +15,7 @@ import "../utils/libraries/MsgFlag.sol";
 import "../utils/Dex/IDexPair.sol";
 import "../utils/interfaces/IUpgradableContract.sol";
 
+// TODO: use tokens, not markets change getMarketPrice to getTokenPrice 
 contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOracleManageMarkets, IUpgradableContract {
     // For uniquencess of contract
     uint256 public nonce;
@@ -209,7 +210,7 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
      * @param swapPairAddress Address of swap pair to fetch price information from
      * @param isLeft Is token on the left side or on the right (check internalGetUpdatedPrice)
      */
-    function addMarket(address market, address swapPairAddress, bool isLeft) override external trusted {
+    function addMarket(address market, address swapPairAddress, bool isLeft) override external onlyOwner {
         tvm.accept();
         swapPairToMarket[swapPairAddress] = market;
         prices[market] = MarketPriceInfo(market, swapPairAddress, isLeft, 0);
