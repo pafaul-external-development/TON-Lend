@@ -117,7 +117,7 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
      */
     function onCodeUpgrade(TvmCell data) private {
         TvmSlice dataSlice = data.toSlice();
-        (address root_, uint8 platformType, address sendGasTo) = dataSlice.decode(address, uint8, address);
+        (address root_, uint8 platformType) = dataSlice.decode(address, uint8);
         root = root_;
         contractType = platformType;
 

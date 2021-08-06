@@ -4,6 +4,7 @@ pragma AbiHeader expire;
 pragma AbiHeader pubkey;
 
 import "./interfaces/ICCCodeManager.sol";
+import "./interfaces/ICCRunLocal.sol";
 
 import "./libraries/PlatformCodes.sol";
 import "./libraries/ContractControllerErrorCodes.sol";
@@ -12,7 +13,7 @@ import "../utils/Platform/Platform.sol";
 import "../utils/interfaces/IUpgradableContract.sol";
 
 
-contract ContractController is IContractControllerCodeManager, IUpgradableContract {
+contract ContractController is IContractControllerCodeManager, IUpgradableContract, IContractControllerRunLocal {
 
     uint256 ownerPubkey; // TODO: owner pubkey is for tests, will be removed
     address ownerAddress;
@@ -160,4 +161,25 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
         require(contractType == PlatformCodes.CONTRACT_CONTROLLER);
         _;
     }
+<<<<<<< HEAD
+=======
+
+    /*********************************************************************************************************/
+    // For local execution
+    function createInitialDataForOracle(uint256 pubkey, address addr) external override returns(TvmCell) {
+        TvmBuilder initialData;
+        initialData.store(pubkey, addr);
+        return initialData.toCell();
+    }
+
+    function createInitialDataForUserAccountManager() external override returns(TvmCell) {
+        TvmCell empty;
+        return empty;
+    }
+
+    function createInitialDataForWalletController() external override returns(TvmCell) {
+        TvmCell empty;
+        return empty;
+    }
+>>>>>>> 0dbbcfaeaa0e646e422f460ad432814a4cf572b8
 }

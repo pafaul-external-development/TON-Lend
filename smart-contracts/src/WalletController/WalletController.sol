@@ -6,12 +6,16 @@ pragma AbiHeader time;
 import "./interfaces/IWalletControllerMarketInteractions.sol";
 import "./interfaces/IWalletControllerMarketManagement.sol";
 
+import "./libraries/CostConstants.sol";
+
 import "../utils/interfaces/IUpgradableContract.sol";
 import "../utils/interfaces/ITokenWalletDeployedCallback.sol";
 import "../utils/interfaces/ITokensReceivedCallback.sol";
 
 import "../utils/interfaces/IRootTokenContract.sol";
 import "../utils/interfaces/ITONTokenWallet.sol";
+
+import "../utils/libraries/MsgFlag.sol";
 
 struct MarketTokenAddresses {
     address realToken;
@@ -46,7 +50,7 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
      */
     function onCodeUpgrade(TvmCell data) private {
         TvmSlice dataSlice = data.toSlice();
-        (address root, uint8 contractType, address sendGasTo) = dataSlice.decode(address, uint8, address);
+        (root, contractType) = dataSlice.decode(address, uint8);
         contractCodeVersion = 0;
 
         platformCode = dataSlice.loadRef();         // Loading platform code
@@ -74,7 +78,7 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
         
         TvmBuilder builder;
         builder.store(root);
-        builder.store(platformType);
+        builder.store(contractType);
         builder.store(platformCode);
 
         TvmBuilder mappingStorage;
@@ -83,8 +87,8 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
         TvmBuilder walletStorage;
         walletStorage.store(wallets);
 
-        mappingStorage.store(marketAddresses.toCell());
-        mappingStorage.store(wallets.toCell());
+        mappingStorage.store(marketStorage.toCell());
+        mappingStorage.store(walletStorage.toCell());
 
         builder.store(mappingStorage);
         onCodeUpgrade(builder.toCell());
@@ -97,7 +101,7 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
      * @param realTokenRoot Address of market's real token root (ex. USDT)
      * @param virtualTokenRoot Address of market's virtual token root (ex. vUSDT)
      */
-    function addMarket(address market, address realTokenRoot, address virtualTokenRoot) external onlyRoot {
+    function addMarket(address market, address realTokenRoot, address virtualTokenRoot) external override onlyRoot {
         marketAddresses[market] = MarketTokenAddresses(realTokenRoot, virtualTokenRoot);
 
         wallets[realTokenRoot] = address.makeAddrStd(0, 0);
@@ -109,7 +113,7 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
     /**
      * @param market Address of market to remove
      */
-    function removeMarket(address market) external {
+    function removeMarket(address market) external override onlyRoot {
         MarketTokenAddresses marketTokenAddresses = marketAddresses[market];
 
         delete wallets[marketTokenAddresses.realToken];
@@ -124,9 +128,10 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
      * @param payload Attached payload
      * @param sendGasTo Where to send remaining gas
      */
-    function transferTokensToWallet(address tokenRoot, address destination, uint128 amount, TvmCell payload, address sendGasTo) external view onlyMarket {
+    function transferTokensToWallet(address tokenRoot, address destination, uint128 amount, TvmCell payload, address sendGasTo) external override view onlyMarket {
+        address market = msg.sender;
         require(marketAddresses[market].virtualToken == tokenRoot || marketAddresses[market].realToken == tokenRoot);
-        ITONTokenWallet(wallets[tokenRoot]).transfer{value: MsgFlags.REMAINING_GAS}(destination, amount, 0, sendGasTo, true, payload);
+        ITONTokenWallet(wallets[tokenRoot]).transfer{value: MsgFlag.REMAINING_GAS}(destination, amount, 0, sendGasTo, true, payload);
     }
 
     /*********************************************************************************************************/
@@ -134,8 +139,8 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
     /**
      * @param tokenRoot Address of token root to request wallet deploy
      */
-    function addWallet(address tokenRoot) private {
-        IRootTokenContract(tokenRoot).createEmptyWallet{value: CostConstants.WALLET_DEPLOY_COST}(
+    function addWallet(address tokenRoot) private pure {
+        IRootTokenContract(tokenRoot).deployEmptyWallet{value: CostConstants.WALLET_DEPLOY_COST}(
             CostConstants.WALLET_DEPLOY_GRAMS,
             0,
             address(this),
@@ -146,7 +151,7 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
     /**
      * @param root_ Receive deployed wallet address
      */
-    function notifyWalletDeployed(address root_) external onlyExisingTIP3Root(root_) {
+    function notifyWalletDeployed(address root_) external override onlyExisingTIP3Root(root_) {
         tvm.accept();
         if (wallets[root_].value == 0) {
             wallets[root_] = msg.sender;
@@ -163,7 +168,7 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
         address original_gas_to,
         uint128 updated_balance,
         TvmCell payload
-    ) external onlyOwnWallet(token_root, token_wallet) {
+    ) external override onlyOwnWallet(token_root, token_wallet) {
 
     }
 
@@ -180,7 +185,7 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
     /**
      * @param contractType_ Received contract type
      */
-    modifier correctContractType(contractType_) {
+    modifier correctContractType(uint8 contractType_) {
         require(contractType == contractType_);
         _;
     }
