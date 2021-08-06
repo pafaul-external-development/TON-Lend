@@ -14,6 +14,9 @@ import "../utils/interfaces/IUpgradableContract.sol";
 contract ContractController is IContractControllerCodeManager {
     mapping(uint8 => CodeStorage) contractCodes;
 
+    mapping(uint8 => address[]) deployedContracts;
+    mapping(address => uint8) knownContracts;
+
     // Contract code managing functions
     function addContractCode(uint8 contractType, TvmCell code, uint32 codeVersion, uint128 deployCost) override external contractTypeExists(contractType, false) {
         tvm.accept();
@@ -46,6 +49,8 @@ contract ContractController is IContractControllerCodeManager {
             value: contractCodes[contractType].deployCost,
             code: contractCodes[PlatformCodes.PLATFORM].code
         }(contractCodes[contractType].code, params);
+        knownContracts[newContract] = contractType;
+        deployedContracts[contractType].push(newContract);
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } newContract;
     }
 
@@ -55,6 +60,15 @@ contract ContractController is IContractControllerCodeManager {
             value: msg.value,
             bounce: true
         }(contractCodes[contractType].code, updateParams, contractCodes[contractType].codeVersion, contractType);
+    }
+
+    function updateContracts(uint8 contractType, TvmCell updateParams) override external {
+        tvm.accept();
+        TvmCell code = contractCodes[contractType].code;
+        uint32 codeVersion = contractCodes[contractType].codeVersion;
+        for (address contractAddress: deployedContracts[contractType]) {
+            IUpgradableContract(contractAddress).upgradeContractCode(code, updateParams, codeVersion, contractType);
+        }
     }
 
     function getCodeVersion(uint8 contractType) override external responsible contractTypeExists(contractType, true) returns (uint32) {
