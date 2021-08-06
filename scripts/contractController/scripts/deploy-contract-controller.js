@@ -7,7 +7,7 @@ const initializeLocklift = require('../../initializeLocklift');
 const { writeContractData } = require('../../migration/manageContractData');
 
 const configuration = require('../../scripts.conf');
-const { extendContractTocontractController, ContractController } = require('../modules/contractControllerWrapper');
+const { extendContractToContractController, ContractController } = require('../modules/contractControllerWrapper');
 
 /**
  * @type { Locklift }
@@ -58,14 +58,14 @@ describe('Deploy contract contoller', async function() {
                 contractController.setAddress(contractAddress)
             }
         }
+
+        if (contractController.address) {
+            await writeContractData(contractController, `${configuration.network}_ContractController.json`);
+        }
     })
 
     it('Convert contract to contract controller', async function() {
-        contractController = extendContractTocontractController(contractController);
-    })
-
-    it('Try to save contract information', async function() {
-        await writeContractData(contractController, 'contractController.json');
+        contractController = extendContractToContractController(contractController);
     })
 
     it('Exit', async function() {

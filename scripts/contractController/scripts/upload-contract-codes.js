@@ -12,7 +12,7 @@ async function main() {
     /**
      * @type {ContractController}
      */
-    let contractController = await loadContractData(locklift, configuration, './contractController.json');
+    let contractController = await loadContractData(locklift, configuration, `./${configuration.network}_ContractController.json`);
     contractController = extendContractToContractController(contractController);
 
     let platformContract = await locklift.factory.getContract(contractInfo.PLATFORM.name, configuration.buildDirectory);

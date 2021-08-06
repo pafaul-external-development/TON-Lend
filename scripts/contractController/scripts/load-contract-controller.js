@@ -8,7 +8,7 @@ async function main() {
     /**
      * @type {ContractController}
      */
-    let contractController = await loadContractData(locklift, configuration, './contractController.json');
+    let contractController = await loadContractData(locklift, configuration, `./${configuration.network}_ContractController.json`);
     contractController = extendContractToContractController(contractController);
 }
 
