@@ -6,6 +6,8 @@ pragma AbiHeader time;
 import "./interfaces/IWalletControllerMarketInteractions.sol";
 import "./interfaces/IWalletControllerMarketManagement.sol";
 
+import "./libraries/CostConstants.sol";
+
 import "../utils/interfaces/IUpgradableContract.sol";
 import "../utils/interfaces/ITokenWalletDeployedCallback.sol";
 import "../utils/interfaces/ITokensReceivedCallback.sol";
@@ -13,12 +15,14 @@ import "../utils/interfaces/ITokensReceivedCallback.sol";
 import "../utils/interfaces/IRootTokenContract.sol";
 import "../utils/interfaces/ITONTokenWallet.sol";
 
+import "../utils/libraries/MsgFlag.sol";
+
 struct MarketTokenAddresses {
     address realToken;
     address virtualToken;
 }
 
-contract TIP3Controller is ITIP3ControllerMarketInteractions, ITIP3ControllerMarketManagement, IUpgradableContract, ITokenWalletDeployedCallback, ITokensReceivedCallback {
+contract WalletController is IWalletControllerMarketInteractions, IWalletControllerMarketManagement, IUpgradableContract, ITokenWalletDeployedCallback, ITokensReceivedCallback {
     // Information for update
     address root;
     uint8 contractType;
@@ -29,6 +33,8 @@ contract TIP3Controller is ITIP3ControllerMarketInteractions, ITIP3ControllerMar
     mapping (address => MarketTokenAddresses) marketAddresses; // Будет использовано для проверки корректности операций
     mapping (address => address) wallets;
 
+    /*********************************************************************************************************/
+    // Functions for deployment and upgrade
     constructor() public { revert(); } // Contract will be deployed using platform
 
     /*  Upgrade Data for version 0 (from Platform):
@@ -39,9 +45,12 @@ contract TIP3Controller is ITIP3ControllerMarketInteractions, ITIP3ControllerMar
         refs:
             1. platformCode
      */
+    /**
+     * @param data Data builded in upgradeContractCode
+     */
     function onCodeUpgrade(TvmCell data) private {
         TvmSlice dataSlice = data.toSlice();
-        (address root, uint8 contractType, address sendGasTo) = dataSlice.decode(address, uint8, address);
+        (root, contractType) = dataSlice.decode(address, uint8);
         contractCodeVersion = 0;
 
         platformCode = dataSlice.loadRef();         // Loading platform code
@@ -58,12 +67,18 @@ contract TIP3Controller is ITIP3ControllerMarketInteractions, ITIP3ControllerMar
                     1. mapping(address => MarketTokenAddresses) marketAddresses
                     2. mapping(address => address) wallets
      */
+    /**
+     * @param code New contract code
+     * @param updateParams Extrenal parameters used during update
+     * @param codeVersion_ New code version
+     * @param contractType_ Contract type of received update
+     */
     function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion_, uint8 contractType_) override external onlyRoot correctContractType(contractType_) {
         contractCodeVersion = codeVersion_;
         
         TvmBuilder builder;
         builder.store(root);
-        builder.store(platformType);
+        builder.store(contractType);
         builder.store(platformCode);
 
         TvmBuilder mappingStorage;
@@ -72,15 +87,21 @@ contract TIP3Controller is ITIP3ControllerMarketInteractions, ITIP3ControllerMar
         TvmBuilder walletStorage;
         walletStorage.store(wallets);
 
-        mappingStorage.store(marketAddresses.toCell());
-        mappingStorage.store(wallets.toCell());
+        mappingStorage.store(marketStorage.toCell());
+        mappingStorage.store(walletStorage.toCell());
 
         builder.store(mappingStorage);
         onCodeUpgrade(builder.toCell());
     }
 
-
-    function addMarket(address market, address realTokenRoot, address virtualTokenRoot) external onlyRoot {
+    /*********************************************************************************************************/
+    // Market functions
+    /**
+     * @param market Address of new market
+     * @param realTokenRoot Address of market's real token root (ex. USDT)
+     * @param virtualTokenRoot Address of market's virtual token root (ex. vUSDT)
+     */
+    function addMarket(address market, address realTokenRoot, address virtualTokenRoot) external override onlyRoot {
         marketAddresses[market] = MarketTokenAddresses(realTokenRoot, virtualTokenRoot);
 
         wallets[realTokenRoot] = address.makeAddrStd(0, 0);
@@ -89,7 +110,10 @@ contract TIP3Controller is ITIP3ControllerMarketInteractions, ITIP3ControllerMar
         addWallet(virtualTokenRoot);
     }
 
-    function removeMarket(address market) external {
+    /**
+     * @param market Address of market to remove
+     */
+    function removeMarket(address market) external override onlyRoot {
         MarketTokenAddresses marketTokenAddresses = marketAddresses[market];
 
         delete wallets[marketTokenAddresses.realToken];
@@ -97,14 +121,26 @@ contract TIP3Controller is ITIP3ControllerMarketInteractions, ITIP3ControllerMar
         delete marketAddresses[market];
     }
 
-    function transferTokensToWallet(address tokenRoot, address destination, uint128 amount, TvmCell payload, address sendGasTo) external view onlyMarket {
+    /**
+     * @param tokenRoot Address of token root
+     * @param destination Address of TIP-3 wallet to transfer tokens to
+     * @param amount Amount of TIP-3 tokens to trasfer
+     * @param payload Attached payload
+     * @param sendGasTo Where to send remaining gas
+     */
+    function transferTokensToWallet(address tokenRoot, address destination, uint128 amount, TvmCell payload, address sendGasTo) external override view onlyMarket {
+        address market = msg.sender;
         require(marketAddresses[market].virtualToken == tokenRoot || marketAddresses[market].realToken == tokenRoot);
-        ITONTokenWallet(wallets[tokenRoot]).transfer{value: MsgFlags.REMAINING_GAS}(destination, amount, 0, sendGasTo, true, payload);
+        ITONTokenWallet(wallets[tokenRoot]).transfer{value: MsgFlag.REMAINING_GAS}(destination, amount, 0, sendGasTo, true, payload);
     }
 
-
-    function addWallet(address tokenRoot) private {
-        IRootTokenContract(tokenRoot).createEmptyWallet{value: CostConstants.WALLET_DEPLOY_COST}(
+    /*********************************************************************************************************/
+    // Wallet functionality
+    /**
+     * @param tokenRoot Address of token root to request wallet deploy
+     */
+    function addWallet(address tokenRoot) private pure {
+        IRootTokenContract(tokenRoot).deployEmptyWallet{value: CostConstants.WALLET_DEPLOY_COST}(
             CostConstants.WALLET_DEPLOY_GRAMS,
             0,
             address(this),
@@ -112,7 +148,10 @@ contract TIP3Controller is ITIP3ControllerMarketInteractions, ITIP3ControllerMar
         );
     }
 
-    function notifyWalletDeployed(address root_) external onlyExisingTIP3Root(root_) {
+    /**
+     * @param root_ Receive deployed wallet address
+     */
+    function notifyWalletDeployed(address root_) external override onlyExisingTIP3Root(root_) {
         tvm.accept();
         if (wallets[root_].value == 0) {
             wallets[root_] = msg.sender;
@@ -129,21 +168,32 @@ contract TIP3Controller is ITIP3ControllerMarketInteractions, ITIP3ControllerMar
         address original_gas_to,
         uint128 updated_balance,
         TvmCell payload
-    ) external onlyOwnWallet(token_root, token_wallet) {
+    ) external override onlyOwnWallet(token_root, token_wallet) {
 
     }
 
+    /*********************************************************************************************************/
     // modifiers
+    /**
+     * @param rootAddress msg.sender parameter
+     */
     modifier onlyExisingTIP3Root(address rootAddress) {
         require(wallets.exists(rootAddress));
         _;
     }
 
-    modifier correctContractType(contractType_) {
+    /**
+     * @param contractType_ Received contract type
+     */
+    modifier correctContractType(uint8 contractType_) {
         require(contractType == contractType_);
         _;
     }
 
+    /**
+     * @param tokenRoot Root address of TIP-3 token
+     * @param tokenWallet Address of TIP-3 wallet
+     */
     modifier onlyOwnWallet(address tokenRoot, address tokenWallet) {
         require(wallets[tokenRoot] == tokenWallet);
         _;
