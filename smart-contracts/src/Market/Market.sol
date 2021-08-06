@@ -8,8 +8,12 @@ import "../TIP3Deployer/interfaces/ITIP3Deployer.sol";
 import "../utils/interfaces/IUpgradableContract.sol";
 import "../utils/interfaces/IRootTokenContract.sol";
 
+import "./interfaces/IBorrow.sol";
+import "./interfaces/ISupply.sol";
+import "./interfaces/IRepay.sol";
+import "./interfaces/ILiquidate.sol";
 
-contract Market is IUpgradableContract {
+contract Market is IUpgradableContract, IBorrow, ISupply, IRepay, ILiquidate {
     // Information for update
     address root;
     uint8 contractType;
