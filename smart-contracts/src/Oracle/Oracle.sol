@@ -117,7 +117,7 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
      */
     function onCodeUpgrade(TvmCell data) private {
         TvmSlice dataSlice = data.toSlice();
-        (address root_, uint8 platformType, address sendGasTo) = dataSlice.decode(address, uint8, address);
+        (address root_, uint8 platformType) = dataSlice.decode(address, uint8);
         root = root_;
         contractType = platformType;
 
@@ -129,11 +129,11 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
     /*********************************************************************************************************/
     // Service functions
     function getVersion() override external responsible view returns (uint32) { 
-        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } codeVersion;
+        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } contractCodeVersion;
     }
 
     function getDetails() override external responsible view returns (OracleServiceInformation) {
-        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } OracleServiceInformation(codeVersion, ownerAddress, ownerPubkey);
+        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } OracleServiceInformation(contractCodeVersion, ownerAddress, ownerPubkey);
     }
 
     /**
@@ -189,7 +189,7 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
     // Get market price info
     /**
      * @param market Address of market
-     * @param paylod Payload attached to message (contains information about operation)
+     * @param payload Payload attached to message (contains information about operation)
      */
     function getMarketPrice(address market, TvmCell payload) override external responsible view returns(uint256, TvmCell) {
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } (prices[market].priceToUSD, payload);
