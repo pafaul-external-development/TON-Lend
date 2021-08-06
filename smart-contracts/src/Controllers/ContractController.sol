@@ -161,8 +161,6 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
         require(contractType == PlatformCodes.CONTRACT_CONTROLLER);
         _;
     }
-<<<<<<< HEAD
-=======
 
     /*********************************************************************************************************/
     // For local execution
@@ -181,5 +179,4 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
         TvmCell empty;
         return empty;
     }
->>>>>>> 0dbbcfaeaa0e646e422f460ad432814a4cf572b8
 }
