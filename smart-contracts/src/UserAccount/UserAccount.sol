@@ -23,7 +23,9 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
     mapping(address => TvmCell) userData;
 
     // Contract is deployed via platform
-    constructor() public { revert(); }
+    constructor() public { 
+        revert(); 
+    }
 
     /*  Upgrade Data for version 0 (from Platform):
         bits:
