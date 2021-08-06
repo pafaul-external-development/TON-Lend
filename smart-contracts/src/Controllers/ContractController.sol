@@ -4,6 +4,7 @@ pragma AbiHeader expire;
 pragma AbiHeader pubkey;
 
 import "./interfaces/ICCCodeManager.sol";
+import "./interfaces/ICCRunLocal.sol";
 
 import "./libraries/PlatformCodes.sol";
 import "./libraries/ContractControllerErrorCodes.sol";
@@ -12,9 +13,8 @@ import "../utils/Platform/Platform.sol";
 import "../utils/interfaces/IUpgradableContract.sol";
 
 
-contract ContractController is IContractControllerCodeManager, IUpgradableContract {
+contract ContractController is IContractControllerCodeManager, IUpgradableContract, IContractControllerRunLocal {
 
-    uint8 contractType;
     uint256 ownerPubkey; // TODO: owner pubkey is for tests, will be removed
     address ownerAddress;
 
@@ -23,7 +23,6 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
     // Contract is deployed as regular contract
     constructor() public {
         tvm.accept();
-        contractType = PlatformCodes.CONTRACT_CONTROLLER;
     }
 
     // From version 0 to version 1
@@ -123,7 +122,7 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
 
     /**
      * @param contractType Type of contract
-     * @param intialData Initial data used for contract
+     * @param initialData Initial data used for contract
      */
     function calculateFutureAddress(uint8 contractType, TvmCell initialData) override external responsible returns (address) {
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } address(tvm.hash(_buildInitialData(contractType, initialData)));
@@ -156,5 +155,28 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
     modifier contractTypeExists(uint8 contractType, bool exists) {
         require(contractCodes.exists(contractType) == exists, exists == true? ContractControllerErrorCodes.ERROR_CONTRACT_TYPE_DOES_NOT_EXIST : ContractControllerErrorCodes.ERROR_CONTRACT_TYPE_ALREADY_EXISTS);
         _;
+    }
+
+    modifier correctContractType(uint8 contractType) {
+        require(contractType == PlatformCodes.CONTRACT_CONTROLLER);
+        _;
+    }
+
+    /*********************************************************************************************************/
+    // For local execution
+    function createInitialDataForOracle(uint256 pubkey, address addr) external override returns(TvmCell) {
+        TvmBuilder initialData;
+        initialData.store(pubkey, addr);
+        return initialData.toCell();
+    }
+
+    function createInitialDataForUserAccountManager() external override returns(TvmCell) {
+        TvmCell empty;
+        return empty;
+    }
+
+    function createInitialDataForWalletController() external override returns(TvmCell) {
+        TvmCell empty;
+        return empty;
     }
 }
