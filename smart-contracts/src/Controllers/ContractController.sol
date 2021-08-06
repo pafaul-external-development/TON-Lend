@@ -14,23 +14,14 @@ import "../utils/interfaces/IUpgradableContract.sol";
 
 contract ContractController is IContractControllerCodeManager, IUpgradableContract {
 
-    uint8 contractType;
     uint256 ownerPubkey; // TODO: owner pubkey is for tests, will be removed
     address ownerAddress;
 
     mapping(uint8 => CodeStorage) contractCodes;
 
-<<<<<<< HEAD
-    // TODO: tmp solution
-    constructor() public {
-        tvm.accept();
-    }
-
-=======
     // Contract is deployed as regular contract
     constructor() public {
         tvm.accept();
-        contractType = PlatformCodes.CONTRACT_CONTROLLER;
     }
 
     // From version 0 to version 1
@@ -44,7 +35,6 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
     }
 
     /*********************************************************************************************************/
->>>>>>> b0f5c04f5d246eed3e8e2feb190e302ab60e74e2
     // Contract code managing functions
     /**
      * @param contractType Type of contract (check libraries/PlatfromCodes.sol)
@@ -131,7 +121,7 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
 
     /**
      * @param contractType Type of contract
-     * @param intialData Initial data used for contract
+     * @param initialData Initial data used for contract
      */
     function calculateFutureAddress(uint8 contractType, TvmCell initialData) override external responsible returns (address) {
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } address(tvm.hash(_buildInitialData(contractType, initialData)));
@@ -163,6 +153,11 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
      */
     modifier contractTypeExists(uint8 contractType, bool exists) {
         require(contractCodes.exists(contractType) == exists, exists == true? ContractControllerErrorCodes.ERROR_CONTRACT_TYPE_DOES_NOT_EXIST : ContractControllerErrorCodes.ERROR_CONTRACT_TYPE_ALREADY_EXISTS);
+        _;
+    }
+
+    modifier correctContractType(uint8 contractType) {
+        require(contractType == PlatformCodes.CONTRACT_CONTROLLER);
         _;
     }
 }
