@@ -44,16 +44,8 @@ contract Market is IUpgradableContract, IBorrow, ISupply, IRepay, ILiquidate {
         contractCodeVersion = condeVersion_;
 
         TvmBuilder builder;
-        // builder.store(root);
-        // builder.store(contractType);
-        // builder.store(platformCode);
 
-        TvmBuilder userDataBuilder;
-        userDataBuilder.store(msigOwner);
-        TvmBuilder userDataMapping;
-        userDataMapping.store(userData);
-        userDataBuilder.store(userDataMapping.toCell());
-        builder.store(userDataBuilder.toCell());
+        //TODO
 
         tvm.setcode(code);
         tvm.setCurrentCode(code);
