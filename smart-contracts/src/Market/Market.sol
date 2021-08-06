@@ -17,13 +17,19 @@ contract Market is IUpgradableContract {
     TvmCell platformCode;
 
     // External contracts
-    address realTokenRoot;
-    address virtualTokenRoot;
+    address token;
+    address wrappedToken;
 
     // Contract addresses
     address tip3Deployer;
     address walletController;
     address oracle;
+
+    // Market parameters
+    uint32 kinkNominator;
+    uint32 kinkDenominator;
+    uint32 collateralFactorNominator;
+    uint32 collateralFactorDenominator;
 
     /*********************************************************************************************************/
     // Base functions - for deploying and upgrading contract
@@ -61,7 +67,7 @@ contract Market is IUpgradableContract {
                 1. platformCode
                 2. initialData
                     bits:
-                        1. address realTokenRoot
+                        1. address token
                         2. address swapPairAddress
                         3. bool isLeft
                     refs:
@@ -81,7 +87,7 @@ contract Market is IUpgradableContract {
 
         platformCode = dataSlice.loadRef();         // Loading platform code
         TvmSlice initialParametersRef = dataSlice.loadRefAsSlice();  // Loading initial parameters
-        (realTokenRoot) = initialParametersRef.decode(address); // decode bits of initial parameters
+        (token) = initialParametersRef.decode(address); // decode bits of initial parameters
         TvmSlice contractAddresses = initialParametersRef.loadRefAsSlice(); // load information about contracts
         (tip3Deployer, walletController, oracle) = contractAddresses.decode(address, address, address);
         
@@ -91,7 +97,7 @@ contract Market is IUpgradableContract {
     /*********************************************************************************************************/
     // functions for interfaction with TIP-3 tokens
     function fetchTIP3Information() external view onlySelf {
-        IRootTokenContract(realTokenRoot).getDetails{
+        IRootTokenContract(token).getDetails{
             value: CostConstants.FETCH_TIP3_ROOT_INFORMATION,
             bounce: true,
             callback: this.receiveTIP3Information
@@ -129,11 +135,11 @@ contract Market is IUpgradableContract {
 
     function receiveNewTIP3Address(address tip3RootAddress) external onlyTIP3Deployer {
         tvm.accept();
-        virtualTokenRoot = tip3RootAddress;
+        wrappedToken = tip3RootAddress;
         ICCMarketDeployed(root).marketDeployed{
             value: CostConstants.NOTIFY_CONTRACT_CONTROLLER,
             bounce: false
-        }(realTokenRoot, virtualTokenRoot);
+        }(token, wrappedToken);
     }
 
     /*********************************************************************************************************/
@@ -151,12 +157,12 @@ contract Market is IUpgradableContract {
     }
 
     modifier onlyRealTokenRoot() {
-        require(msg.sender == realTokenRoot);
+        require(msg.sender == token);
         _;
     }
 
     modifier onlyVirtualTokenRoot() {
-        require(msg.sender == virtualTokenRoot);
+        require(msg.sender == wrappedToken);
         _;
     }
 
