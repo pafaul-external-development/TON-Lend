@@ -6,7 +6,7 @@ pragma AbiHeader pubkey;
 import "./interfaces/IOracleService.sol";
 import "./interfaces/IOracleUpdatePrices.sol";
 import "./interfaces/IOracleReturnPrices.sol";
-import "./interfaces/IOracleManageMarkets.sol";
+import "./interfaces/IOracleManageTokens.sol";
 
 import "./libraries/CostConstants.sol";
 import "./libraries/OracleErrorCodes.sol";
@@ -16,13 +16,15 @@ import "../utils/Dex/IDexPair.sol";
 import "../utils/interfaces/IUpgradableContract.sol";
 
 // TODO: use tokens, not markets change getMarketPrice to getTokenPrice 
-contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOracleManageMarkets, IUpgradableContract {
+contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOracleManageTokens, IUpgradableContract {
     // For uniquencess of contract
     uint256 public nonce;
 
     // Variables for prices
+    // Token root => MarketPriceInfo
     mapping(address => MarketPriceInfo) prices;
-    mapping(address => address) swapPairToMarket;
+    // Swap pair address to token root
+    mapping(address => address) swapPairToTokenRoot;
 
     // Information for update
     address root;
@@ -53,7 +55,7 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
                     -
                 refs:
                     1. mapping(address => MarketPriceInfo) prices
-                    2. mapping(address => address) swapPairToMarket
+                    2. mapping(address => address) swapPairToTokenRoot
             3. updateParams
 
      */
@@ -156,20 +158,20 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
     /*********************************************************************************************************/
     // Update price functions
     /**
-     * @param market Address of market to update
+     * @param tokenRoot Address of token root to update
      * @param costToUSD Cost of token to USD
      */
-    function externalUpdatePrice(address market, uint256 costToUSD) override external onlyOwner {
+    function externalUpdatePrice(address tokenRoot, uint256 costToUSD) override external onlyOwner onlyKnownTokenRoot(tokenRoot) {
         tvm.accept();
-        prices[market].priceToUSD = costToUSD;
+        prices[tokenRoot].priceToUSD = costToUSD;
     }
 
     /**
-     * @param market Address of market to update
+     * @param tokenRoot Address of token root to update
      */
-    function internalUpdatePrice(address market) override external {
+    function internalUpdatePrice(address tokenRoot) override external onlyKnownTokenRoot(tokenRoot) {
         tvm.rawReserve(msg.value, 2);
-        IDexPair(prices[market].swapPair).getBalances{
+        IDexPair(prices[tokenRoot].swapPair).getBalances{
             value: 0, 
             bounce: true, 
             flag: MsgFlag.REMAINING_GAS,
@@ -182,48 +184,48 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
      */
     function internalGetUpdatedPrice(IDexPairBalances updatedPrice) override external onlyTrustedSwapPair {
         tvm.rawReserve(msg.value, 2);
-        address affectedMarket = swapPairToMarket[msg.sender];
-        prices[affectedMarket].priceToUSD = prices[affectedMarket].isLeft ? updatedPrice.left_balance/updatedPrice.right_balance : updatedPrice.right_balance/updatedPrice.left_balance;
+        address affectedToken = swapPairToTokenRoot[msg.sender];
+        prices[affectedToken].priceToUSD = prices[affectedToken].isLeft ? updatedPrice.left_balance/updatedPrice.right_balance : updatedPrice.right_balance/updatedPrice.left_balance;
     }
 
     /*********************************************************************************************************/
-    // Get market price info
+    // Get token price info
     /**
-     * @param market Address of market
+     * @param tokenRoot Address of token root
      * @param payload Payload attached to message (contains information about operation)
      */
-    function getMarketPrice(address market, TvmCell payload) override external responsible view returns(uint256, TvmCell) {
-        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } (prices[market].priceToUSD, payload);
+    function getTokenPrice(address tokenRoot, TvmCell payload) override external responsible view returns(uint256, TvmCell) {
+        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } (prices[tokenRoot].priceToUSD, payload);
     }
 
     /**
      * @param payload Payload attached to message (contains information about operation)
      */
-    function getAllMarketsPrices(TvmCell payload) override external responsible view returns (mapping(address => MarketPriceInfo), TvmCell) {
+    function getAllTokenPrices(TvmCell payload) override external responsible view returns (mapping(address => MarketPriceInfo), TvmCell) {
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } (prices, payload);
     }
 
     /*********************************************************************************************************/
-    // Manage markets
+    // Manage tokens
     /**
-     * @param market Address of market
+     * @param tokenRoot Address of token root
      * @param swapPairAddress Address of swap pair to fetch price information from
      * @param isLeft Is token on the left side or on the right (check internalGetUpdatedPrice)
      */
-    function addMarket(address market, address swapPairAddress, bool isLeft) override external onlyOwner {
+    function addToken(address tokenRoot, address swapPairAddress, bool isLeft) override external onlyOwner {
         tvm.accept();
-        swapPairToMarket[swapPairAddress] = market;
-        prices[market] = MarketPriceInfo(market, swapPairAddress, isLeft, 0);
-        this.internalUpdatePrice{value: CostConstants.MARKET_INITIAL_UPDATE_PRICE, bounce: false}(market);
+        swapPairToTokenRoot[swapPairAddress] = tokenRoot;
+        prices[tokenRoot] = MarketPriceInfo(swapPairAddress, isLeft, 0);
+        this.internalUpdatePrice{value: CostConstants.TOKEN_INITIAL_UPDATE_PRICE, bounce: false}(tokenRoot);
     }
 
     /**
-     * @param market Address of market
+     * @param tokenRoot Address of token root
      */
-    function removeMarket(address market) override external onlyOwner {
+    function removeToken(address tokenRoot) override external onlyOwner {
         tvm.accept();
-        delete swapPairToMarket[prices[market].swapPair];
-        delete prices[market];
+        delete swapPairToTokenRoot[prices[tokenRoot].swapPair];
+        delete prices[tokenRoot];
     }
 
     /*********************************************************************************************************/
@@ -244,7 +246,12 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
     }
 
     modifier onlyTrustedSwapPair() {
-        require(swapPairToMarket.exists(msg.sender), OracleErrorCodes.ERROR_NOT_KNOWN_SWAP_PAIR);
+        require(swapPairToTokenRoot.exists(msg.sender), OracleErrorCodes.ERROR_NOT_KNOWN_SWAP_PAIR);
+        _;
+    }
+
+    modifier onlyKnownTokenRoot(address tokenRoot_) {
+        require(prices.exists(tokenRoot_), OracleErrorCodes.ERROR_NOT_KNOWN_TOKEN_ROOT);
         _;
     }
 
