@@ -7,4 +7,5 @@ library PlatformCodes {
     uint8 constant ORACLE = 3;
     uint8 constant USER_ACCOUNT_MANAGER = 4;
     uint8 constant USER_ACCOUNT = 5;
+    uint8 constant MARKET = 6;
 }

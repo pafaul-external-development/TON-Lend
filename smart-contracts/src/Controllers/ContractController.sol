@@ -9,6 +9,9 @@ import "./interfaces/ICCRunLocal.sol";
 import "./libraries/PlatformCodes.sol";
 import "./libraries/ContractControllerErrorCodes.sol";
 
+import "../Oracle/interfaces/IOracleManageMarkets.sol";
+import "../WalletController/interfaces/IWalletControllerMarketManagement.sol";
+
 import "../utils/Platform/Platform.sol";
 import "../utils/interfaces/IUpgradableContract.sol";
 
@@ -20,19 +23,58 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
 
     mapping(uint8 => CodeStorage) contractCodes;
 
+    mapping(uint8 => address[]) deployedContracts;
+    mapping(address => uint8) knownContracts;
     // Contract is deployed as regular contract
     constructor() public {
         tvm.accept();
     }
 
+    /*
+        Data for upgrade from version 0 to version 1:
+        data:
+            bits:
+                uint256 ownerPubkey
+                address ownerAddress
+                uint32 codeVersion
+            refs:
+                1. mapping refs
+                    refs:
+                        1. mapping(uint8 => CodeStorage) contractCodes
+                        2. mapping(uint8 => address[]) deployedContracts
+                        3. mapping(address => uint8) knownContracts
+     */
     // From version 0 to version 1
-    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion_, uint8 contractType_) override external correctContractType(contractType_) {
+    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion_, uint8 contractType_) override external correctContractType(contractType_) newVersion(codeVersion_) {
+        tvm.accept();
+        TvmBuilder dataBuilder;
+        dataBuilder.store(ownerPubkey);
+        dataBuilder.store(ownerAddress);
+        dataBuilder.store(codeVersion_);
 
+        TvmBuilder mappingBuilder;
+        TvmBuilder contractCodesStorage;
+        TvmBuilder deployedContractsStorage;
+        TvmBuidler knownContractsStorage;
+        contractCodesStorage.store(contractCodes);
+        deployedContractsStorage.store(deployedContracts);
+        knownContractsStorage.store(knownContracts);
+
+        mappingBuilder.store(contractCodesStorage.toCell());
+        mappingBuilder.store(deployedContractsStorage.toCell());
+        mappingBuilder.store(knownContractsStorage.toCell());
+
+        dataBuilder.store(mappingBuilder);
+
+        tvm.setcode(code);
+        tvm.setCurrentCode(code);
+
+        onCodeUpgrade(dataBuilder.toCell());
     }
 
     // From version 0 to version 1
     function onCodeUpgrade(TvmCell data) private {
-
+        // some functions for upgrade
     }
 
     /*********************************************************************************************************/
@@ -88,6 +130,8 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
             value: contractCodes[contractType].deployCost,
             code: contractCodes[PlatformCodes.PLATFORM].code
         }(contractCodes[contractType].code, params);
+        knownContracts[newContract] = contractType;
+        deployedContracts[contractType].push(newContract);
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } newContract;
     }
 
@@ -104,6 +148,35 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
         }(contractCodes[contractType].code, updateParams, contractCodes[contractType].codeVersion, contractType);
     }
 
+    /**
+     * @param conractType Type of contracts to update
+     * @param updateParams Parameters passed to contracts during update
+     */
+    function updateContracts(uint8 contractType, TvmCell updateParams) override external {
+        tvm.accept();
+        TvmCell code = contractCodes[contractType].code;
+        uint32 codeVersion = contractCodes[contractType].codeVersion;
+        for (address contractAddress: deployedContracts[contractType]) {
+            IUpgradableContract(contractAddress).upgradeContractCode(code, updateParams, codeVersion, contractType);
+        }
+    }
+
+    /*********************************************************************************************************/
+    // Special functions for market deployment
+    // At least one Oracle and WalletController must be deployed before deploying markets
+    /**
+     * @param realTokenRoot Address of market's real token (ex. wTON)
+     * @param virtualTokenRoot Address of market's virtual token (ex. vTON)
+     */
+    function marketDeployed(address realTokenRoot, address virtualTokenRoot) external override onlyKnownContract(ContractCodes.MARKET) {
+        tvm.accept();
+        address market = msg.sender;
+
+        for (address walletController: deployedContracts[ContractCodes.WALLET_CONTROLLER]) {
+            IWalletControllerMarketManagement(walletController).addMarket(market, realTokenRoot, virtualTokenRoot);
+        }
+    }
+    
     /*********************************************************************************************************/
     // Getters, for local execution
     /**
@@ -157,8 +230,14 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
         _;
     }
 
+    // TODO: add desc + error codes
     modifier correctContractType(uint8 contractType) {
         require(contractType == PlatformCodes.CONTRACT_CONTROLLER);
+        _;
+    }
+
+    modifier onlyKnownContract(uint8 contractType) {
+        require(knownContracts[msg.sender] == contractType);
         _;
     }
 
