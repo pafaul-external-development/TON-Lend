@@ -1,4 +1,7 @@
 const Contract = require("locklift/locklift/contract");
+const { Locklift } = require("locklift/locklift");
+const { abiContract, signerNone } = require("@tonclient/core");
+const { encodeMessageBody } = require("../../utils/utils");
 
 /**
  * @classdesc Intreface for ContractController contract. Use extendContractToContractController to gain real functionality
@@ -8,7 +11,7 @@ const Contract = require("locklift/locklift/contract");
  */
 class ContractController extends Contract {
     /**
-     * Add contract code to contract controller
+     * Add contract code to contract controller (creates payload)
      * @param {Number} contractType 
      * @param {String} code 
      * @param {Number} codeVersion 
@@ -17,7 +20,7 @@ class ContractController extends Contract {
     async addContractCode(contractType, code, codeVersion, deployCost) {}
 
     /**
-     * Update existing contract code
+     * Update existing contract code (creates payload)
      * @param {Number} contractType 
      * @param {String} code 
      * @param {Number} codeVersion 
@@ -25,14 +28,14 @@ class ContractController extends Contract {
     async updateContractCode(contractType, code, codeVersion) {}
 
     /**
-     * Set contract deployment cost
+     * Set contract deployment cost (creates payload)
      * @param {Number} contractType 
      * @param {String} deployCost 
      */
     async setContractDeployCost(contractType, deployCost) {}
 
     /**
-     * Create contract from existing code
+     * Create contract from existing code (creates payload)
      * @param {Number} contractType 
      * @param {String} initialData 
      * @param {String} params 
@@ -40,7 +43,7 @@ class ContractController extends Contract {
     async createContract(contractType, initialData, params) {}
 
     /**
-     * Update already deployed contract
+     * Update already deployed contract (creates payload)
      * @param {Number} contractType 
      * @param {String} contractAddress 
      * @param {String} updateParams 
@@ -75,62 +78,63 @@ class ContractController extends Contract {
  */
 function extendContractToContractController(contract) {
     contract.addContractCode = async function(contractType, code, codeVersion, deployCost) {
-        return await contract.run({
-            method: 'addContractCode',
-            params: {
+        return await encodeMessageBody({
+            contract: contract,
+            functionName: 'addContractCode',
+            input: {
                 contractType: contractType,
                 code: code,
                 codeVersion: codeVersion,
                 deployCost: deployCost
-            },
-            keyPair: contract.keyPair
+            }
         })
     };
 
     contract.updateContractCode = async function(contractType, code, codeVersion) {
-        return await contract.run({
-            method: 'updateContractCode',
-            params: {
+        return await encodeMessageBody({
+            contract: contract,
+            functionName: 'updateContractCode',
+            input: {
                 contractType: contractType,
                 code: code,
                 codeVersion: codeVersion
             },
-            keyPair: contract.keyPair
         })
     };
 
     contract.setContractDeployCost = async function(contractType, deployCost) {
-        return await contract.run({
-            method: 'setContractDeployCost',
-            params: {
+        return await encodeMessageBody({
+            contract: contract,
+            functionName: 'setContractDeployCost',
+            input: {
                 contractType: contractType,
                 deployCost: deployCost
-            },
-            keyPair: contract.keyPair
+            }
         })
     };
 
     contract.createContract = async function(contractType, initialData, params) {
-        return await contract.run({
-            method: 'createContract',
-            params: {
+        return await encodeMessageBody({
+            contract: contract,
+            functionName: 'createContract',
+            input: {
                 contractType: contractType,
                 initialData: initialData,
-                params: params
+                params: params,
+                _answer_id: 0
             },
-            keyPair: contract.keyPair
         })
     };
 
     contract.updateContract = async function(contractType, contractAddress, updateParams) {
-        return await contract.run({
-            method: 'updateContract',
-            params: {
+        return await encodeMessageBody({
+            contract: contract,
+            functionName: 'updateContract',
+            input: {
                 contractType: contractType,
                 contractAddress: contractAddress,
                 updateParams: updateParams
-            },
-            keyPair: contract.keyPair
+            }
         })
     };
 

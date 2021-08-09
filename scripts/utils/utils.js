@@ -1,0 +1,29 @@
+const { abiContract } = require("@tonclient/core")
+const Contract = require("locklift/locklift/contract")
+
+/**
+ * Encode message body
+ * @param {Contract} contract 
+ * @param {String} functionName 
+ * @param {JSON} input 
+ * @returns 
+ */
+async function encodeMessageBody({
+    contract,
+    functionName,
+    input
+}) {
+    return await contract.locklift.ton.client.abi.encode_message_body({
+        abi: abiContract(contract.abi),
+        call_set: {
+            function_name: functionName,
+            input: input
+        },
+        is_internal: true,
+        signer: signerNone()
+    })
+}
+
+module.exports = {
+    encodeMessageBody
+}

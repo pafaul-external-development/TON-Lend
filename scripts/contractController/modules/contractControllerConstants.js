@@ -9,6 +9,13 @@
 
 /**
  * @type {Record<String, ContractInfo>}
+ * @property {ContractInfo} PLATFORM
+ * @property {ContractInfo} CONTRACT_CONTROLLER
+ * @property {ContractInfo} WALLET_CONTROLLER
+ * @property {ContractInfo} ORACLE
+ * @property {ContractInfo} USER_ACCOUNT_MANAGER
+ * @property {ContractInfo} USER_ACCOUNT
+ * @property {ContractInfo} MARKET
  */
 const contractInfo = {
     PLATFORM: {
@@ -40,6 +47,11 @@ const contractInfo = {
         name: 'UserAccount',
         deployTonCost: 5,
         id: 5
+    },
+    MARKET: {
+        name: 'Market',
+        deployTonCost: 5,
+        id: 6
     }
 }
 
