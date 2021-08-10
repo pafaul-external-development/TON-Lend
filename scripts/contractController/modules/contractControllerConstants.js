@@ -54,7 +54,8 @@ const contractInfo = {
 }
 
 const operationsCost = {
-    uploadContractCode: 0.5
+    uploadContractCode: 0.5,
+    deployContract: 0.6
 }
 
 module.exports = {

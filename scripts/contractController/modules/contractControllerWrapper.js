@@ -80,6 +80,23 @@ class ContractController extends Contract {
      * @param {String} initialData 
      */
     async calculateFutureAddress(contractType, initialData) {}
+
+    /**
+     * Create initial data for oracle smart contract
+     * @param {String} pubkey 
+     * @param {String} addr 
+     */
+    async createInitialDataForOracle(pubkey, addr) {}
+
+    /**
+     * Create initial data for user account manager
+     */
+    async createIniaialDataForUserAccountManager() {}
+
+    /**
+     * Create initial data for wallet controller
+     */
+    async createInitialDataForWalletController() {}
 }
 
 
@@ -197,6 +214,33 @@ function extendContractToContractController(contract) {
                 contractType: contractType,
                 initialData: initialData
             },
+            keyPair: contract.keyPair
+        })
+    };
+
+    contract.createInitialDataForOracle = async function(pubkey, addr) {
+        return await contract.call({
+            method: 'createInitialDataForOracle',
+            params: {
+                pubkey: pubkey,
+                addr: addr
+            },
+            keyPair: contract.keyPair
+        })
+    };
+
+    contract.createIniaialDataForUserAccountManager = async function() {
+        return await contract.call({
+            method: 'createIniaialDataForUserAccountManager',
+            params: {},
+            keyPair: contract.keyPair
+        })
+    };
+
+    contract.createInitialDataForWalletController = async function() {
+        return await contract.call({
+            method: 'createInitialDataForWalletController',
+            params: {},
             keyPair: contract.keyPair
         })
     };
