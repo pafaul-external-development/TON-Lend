@@ -16,8 +16,6 @@ interface IContractControllerCodeManager {
     function updateContract(uint8 contractType, address contractAddress, TvmCell updateParams) external;
     function updateContracts(uint8 contractType, TvmCell updateParams) external;
 
-    function getCodeVersion(uint8 contractType) external responsible returns (uint32);
-    function getCodeStorage(uint8 contractType) external responsible returns (CodeStorage);
     function calculateFutureAddress(uint8 contractType, TvmCell initialData) external responsible returns (address);
 
     function setContractDeployCost(uint8 contractType, uint128 deployCost) external;
