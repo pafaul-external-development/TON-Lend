@@ -15,7 +15,7 @@ async function main() {
         keyPair
     });
 
-    writeContractData(giver, './giverData.js');
+    writeContractData(giver, 'giverData.js');
 
     let giverContract = extendContractToGiver(giver);
 }

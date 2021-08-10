@@ -51,6 +51,18 @@ class ContractController extends Contract {
     async updateContract(contractType, contractAddress, updateParams) {}
 
     /**
+     * Get contract addresses of deployed contracts of contractType
+     * @param {Number} contractType 
+     */
+    async getContractAddresses(contractType) {}
+
+    /**
+     * Get type of deployed contract
+     * @param {String} contractAddress 
+     */
+    async getContractType(contractAddress) {}
+
+    /**
      * Get code version
      * @param {Number} contractType 
      */
@@ -135,6 +147,26 @@ function extendContractToContractController(contract) {
                 contractAddress: contractAddress,
                 updateParams: updateParams
             }
+        })
+    };
+
+    contract.getContractAddresses = async function(contractType) {
+        return await contract.call({
+            method: 'getContractAddresses',
+            params: {
+                contractType: contractType
+            },
+            keyPair: contract.keyPair
+        })
+    };
+
+    contract.getContractType = async function(contractAddress) {
+        return await contract.call({
+            method: 'getContractType',
+            params: {
+                contractAddress: contractAddress
+            },
+            keyPair: contract.keyPair
         })
     };
 
