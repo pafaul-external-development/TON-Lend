@@ -15,7 +15,6 @@ import "../utils/libraries/MsgFlag.sol";
 import "../utils/Dex/IDexPair.sol";
 import "../utils/interfaces/IUpgradableContract.sol";
 
-// TODO: use tokens, not markets change getMarketPrice to getTokenPrice 
 contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOracleManageTokens, IUpgradableContract {
     // For uniquencess of contract
     uint256 public nonce;
@@ -31,7 +30,6 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
     uint8 contractType;
     uint32 contractCodeVersion;
     TvmCell platformCode;
-
 
     // Owner info
     uint256 private ownerPubkey;
