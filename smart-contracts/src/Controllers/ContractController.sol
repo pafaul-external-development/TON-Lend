@@ -6,6 +6,7 @@ pragma AbiHeader pubkey;
 import "./interfaces/ICCCodeManager.sol";
 import "./interfaces/ICCRunLocal.sol";
 import "./interfaces/ICCMarketDeployed.sol";
+import "./interfaces/ICCGetContractInfo.sol";
 
 import "./libraries/PlatformCodes.sol";
 import "./libraries/ContractControllerErrorCodes.sol";
@@ -16,7 +17,7 @@ import "../utils/Platform/Platform.sol";
 import "../utils/interfaces/IUpgradableContract.sol";
 
 
-contract ContractController is IContractControllerCodeManager, IUpgradableContract, IContractControllerRunLocal, ICCMarketDeployed {
+contract ContractController is IContractControllerCodeManager, IUpgradableContract, IContractControllerRunLocal, ICCMarketDeployed, IContractControllerGetContractInfo {
 
     address ownerAddress;
 
@@ -179,6 +180,21 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
     
     /*********************************************************************************************************/
     // Getters, for local execution
+
+    /**
+     * @param contractType Type of contract
+     */
+    function getContractAddresses(uint8 contractType) external returns (address[]) {
+        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } deployedContracts[contractType];
+    }
+
+    /**
+     * @param contractAddress Address of contract
+     */
+    function getContractType(address contractAddress) external returns (uint8) {
+        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } knownContracts[contractAddress];
+    }
+
     /**
      * @param contractType Type of contract
      */
