@@ -4,11 +4,6 @@ pragma AbiHeader expire;
 pragma AbiHeader pubkey;
 
 interface IContractControllerCodeManager {
-    struct CodeStorage {
-        TvmCell code;
-        uint32 codeVersion;
-        uint128 deployCost;
-    }
     
     function addContractCode(uint8 contractType, TvmCell code, uint32 codeVersion, uint128 deployCost) external;
     function createContract(uint8 contractType, TvmCell initialData, TvmCell params) external responsible returns (address);
