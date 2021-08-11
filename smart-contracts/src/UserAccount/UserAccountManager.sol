@@ -31,6 +31,7 @@ contract UserAccountManager is IUpgradableContract, IReceiveAddressCallback {
         bits:
             address root
             uint8 contractType
+            uint32 codeVersion
         refs:
             1. platformCode
      */
@@ -42,6 +43,7 @@ contract UserAccountManager is IUpgradableContract, IReceiveAddressCallback {
         TvmBuilder builder;
         builder.store(root);
         builder.store(contractType);
+        builder.store(codeVersion_);
         builder.store(platformCode);
 
         tvm.setcode(code);
