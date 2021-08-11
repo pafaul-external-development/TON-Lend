@@ -8,9 +8,9 @@ const initializeLocklift = require('../../initializeLocklift');
 const configuration = require('../../scripts.conf');
 
 async function main() {
-    let locklift = initializeLocklift(configuration.pathToLockliftConfig, configuration.network);
+    let locklift = await initializeLocklift(configuration.pathToLockliftConfig, configuration.network);
 
-    let walletContract = await locklift.factory.getContract('MultisigWallet', configuration.buildDirectory);
+    let walletContract = await locklift.factory.getContract('SafeMultisigWallet', configuration.buildDirectory);
 
     let [keyPair] = await locklift.keys.getKeyPairs();
     walletContract.setKeyPair(keyPair);
@@ -19,7 +19,7 @@ async function main() {
         await locklift.giver.deployContract({
             contract: walletContract,
             constructorParams: {
-                owners: [walletContract.keyPair.public],
+                owners: ['0x' + walletContract.keyPair.public],
                 reqConfirms: 1
             },
             initParams: {},
