@@ -1,15 +1,15 @@
 pragma ton-solidity >= 0.39.0;
 
-struct IRootTokenContractDetails {
-    bytes name;
-    bytes symbol;
-    uint8 decimals;
-    uint256 root_public_key;
-    address root_owner_address;
-    uint128 total_supply;
-}
-
 interface IRootTokenContract {
+
+    struct IRootTokenContractDetails {
+        bytes name;
+        bytes symbol;
+        uint8 decimals;
+        uint256 root_public_key;
+        address root_owner_address;
+        uint128 total_supply;
+    }
 
     function getDetails() external view responsible returns (IRootTokenContractDetails);
 

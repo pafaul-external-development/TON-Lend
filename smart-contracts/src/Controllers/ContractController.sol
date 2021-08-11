@@ -184,14 +184,14 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
     /**
      * @param contractType Type of contract
      */
-    function getContractAddresses(uint8 contractType) external returns (address[]) {
+    function getContractAddresses(uint8 contractType) external override responsible returns (address[]) {
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } deployedContracts[contractType];
     }
 
     /**
      * @param contractAddress Address of contract
      */
-    function getContractType(address contractAddress) external returns (uint8) {
+    function getContractType(address contractAddress) external override responsible returns (uint8) {
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } knownContracts[contractAddress];
     }
 

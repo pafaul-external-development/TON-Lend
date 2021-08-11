@@ -6,14 +6,16 @@ import "../Controllers/interfaces/ICCMarketDeployed.sol";
 import "../TIP3Deployer/interfaces/ITIP3Deployer.sol";
 
 import "../utils/interfaces/IUpgradableContract.sol";
-import "../utils/interfaces/IRootTokenContract.sol";
+import "../utils/TIP3/interfaces/IRootTokenContract.sol";
 
-import "./interfaces/IBorrow.sol";
-import "./interfaces/ISupply.sol";
-import "./interfaces/IRepay.sol";
-import "./interfaces/ILiquidate.sol";
+// import "./interfaces/IBorrow.sol";
+// import "./interfaces/ISupply.sol";
+// import "./interfaces/IRepay.sol";
+// import "./interfaces/ILiquidate.sol";
 
-contract Market is IUpgradableContract, IBorrow, ISupply, IRepay, ILiquidate {
+contract Market is IUpgradableContract 
+// , IBorrow, ISupply, IRepay, ILiquidate
+{
     // Information for update
     address root;
     uint8 contractType;
@@ -108,13 +110,13 @@ contract Market is IUpgradableContract, IBorrow, ISupply, IRepay, ILiquidate {
         }();
     }
 
-    function receiveTIP3Information(IRootTokenContractDetails rootTokenDetails) external view onlyRealTokenRoot {
+    function receiveTIP3Information(IRootTokenContract.IRootTokenContractDetails rootTokenDetails) external view onlyRealTokenRoot {
         tvm.accept();
         prepareDataForNewTIP3(rootTokenDetails);
     }
 
-    function prepareDataForNewTIP3(IRootTokenContractDetails rootTokenDetails) private view {
-        IRootTokenContractDetails newRootInfo;
+    function prepareDataForNewTIP3(IRootTokenContract.IRootTokenContractDetails rootTokenDetails) private view {
+        IRootTokenContract.IRootTokenContractDetails newRootInfo;
         string initialName = "v";
         initialName.append(string(rootTokenDetails.name));
         newRootInfo.name = bytes(initialName);
@@ -128,13 +130,13 @@ contract Market is IUpgradableContract, IBorrow, ISupply, IRepay, ILiquidate {
         deployNewTIP3Token(newRootInfo);
     }
 
-    function deployNewTIP3Token(IRootTokenContractDetails newRootTokenDetails) private view {
+    function deployNewTIP3Token(IRootTokenContract.IRootTokenContractDetails newRootTokenDetails) private view {
         tvm.accept();
         ITIP3Deployer(tip3Deployer).deployTIP3{
             value: CostConstants.SEND_TO_TIP3_DEPLOYER,
             bounce: false,
             callback: this.receiveNewTIP3Address
-        }(newRootTokenDetails, CostConstants.USE_TO_DEPLOY_TIP3_ROOT);
+        }(newRootTokenDetails, CostConstants.USE_TO_DEPLOY_TIP3_ROOT, tvm.pubkey());
     }
 
     function receiveNewTIP3Address(address tip3RootAddress) external onlyTIP3Deployer {

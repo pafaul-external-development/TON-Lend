@@ -1,7 +1,9 @@
 pragma ton-solidity >= 0.39.0;
 
-import "../../utils/interfaces/IRootTokenContract.sol";
+import '../../utils/TIP3/interfaces/IRootTokenContract.sol';
 
 interface ITIP3Deployer {
-    function deployTIP3(IRootTokenContractDetails rootInfo, uint128 deployGrams) external responsible returns(address);
+    function deployTIP3(IRootTokenContract.IRootTokenContractDetails rootInfo, uint128 deployGrams, uint256 pubkeyToInsert) external responsible returns(address);
+
+    function getFutureTIP3Address(IRootTokenContract.IRootTokenContractDetails rootInfo, uint256 pubkeyToInsert) external responsible returns(address);
 }
