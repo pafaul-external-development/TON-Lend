@@ -21,7 +21,7 @@ contract TIP3TokenDeployer is ITIP3Deployer, ITIP3DeployerManageCode, ITIP3Deplo
         ownerAddress = ownerAddress_;
     }
 
-    function deployTIP3(IRootTokenContractDetails rootInfo, uint128 deployGrams, uint256 pubkeyToInsert) external responsible override returns (address) {
+    function deployTIP3(IRootTokenContract.IRootTokenContractDetails rootInfo, uint128 deployGrams, uint256 pubkeyToInsert) external responsible override returns (address) {
         tvm.rawReserve(msg.value, 2);
         address tip3TokenAddress = new RootTokenContract{
             value: deployGrams,
@@ -40,7 +40,7 @@ contract TIP3TokenDeployer is ITIP3Deployer, ITIP3DeployerManageCode, ITIP3Deplo
         return {value: 0, flag: 64} tip3TokenAddress;
     }
 
-    function getFutureTIP3Address(IRootTokenContractDetails rootInfo, uint256 pubkeyToInsert) external override responsible returns (address) {
+    function getFutureTIP3Address(IRootTokenContract.IRootTokenContractDetails rootInfo, uint256 pubkeyToInsert) external override responsible returns (address) {
         tvm.accept();
         TvmCell stateInit = tvm.buildStateInit({
             contr: RootTokenContract,
