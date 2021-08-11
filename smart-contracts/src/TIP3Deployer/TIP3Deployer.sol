@@ -7,18 +7,83 @@ import './interfaces/ITIP3Deployer.sol';
 import './interfaces/ITIP3DeployerManageCode.sol';
 import './interfaces/ITIP3DeployerServiceInfo.sol';
 
+import '../utils/interfaces/IUpgradableContract.sol';
 import '../utils/TIP3/RootTokenContract.sol';
 
-// import "../../utils/interfaces/IRootTokenContract.sol";
-
-contract TIP3TokenDeployer is ITIP3Deployer, ITIP3DeployerManageCode, ITIP3DeployerServiceInfo {
+contract TIP3TokenDeployer is ITIP3Deployer, ITIP3DeployerManageCode, ITIP3DeployerServiceInfo, IUpgradableContract {
     TvmCell rootContractCode;
     TvmCell walletContractCode;
     address ownerAddress;
 
-    constructor(address ownerAddress_) public {
+    // Information for update
+    address root;
+    uint8 contractType;
+    uint32 contractCodeVersion;
+    TvmCell platformCode;
+
+
+    constructor() public {
+        revert();
+    }
+
+    /** Upgrade contract code from version 0 to 1
+      Data:
+        bits:
+            1. address root
+            2. uint8 contractType
+            3. uint32 codeVersion
+        refs:
+            1. TvmCell platform code
+            3. ownerInfo:
+                bits:
+                    1. address ownerAddress
+            2. codeInfo:
+                refs:
+                    1. TvmCell rootContractCode
+                    2. TvmCell walletContractCode
+     */
+    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion_, uint8 contractType_) override external onlyRoot correctContractType(contractType_) {
+        TvmBuilder builder;
+        builder.store(root);
+        builder.store(contractType);
+        builder.store(codeVersion_);
+        builder.store(platformCode);
+
+        // Store owner info
+        TvmBuilder ownerInfo;
+        ownerInfo.store(ownerAddress);
+
+        TvmBuilder codeInfo;
+        codeInfo.store(rootContractCode);
+        codeInfo.store(walletContractCode);
+
+        builder.store(ownerInfo.toCell());
+        builder.store(codeInfo.toCell());
+
+        tvm.setcode(code);
+        tvm.setCurrentCode(code);
+
+        onCodeUpgrade(builder.toCell());
+    }
+
+    /*  Upgrade Data for version 0 (from Platform):
+        bits:
+            address root
+            uint8 platformType
+        refs:
+            1. platformCode
+            2. initialData:
+                bits:
+                    address ownerAddress
+     */
+    function onCodeUpgrade(TvmCell data) private {
         tvm.accept();
-        ownerAddress = ownerAddress_;
+        TvmSlice dataSlice = data.toSlice();
+        (root, contractType) = dataSlice.decode(address, uint8);
+
+        platformCode = dataSlice.loadRef();         // Loading platform code
+        TvmSlice ref = dataSlice.loadRefAsSlice();  // Loading initial parameters
+        (ownerAddress) = ref.decode(address);
     }
 
     function deployTIP3(IRootTokenContractDetails rootInfo, uint128 deployGrams, uint256 pubkeyToInsert) external responsible override returns (address) {

@@ -46,6 +46,7 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
         bits:
             address root
             uint8 contractType
+            uint32 codeVersion
         refs:
             1. platformCode
             2. mappingStorage
@@ -71,6 +72,7 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
         TvmBuilder builder;
         builder.store(root);
         builder.store(contractType);
+        builder.store(codeVersion_);
         builder.store(platformCode);
 
         // Store owner info
@@ -104,7 +106,6 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
         bits:
             address root
             uint8 platformType
-            address gasTo ?
         refs:
             1. platformCode
             2. initialData:
@@ -118,9 +119,7 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
      */
     function onCodeUpgrade(TvmCell data) private {
         TvmSlice dataSlice = data.toSlice();
-        (address root_, uint8 platformType) = dataSlice.decode(address, uint8);
-        root = root_;
-        contractType = platformType;
+        (root, contractType) = dataSlice.decode(address, uint8);
 
         platformCode = dataSlice.loadRef();         // Loading platform code
         TvmSlice ref = dataSlice.loadRefAsSlice();  // Loading initial parameters

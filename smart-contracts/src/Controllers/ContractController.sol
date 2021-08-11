@@ -38,6 +38,7 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
         Data for upgrade from version 0 to version 1:
         data:
             bits:
+                address ownerAddress
                 uint32 codeVersion
             refs:
                 1. mapping refs
