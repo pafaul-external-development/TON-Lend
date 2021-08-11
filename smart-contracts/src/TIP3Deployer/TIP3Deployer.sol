@@ -1,73 +1,56 @@
-pragma ton-solc ^0.39.0;
+pragma ton-solidity >= 0.39.0;
 pragma AbiHeader pubkey;
 pragma AbiHeader expire;
 pragma AbiHeader time;
 
-import '../interfaces/helpers/ITIP3TokenDeployer.sol';
+import './interfaces/ITIP3Deployer.sol';
+import './interfaces/ITIP3DeployerManageCode.sol';
+import './interfaces/ITIP3DeployerServiceInfo.sol';
 
-import '../../../ton-eth-bridge-token-contracts/free-ton/contracts/RootTokenContract.sol';
+import '../utils/TIP3/RootTokenContract.sol';
 
-contract TIP3TokenDeployer is ITIP3TokenDeployer {
+// import "../../utils/interfaces/IRootTokenContract.sol";
+
+contract TIP3TokenDeployer is ITIP3Deployer, ITIP3DeployerManageCode, ITIP3DeployerServiceInfo {
     TvmCell rootContractCode;
     TvmCell walletContractCode;
-    uint ownerPublicKey;
+    address ownerAddress;
 
-    constructor() public {
+    constructor(address ownerAddress_) public {
         tvm.accept();
-        ownerPublicKey = msg.pubkey();
+        ownerAddress = ownerAddress_;
     }
 
-    function deployTIP3Token(
-        bytes name,
-        bytes symbol,
-        uint8 decimals,
-        uint256 rootPublicKey,
-        address rootOwnerAddress,
-        uint128 deployGrams
-    ) 
-        external 
-        responsible 
-        override 
-        returns (address) 
-    {
+    function deployTIP3(IRootTokenContractDetails rootInfo, uint128 deployGrams, uint256 pubkeyToInsert) external responsible override returns (address) {
+        tvm.rawReserve(msg.value, 2);
         address tip3TokenAddress = new RootTokenContract{
             value: deployGrams,
-            flag: 1,
+            flag: 0,
             code: rootContractCode,
-            pubkey: rootPublicKey,
+            pubkey: pubkeyToInsert,
             varInit: {
                 _randomNonce: 0,
-                name: name,
-                symbol: symbol,
-                decimals: decimals,
+                name: rootInfo.name,
+                symbol: rootInfo.symbol,
+                decimals: rootInfo.decimals,
                 wallet_code: walletContractCode 
             }
-        }(rootPublicKey, rootOwnerAddress);
+        }(rootInfo.root_public_key, rootInfo.root_owner_address);
 
         return {value: 0, flag: 64} tip3TokenAddress;
     }
 
-    function getFutureTIP3Address(
-        bytes name,
-        bytes symbol,
-        uint8 decimals,
-        uint256 rootPublicKey
-    ) 
-        external 
-        override 
-        responsible
-        returns (address) 
-    {
+    function getFutureTIP3Address(IRootTokenContractDetails rootInfo, uint256 pubkeyToInsert) external override responsible returns (address) {
         tvm.accept();
         TvmCell stateInit = tvm.buildStateInit({
             contr: RootTokenContract,
             code: rootContractCode,
-            pubkey: rootPublicKey,
+            pubkey: pubkeyToInsert,
             varInit: {
                 _randomNonce: 0,
-                name: name,
-                symbol: symbol,
-                decimals: decimals,
+                name: rootInfo.name,
+                symbol: rootInfo.symbol,
+                decimals: rootInfo.decimals,
                 wallet_code: walletContractCode 
             }
         });
@@ -85,13 +68,13 @@ contract TIP3TokenDeployer is ITIP3TokenDeployer {
         walletContractCode = walletContractCode_;
     }
 
-    function getServiceInfo() external responsible view override returns (ServiceInfo) {
+    function getServiceInfo() external override responsible view returns (ServiceInfo) {
         return ServiceInfo(rootContractCode, walletContractCode);
     }
 
     modifier onlyOwner() {
         require(
-            msg.pubkey() == ownerPublicKey
+            msg.sender == ownerAddress
         );
         _;
     }
