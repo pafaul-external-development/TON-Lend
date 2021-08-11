@@ -53,8 +53,6 @@ contract Market is IUpgradableContract
     function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion_, uint8 contractType_) override external onlyRoot correctContractType(contractType_) {
         tvm.accept();
 
-        contractCodeVersion = codeVersion_;
-
         TvmBuilder builder;
 
         tvm.setcode(code);

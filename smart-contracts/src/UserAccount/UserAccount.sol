@@ -55,6 +55,7 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
         bits:
             address root
             uint8 platformType
+            uint32 contractVersion
         refs:
             1. TvmCell platformCode
             2. user data:
@@ -69,6 +70,7 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
         TvmBuilder builder;
         builder.store(root);
         builder.store(contractType);
+        builder.store(codeVersion_);
         builder.store(platformCode);
 
         TvmBuilder userDataBuilder;
