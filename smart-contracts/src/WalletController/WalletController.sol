@@ -9,11 +9,11 @@ import "./interfaces/IWalletControllerMarketManagement.sol";
 import "./libraries/CostConstants.sol";
 
 import "../utils/interfaces/IUpgradableContract.sol";
-import "../utils/interfaces/ITokenWalletDeployedCallback.sol";
-import "../utils/interfaces/ITokensReceivedCallback.sol";
+import "../utils/TIP3/interfaces/ITokenWalletDeployedCallback.sol";
+import "../utils/TIP3/interfaces/ITokensReceivedCallback.sol";
 
-import "../utils/interfaces/IRootTokenContract.sol";
-import "../utils/interfaces/ITONTokenWallet.sol";
+import "../utils/TIP3/interfaces/IRootTokenContract.sol";
+import "../utils/TIP3/interfaces/ITONTokenWallet.sol";
 
 import "../utils/libraries/MsgFlag.sol";
 
