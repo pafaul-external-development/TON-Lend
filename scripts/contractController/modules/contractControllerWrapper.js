@@ -82,6 +82,20 @@ class ContractController extends Contract {
     async calculateFutureAddress(contractType, initialData) {}
 
     /**
+     * Create TvmCell with intialParameters for market contract
+     * @param {String} tokenRoot 
+     * @param {String} tip3Deployer 
+     * @param {String} walletController 
+     * @param {String} oracle 
+     */
+    async createInitialDataForMarket(tokenRoot, tip3Deployer, walletController, oracle) {}
+
+    /**
+     * Create TvmCell with params for market contract
+     */
+    async createParamsForMarket() {}
+
+    /**
      * Create initial data for oracle smart contract
      * @param {String} pubkey 
      * @param {String} addr 
@@ -89,14 +103,51 @@ class ContractController extends Contract {
     async createInitialDataForOracle(pubkey, addr) {}
 
     /**
+     * Create TvmCell with params for oracle contract
+     */
+    async createParamsForOracle() {}
+
+    /**
+     * Create TvmCell with initialData for TIP3Deployer contract
+     * @param {String} ownerAddress_ 
+     */
+    async craeteInitialDataForTIP3Deployer(ownerAddress_) {}
+
+    /**
+     * Create TvmCell with params for TIP3Deployer contract
+     */
+    async craeteParamsForTIP3Deployer() {}
+
+    /**
+     * Create TvmCell with initialData for UserAccount contract
+     * @param {String} msigOwner 
+     */
+    async createInitialDataForUserAccount(msigOwner) {}
+
+    /**
+     * Create TvmCell with params for UserAccount contract
+     */
+    async createParamsForUserAccount() {}
+
+    /**
      * Create initial data for user account manager
      */
-    async createIniaialDataForUserAccountManager() {}
+    async createInitialDataForUserAccountManager() {}
+
+    /**
+     * Create TvmCell with params for UserAccountManager contract
+     */
+    async createParamsForUserAccountManager() {}
 
     /**
      * Create initial data for wallet controller
      */
     async createInitialDataForWalletController() {}
+
+    /**
+     * Create TvmCell with params for WalletController contract
+     */
+    async createParamsForWalletController() {}
 }
 
 
@@ -218,6 +269,27 @@ function extendContractToContractController(contract) {
         })
     };
 
+    contract.createInitialDataForMarket = async function(tokenRoot, tip3Deployer, walletController, oracle) {
+        return await contract.call({
+            method: 'createInitialDataForMarket',
+            params: {
+                tokenRoot: tokenRoot,
+                tip3Deployer: tip3Deployer,
+                walletController: walletController,
+                oracle: oracle
+            },
+            keyPair: contract.keyPair
+        });
+    }
+
+    contract.createParamsForMarket = async function() {
+        return await contract.call({
+            method: 'createParamsForMarket',
+            params: {},
+            keyPair: contract.keyPair
+        });
+    }
+
     contract.createInitialDataForOracle = async function(pubkey, addr) {
         return await contract.call({
             method: 'createInitialDataForOracle',
@@ -226,24 +298,83 @@ function extendContractToContractController(contract) {
                 addr: addr
             },
             keyPair: contract.keyPair
-        })
-    };
+        });
+    }
 
+    contract.createParamsForOracle = async function() {
+        return await contract.call({
+            method: 'createParamsForOracle',
+            params: {},
+            keyPair: {}
+        });
+    }
+
+    contract.craeteInitialDataForTIP3Deployer = async function(ownerAddress_) {
+        return await contract.call({
+            method: 'createInitialDataForTIP3Deployer',
+            params: {
+                ownerAddress_: ownerAddress_
+            },
+            keyPair: contract.keyPair
+        });
+    }
+
+    contract.craeteParamsForTIP3Deployer = async function() {
+        return await contract.call({
+            method: 'createParamsForTIP3Deployer',
+            params: {},
+            keyPair: contract.keyPair
+        });
+    }
+
+    contract.createInitialDataForUserAccount = async function(msigOwner) {
+        return await contract.call({
+            method: 'createInitialDataForUserAccount',
+            params: {
+                msigOwner: msigOwner
+            },
+            keyPair: contract.keyPair
+        });
+    }
+
+    contract.createParamsForUserAccount = async function() {
+        return await contract.call({
+            method: 'createParamsForUserAccount',
+            params: {},
+            keyPair: contract.keyPair
+        });
+    }
     contract.createIniaialDataForUserAccountManager = async function() {
         return await contract.call({
             method: 'createIniaialDataForUserAccountManager',
             params: {},
             keyPair: contract.keyPair
-        })
-    };
+        });
+    }
+
+    contract.createParamsForUserAccountManager = async function() {
+        return await contract.call({
+            method: 'createParamsForUserAccountManager',
+            params: {},
+            keyPair: contract.keyPair
+        });
+    }
 
     contract.createInitialDataForWalletController = async function() {
         return await contract.call({
             method: 'createInitialDataForWalletController',
             params: {},
             keyPair: contract.keyPair
-        })
-    };
+        });
+    }
+
+    contract.createParamsForWalletController = async function() {
+        return await contract.call({
+            method: 'createParamsForWalletController',
+            params: {},
+            keyPair: contract.keyPair
+        });
+    }
 
     return contract;
 }
