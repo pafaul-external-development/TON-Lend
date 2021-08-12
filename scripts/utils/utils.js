@@ -1,4 +1,4 @@
-const { abiContract } = require("@tonclient/core")
+const { abiContract, signerNone } = require("@tonclient/core")
 const Contract = require("locklift/locklift/contract")
 
 /**
@@ -14,7 +14,7 @@ async function encodeMessageBody({
     functionName,
     input
 }) {
-    return await contract.locklift.ton.client.abi.encode_message_body({
+    return (await contract.locklift.ton.client.abi.encode_message_body({
         abi: abiContract(contract.abi),
         call_set: {
             function_name: functionName,
@@ -22,9 +22,17 @@ async function encodeMessageBody({
         },
         is_internal: true,
         signer: signerNone()
-    })
+    })).body;
+}
+
+function describeTransaction(tx) {
+    let description = '';
+    description += `Tx ${tx.compute.success == true ? 'success':'fail'}\n`;
+    description += `Fees: ${tx.fees.total_account_fees}`;
+    return description;
 }
 
 module.exports = {
-    encodeMessageBody
+    encodeMessageBody,
+    describeTransaction
 }

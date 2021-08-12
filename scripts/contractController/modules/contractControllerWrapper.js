@@ -116,7 +116,7 @@ class ContractController extends Contract {
     /**
      * Create TvmCell with params for TIP3Deployer contract
      */
-    async craeteParamsForTIP3Deployer() {}
+    async createParamsForTIP3Deployer() {}
 
     /**
      * Create TvmCell with initialData for UserAccount contract
@@ -305,7 +305,7 @@ function extendContractToContractController(contract) {
         return await contract.call({
             method: 'createParamsForOracle',
             params: {},
-            keyPair: {}
+            keyPair: contract.keyPair
         });
     }
 
@@ -319,7 +319,7 @@ function extendContractToContractController(contract) {
         });
     }
 
-    contract.craeteParamsForTIP3Deployer = async function() {
+    contract.createParamsForTIP3Deployer = async function() {
         return await contract.call({
             method: 'createParamsForTIP3Deployer',
             params: {},
@@ -344,9 +344,9 @@ function extendContractToContractController(contract) {
             keyPair: contract.keyPair
         });
     }
-    contract.createIniaialDataForUserAccountManager = async function() {
+    contract.createInitialDataForUserAccountManager = async function() {
         return await contract.call({
-            method: 'createIniaialDataForUserAccountManager',
+            method: 'createInitialDataForUserAccountManager',
             params: {},
             keyPair: contract.keyPair
         });

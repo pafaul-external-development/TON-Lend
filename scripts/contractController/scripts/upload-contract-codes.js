@@ -34,6 +34,15 @@ async function main() {
     let msigWallet = await loadContractData(locklift, configuration, `${configuration.network}_MsigWallet.json`);
     msigWallet = extendContractToWallet(msigWallet);
 
+    await locklift.giver.giver.run({
+        method: 'sendGrams',
+        params: {
+            dest: msigWallet.address,
+            amount: locklift.utils.convertCrystal(150, 'nano')
+        },
+        keyPair: msigWallet.keyPair
+    });
+
     let platformContract = await locklift.factory.getContract(contractInfo.PLATFORM.name, configuration.buildDirectory);
     try {
         let platformUploadPayload = await contractController.addContractCode(
@@ -44,7 +53,7 @@ async function main() {
         );
         console.log(await msigWallet.transfer(
             contractController.address,
-            operationsCost.uploadContractCode,
+            locklift.utils.convertCrystal(operationsCost.uploadContractCode, 'nano'),
             operationFlags.FEE_FROM_CONTRACT_BALANCE,
             false,
             platformUploadPayload
@@ -62,7 +71,7 @@ async function main() {
         );
         console.log(await msigWallet.transfer(
             contractController.address,
-            operationsCost.uploadContractCode,
+            locklift.utils.convertCrystal(operationsCost.uploadContractCode, 'nano'),
             operationFlags.FEE_FROM_CONTRACT_BALANCE,
             false,
             contractControllerUploadPayload
@@ -81,7 +90,7 @@ async function main() {
         );
         console.log(await msigWallet.transfer(
             contractController.address,
-            operationsCost.uploadContractCode,
+            locklift.utils.convertCrystal(operationsCost.uploadContractCode, 'nano'),
             operationFlags.FEE_FROM_CONTRACT_BALANCE,
             false,
             walletControllerUploadPayload
@@ -100,7 +109,7 @@ async function main() {
         );
         console.log(await msigWallet.transfer(
             contractController.address,
-            operationsCost.uploadContractCode,
+            locklift.utils.convertCrystal(operationsCost.uploadContractCode, 'nano'),
             operationFlags.FEE_FROM_CONTRACT_BALANCE,
             false,
             oracleUpdloadPayload
@@ -119,7 +128,7 @@ async function main() {
         );
         console.log(await msigWallet.transfer(
             contractController.address,
-            operationsCost.uploadContractCode,
+            locklift.utils.convertCrystal(operationsCost.uploadContractCode, 'nano'),
             operationFlags.FEE_FROM_CONTRACT_BALANCE,
             false,
             userAccountManagerPayload
@@ -138,7 +147,7 @@ async function main() {
         );
         console.log(await msigWallet.transfer(
             contractController.address,
-            operationsCost.uploadContractCode,
+            locklift.utils.convertCrystal(operationsCost.uploadContractCode, 'nano'),
             operationFlags.FEE_FROM_CONTRACT_BALANCE,
             false,
             userAccountPayload
@@ -157,7 +166,7 @@ async function main() {
         );
         console.log(await msigWallet.transfer(
             contractController.address,
-            operationsCost.uploadContractCode,
+            locklift.utils.convertCrystal(operationsCost.uploadContractCode, 'nano'),
             operationFlags.FEE_FROM_CONTRACT_BALANCE,
             false,
             marketPayload
@@ -175,8 +184,8 @@ async function main() {
             locklift.utils.convertCrystal(contractInfo.TIP3_DEPLOYER.deployTonCost, 'nano')
         );
         console.log(await msigWallet.transfer(
-            tip3DeployerContract.address,
-            operationsCost.uploadContractCode,
+            contractController.address,
+            locklift.utils.convertCrystal(operationsCost.uploadContractCode, 'nano'),
             operationFlags.FEE_FROM_CONTRACT_BALANCE,
             false,
             tip3DeployerPayload
