@@ -1,4 +1,5 @@
 const Contract = require("locklift/locklift/contract");
+const { encodeMessageBody } = require("../../utils/utils");
 
 /**
  * @classdesc Intreface for Giver contract. Use extendContractToGiver to gain real functionality
@@ -35,49 +36,49 @@ class Oracle extends Contract {
 
     /**
      * 
-     * @param {String} market 
+     * @param {String} tokenRoot
      * @param {String} costToUSD 
      * @returns {Promise<Object>}
      */
-    async externalUpdatePrice(market, costToUSD) {};
+    async externalUpdatePrice(tokenRoot, costToUSD) {};
 
     /**
      * 
-     * @param {String} market 
+     * @param {String} tokenRoot
      * @returns {Promise<Object>}
      */
-    async internalUpdatePrice(market) {};
+    async internalUpdatePrice(tokenRoot) {};
 
     /**
      * 
-     * @param {String} market 
+     * @param {String} tokenRoot 
      * @param {String} payload 
      * @returns {Promise<Object>}
      */
-    async getMarketPrice(market, payload) {};
+    async getTokenPrice(tokenRoot, payload) {};
 
     /**
      * 
      * @param {String} payload 
      * @returns {Promise<Object>}
      */
-    async getAllMarketsPrices(payload) {};
+    async getAllTokenPrices(payload) {};
 
     /**
      * 
-     * @param {String} market 
+     * @param {String} tokenRoot 
      * @param {String} swapPairAddress 
      * @param {Boolean} isLeft 
      * @returns {Promise<Object>}
      */
-    async addMarket(market, swapPairAddress, isLeft) {};
+    async addToken(tokenRoot, swapPairAddress, isLeft) {};
 
     /**
      * 
-     * @param {String} market 
+     * @param {String} tokenRoot 
      * @returns {Promise<Object>}
      */
-    async removeMarket(market) {};
+    async removeToken(tokenRoot) {};
 }
 
 
@@ -88,10 +89,10 @@ class Oracle extends Contract {
  */
 function extendContractToOracle(contract) {
     contract.getVersion = async function() {
-        return await contract.call({
-            method: 'getVersion',
-            params: {},
-            keyPair: contract.keyPair
+        return await encodeMessageBody({
+            contract: contract,
+            functionName: 'getVersion',
+            input: {}
         })
     }
 
@@ -104,60 +105,60 @@ function extendContractToOracle(contract) {
     }
 
     contract.changeOwnerAddress = async function(newOwnerAddress) {
-        return await contract.run({
-            method: 'changeOwnerAddress',
-            params: {
+        return await encodeMessageBody({
+            contract: contract,
+            functionName: 'changeOwnerAddress',
+            input: {
                 newOwnerAddress: newOwnerAddress
-            },
-            keyPair: contract.keyPair
+            }
         })
     }
 
     contract.changeOwnerPubkey = async function(newOwnerPubkey) {
-        return await contract.run({
-            method: 'changeOwnerPubkey',
-            params: {
+        return await encodeMessageBody({
+            contract: contract,
+            functionName: 'changeOwnerPubkey',
+            input: {
                 newOwnerPubkey: newOwnerPubkey
-            },
-            keyPair: contract.keyPair
+            }
         })
     }
 
-    contract.externalUpdatePrice = async function(market, costToUSD) {
-        return await contract.run({
-            method: 'externalUpdatePrice',
-            params: {
-                market: market,
+    contract.externalUpdatePrice = async function(tokenRoot, costToUSD) {
+        return await encodeMessageBody({
+            contract: contract,
+            functionName: 'externalUpdatePrice',
+            input: {
+                tokenRoot: tokenRoot,
                 costToUSD: costToUSD
-            },
-            keyPair: contract.keyPair
+            }
         })
     }
 
-    contract.internalUpdatePrice = async function(market) {
-        return await contract.run({
-            method: 'internalUpdatePrice',
-            params: {
-                market: market
-            },
-            keyPair: contract.keyPair
+    contract.internalUpdatePrice = async function(tokenRoot) {
+        return await encodeMessageBody({
+            contract: contract,
+            functionName: 'internalUpdatePrice',
+            input: {
+                tokenRoot: tokenRoot
+            }
         })
     }
 
-    contract.getMarketPrice = async function(market, payload) {
+    contract.getTokenPrice = async function(tokenRoot, payload) {
         return await contract.call({
-            method: 'getMarketPrice',
+            method: 'getTokenPrice',
             params: {
-                market: market,
+                tokenRoot: tokenRoot,
                 payload: payload
             },
             keyPair: contract.keyPair
         })
     }
 
-    contract.getAllMarketsPrices = async function(payload) {
+    contract.getAllTokenPrices = async function(payload) {
         return await contract.call({
-            method: 'getAllMarketsPrices',
+            method: 'getAllTokenPrices',
             params: {
                 payload: payload
             },
@@ -165,25 +166,25 @@ function extendContractToOracle(contract) {
         })
     }
 
-    contract.addMarket = async function(market, swapPairAddress, isLeft) {
-        return await contract.run({
-            method: 'addMarket',
-            params: {
-                market: market,
+    contract.addToken = async function(tokenRoot, swapPairAddress, isLeft) {
+        return await encodeMessageBody({
+            contract: contract,
+            functionName: 'addToken',
+            input: {
+                tokenRoot: tokenRoot,
                 swapPairAddress: swapPairAddress,
                 isLeft: isLeft
-            },
-            keyPair: contract.keyPair
+            }
         })
     }
 
-    contract.removeMarket = async function(market) {
-        return await contract.run({
-            method: 'removeMarket',
-            params: {
-                market: market
-            },
-            keyPair: contract.keyPair
+    contract.removeToken = async function(tokenRoot) {
+        return await encodeMessageBody({
+            contract: contract,
+            functionName: 'removeToken',
+            input: {
+                tokenRoot: tokenRoot
+            }
         })
     }
 

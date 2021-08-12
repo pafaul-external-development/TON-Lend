@@ -50,6 +50,12 @@ const contractInfo = {
         deployTonCost: 5,
         codeVersion: 0,
         id: 6
+    },
+    TIP3_DEPLOYER: {
+        name: 'TIP3Deployer',
+        deployTonCost: 5,
+        codeVersion: 0,
+        id: 7
     }
 }
 

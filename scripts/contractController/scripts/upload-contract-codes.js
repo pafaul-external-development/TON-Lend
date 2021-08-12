@@ -18,6 +18,17 @@ async function main() {
     contractController = extendContractToContractController(contractController);
 
     /**
+     * Platform +
+     * Contract controller +
+     * wallet controller +
+     * oracle +
+     * user account manager +
+     * user account +
+     * market +
+     * tip3 deployer
+     */
+
+    /**
      * @type {MsigWallet}
      */
     let msigWallet = await loadContractData(locklift, configuration, `${configuration.network}_MsigWallet.json`);
@@ -60,6 +71,25 @@ async function main() {
         console.log(describeError(err));
     }
 
+    let walletContract = await locklift.factory.getContract(contractInfo.WALLET_CONTROLLER.name, configuration.buildDirectory);
+    try {
+        let walletControllerUploadPayload = await contractController.addContractCode(
+            contractInfo.WALLET_CONTROLLER.id,
+            walletContract.code,
+            contractInfo.WALLET_CONTROLLER.codeVersion,
+            locklift.utils.convertCrystal(contractInfo.WALLET_CONTROLLER.deployTonCost, 'nano')
+        );
+        console.log(await msigWallet.transfer(
+            contractController.address,
+            operationsCost.uploadContractCode,
+            operationFlags.FEE_FROM_CONTRACT_BALANCE,
+            false,
+            walletControllerUploadPayload
+        ));
+    } catch (err) {
+        console.log(describeError(err));
+    }
+
     let oracleContract = await locklift.factory.getContract(contractInfo.ORACLE.name, configuration.buildDirectory);
     try {
         let oracleUpdloadPayload = await contractController.addContractCode(
@@ -79,20 +109,77 @@ async function main() {
         console.log(describeError(err));
     }
 
-    let walletContract = await locklift.factory.getContract(contractInfo.WALLET_CONTROLLER.name, configuration.buildDirectory);
+    let userAccountManagerContract = await locklift.factory.getContract(contractInfo.USER_ACCOUNT_MANAGER.name, configuration.buildDirectory);
     try {
-        let walletControllerUploadPayload = await contractController.addContractCode(
-            contractInfo.WALLET_CONTROLLER.id,
-            walletContract.code,
-            contractInfo.WALLET_CONTROLLER.codeVersion,
-            locklift.utils.convertCrystal(contractInfo.WALLET_CONTROLLER.deployTonCost, 'nano')
+        let userAccountManagerPayload = await contractController.addContractCode(
+            contractInfo.USER_ACCOUNT_MANAGER.id,
+            userAccountManagerContract.code,
+            contractInfo.USER_ACCOUNT_MANAGER.codeVersion,
+            locklift.utils.convertCrystal(contractInfo.USER_ACCOUNT_MANAGER.deployTonCost, 'nano')
         );
         console.log(await msigWallet.transfer(
             contractController.address,
             operationsCost.uploadContractCode,
             operationFlags.FEE_FROM_CONTRACT_BALANCE,
             false,
-            walletControllerUploadPayload
+            userAccountManagerPayload
+        ));
+    } catch (err) {
+        console.log(describeError(err));
+    }
+
+    let userAccountContract = await locklift.factory.getContract(contractInfo.USER_ACCOUNT.name, configuration.buildDirectory);
+    try {
+        let userAccountPayload = await contractController.addContractCode(
+            contractInfo.USER_ACCOUNT.id,
+            userAccountContract.code,
+            contractInfo.USER_ACCOUNT.codeVersion,
+            locklift.utils.convertCrystal(contractInfo.USER_ACCOUNT.deployTonCost, 'nano')
+        );
+        console.log(await msigWallet.transfer(
+            contractController.address,
+            operationsCost.uploadContractCode,
+            operationFlags.FEE_FROM_CONTRACT_BALANCE,
+            false,
+            userAccountPayload
+        ));
+    } catch (err) {
+        console.log(describeError(err));
+    }
+
+    let marketContract = await locklift.factory.getContract(contractInfo.MARKET.name, configuration.buildDirectory);
+    try {
+        let marketPayload = await contractController.addContractCode(
+            contractInfo.MARKET.id,
+            marketContract.code,
+            contractInfo.MARKET.codeVersion,
+            locklift.utils.convertCrystal(contractInfo.MARKET.deployTonCost, 'nano')
+        );
+        console.log(await msigWallet.transfer(
+            contractController.address,
+            operationsCost.uploadContractCode,
+            operationFlags.FEE_FROM_CONTRACT_BALANCE,
+            false,
+            marketPayload
+        ));
+    } catch (err) {
+        console.log(describeError(err));
+    }
+
+    let tip3DeployerContract = await locklift.factory.getContract(contractInfo.TIP3_DEPLOYER.name, configuration.buildDirectory);
+    try {
+        let tip3DeployerPayload = await contractController.addContractCode(
+            contractInfo.TIP3_DEPLOYER.id,
+            tip3DeployerContract.code,
+            contractInfo.TIP3_DEPLOYER.codeVersion,
+            locklift.utils.convertCrystal(contractInfo.TIP3_DEPLOYER.deployTonCost, 'nano')
+        );
+        console.log(await msigWallet.transfer(
+            tip3DeployerContract.address,
+            operationsCost.uploadContractCode,
+            operationFlags.FEE_FROM_CONTRACT_BALANCE,
+            false,
+            tip3DeployerPayload
         ));
     } catch (err) {
         console.log(describeError(err));

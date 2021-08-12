@@ -3,9 +3,10 @@ const Contract = require("locklift/locklift/contract")
 
 /**
  * Encode message body
- * @param {Contract} contract 
- * @param {String} functionName 
- * @param {JSON} input 
+ * @param {Object} encodeMessageBodyParameters
+ * @param {Contract} encodeMessageBodyParameters.contract 
+ * @param {String} encodeMessageBodyParameters.functionName 
+ * @param {JSON} encodeMessageBodyParameters.input 
  * @returns 
  */
 async function encodeMessageBody({

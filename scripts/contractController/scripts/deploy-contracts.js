@@ -14,7 +14,7 @@ async function main() {
     /**
      * @type {ContractController}
      */
-    let contractController = await loadContractData(locklift, configuration, `./${configuration.network}_ContractController.json`);
+    let contractController = await loadContractData(locklift, configuration, `${configuration.network}_ContractController.json`);
     contractController = extendContractToContractController(contractController);
 
     /**
@@ -46,7 +46,7 @@ async function main() {
         console.log(describeError(err));
     }
 
-    let walletContract = await locklift.factory.getContract(contractInfo.WALLET_CONTROLLER.name, configuration.buildDirectory);
+    let walletControllerContract = await locklift.factory.getContract(contractInfo.WALLET_CONTROLLER.name, configuration.buildDirectory);
     try {
         let walletControllerInitialData = await contractController.createInitialDataForWalletController();
         let walletControllerInitialParams = await contractController.createInitialParamsForWalletController();
