@@ -280,22 +280,71 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
     }
 
     /*********************************************************************************************************/
-    /**
-     * @param pubkey Owner pubkey
-     * @param addr Owner address
-     */
-    function createInitialDataForOracle(uint256 pubkey, address addr) external override returns(TvmCell) {
+    function createInitialDataForMarket(address tokenRoot, address tip3Deployer, address walletController, address oracle) external override returns (TvmCell) {
         TvmBuilder initialData;
-        initialData.store(pubkey, addr);
+        initialData.store(tokenRoot);
+
+        TvmBuilder helperContracts;
+        helperContracts.store(tip3Deployer);
+        helperContracts.store(walletController);
+        helperContracts.store(oracle);
+
+        initialData.store(helperContracts.toCell());
         return initialData.toCell();
     }
-
-    function createInitialDataForUserAccountManager() external override returns(TvmCell) {
+    function createParamsForMarket() external override returns (TvmCell) {
         TvmCell empty;
         return empty;
     }
 
-    function createInitialDataForWalletController() external override returns(TvmCell) {
+    /**
+     * @param pubkey Owner pubkey
+     * @param addr Owner address
+     */
+    function createInitialDataForOracle(uint256 pubkey, address addr) external override returns (TvmCell) {
+        TvmBuilder initialData;
+        initialData.store(pubkey, addr);
+        return initialData.toCell();
+    }
+    function createParamsForOracle() external override returns (TvmCell) {
+        TvmCell empty;
+        return empty;
+    }
+
+    function craeteInitialDataForTIP3Deployer(address ownerAddress_) external override returns (TvmCell) {
+        TvmBuilder initialData;
+        initialData.store(ownerAddress_);
+        return initialData.toCell();
+    }
+    function craeteParamsForTIP3Deployer() external override returns (TvmCell) {
+        TvmCell empty;
+        return empty;
+    }
+
+    function createInitialDataForUserAccount(address msigOwner) external override returns (TvmCell) {
+        TvmBuilder initialData;
+        initialData.store(msigOwner);
+        return initialData.toCell();
+    }
+    function createParamsForUserAccount() external override returns (TvmCell) {
+        TvmCell empty;
+        return empty;
+    }
+
+    function createInitialDataForUserAccountManager() external override returns (TvmCell) {
+        TvmCell empty;
+        return empty;
+    }
+    function createParamsForUserAccountManager() external override returns (TvmCell) {
+        TvmCell empty;
+        return empty;
+    }
+
+    function createInitialDataForWalletController() external override returns (TvmCell) {
+        TvmCell empty;
+        return empty;
+    }
+    function createParamsForWalletController() external override returns (TvmCell) {
         TvmCell empty;
         return empty;
     }
