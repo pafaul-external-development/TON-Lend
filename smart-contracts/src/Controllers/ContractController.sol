@@ -311,12 +311,12 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
         return empty;
     }
 
-    function craeteInitialDataForTIP3Deployer(address ownerAddress_) external override returns (TvmCell) {
+    function createInitialDataForTIP3Deployer(address ownerAddress_) external override returns (TvmCell) {
         TvmBuilder initialData;
         initialData.store(ownerAddress_);
         return initialData.toCell();
     }
-    function craeteParamsForTIP3Deployer() external override returns (TvmCell) {
+    function createParamsForTIP3Deployer() external override returns (TvmCell) {
         TvmCell empty;
         return empty;
     }
