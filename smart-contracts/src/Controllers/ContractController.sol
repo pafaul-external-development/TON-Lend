@@ -123,14 +123,14 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
         require(msg.value >= contractCodes[contractType].deployCost, ContractControllerErrorCodes.ERROR_MSG_VALUE_LOW);
         tvm.accept();
         address newContract = new Platform{
+            contr: Platform,
             varInit: {
                 root: address(this),
                 platformType: contractType,
                 platformCode: contractCodes[PlatformCodes.PLATFORM].code,
                 initialData: initialData
             },
-            value: contractCodes[contractType].deployCost,
-            code: contractCodes[PlatformCodes.PLATFORM].code
+            value: contractCodes[contractType].deployCost
         }(contractCodes[contractType].code, params);
         knownContracts[newContract] = contractType;
         deployedContracts[contractType].push(newContract);

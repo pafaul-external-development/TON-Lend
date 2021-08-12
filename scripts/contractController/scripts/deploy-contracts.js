@@ -18,9 +18,17 @@ const { describeError } = require("../modules/errorDescription");
 const { extendContractToWallet, MsigWallet } = require("../../wallet/modules/walletWrapper");
 const { operationFlags } = require("../../utils/transferFlags");
 const { describeTransaction } = require("../../utils/utils");
+const Contract = require("locklift/locklift/contract");
+const { abiContract } = require("@tonclient/core");
 
 async function main() {
     let locklift = await initializeLocklift(configuration.pathToLockliftConfig, configuration.network);
+
+    /**
+     * @type {Contract}
+     */
+    let platform = await locklift.factory.getContract('Platform', configuration.buildDirectory);
+
     /**
      * @type {ContractController}
      */
@@ -127,7 +135,27 @@ async function main() {
     }
 
     try {
-        console.log(await contractController.getContractAddresses(contractInfo.TIP3_DEPLOYER.id));
+        let tip3DeployerAddress = (await contractController.getContractAddresses(contractInfo.TIP3_DEPLOYER.id))[0];
+        const {
+            result: [{
+                boc
+            }]
+        } = await locklift.ton.client.net.query_collection({
+            collection: 'accounts',
+            filter: {
+                id: {
+                    eq: tip3DeployerAddress,
+                }
+            },
+            result: 'boc'
+        });
+
+        console.log(await locklift.ton.client.abi.decode_account_data({
+            abi: abiContract(platform.abi),
+            data: boc
+        }));
+
+        console.log(tip3DeployerAddress);
         console.log(await contractController.getContractAddresses(contractInfo.ORACLE.id));
         console.log(await contractController.getContractAddresses(contractInfo.WALLET_CONTROLLER.id));
         console.log(await contractController.getContractAddresses(contractInfo.USER_ACCOUNT_MANAGER.id));
