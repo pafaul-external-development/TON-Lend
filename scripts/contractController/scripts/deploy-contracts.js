@@ -1,3 +1,11 @@
+/**
+ * Deploy sequence (if ContractController is already deployed):
+ * 1. TIP3Deployer
+ * 2. Oracle
+ * 3. UserAccountController
+ * 4. Market
+ */
+
 const { ContractController, extendContractToContractController } = require("../modules/contractControllerWrapper");
 
 const initializeLocklift = require("../../initializeLocklift");
@@ -23,17 +31,22 @@ async function main() {
     let msigWallet = await loadContractData(locklift, configuration, `${configuration.network}_MsigWallet.json`);
     msigWallet = extendContractToWallet(msigWallet);
 
+    let tip3DeployerContract = await locklift.factory.getContract(contractInfo.TIP3_DEPLOYER, configuration.buildDirectory);
+    try {
+        let tip3DeployerInitialData = await contractController.createInitialDataForTIP3Deployer
+    }
+
     let oracleContract = await locklift.factory.getContract(contractInfo.ORACLE.name, configuration.buildDirectory);
     try {
         let oracleInitialData = await contractController.createInitialDataForOracle(
             oracleContract.keyPair.public,
             msigWallet.address
         );
-        let oracleInitialParams = await contractController.createInitialParamsForOracle();
+        let oracleParams = await contractController.createParamsForOracle();
         let oracleCreatePayload = await contractController.createContract(
             contractInfo.ORACLE.id,
             oracleInitialData,
-            oracleInitialParams
+            oracleParams
         );
         console.log(await msigWallet.transfer(
             contractController.address,
@@ -49,11 +62,11 @@ async function main() {
     let walletControllerContract = await locklift.factory.getContract(contractInfo.WALLET_CONTROLLER.name, configuration.buildDirectory);
     try {
         let walletControllerInitialData = await contractController.createInitialDataForWalletController();
-        let walletControllerInitialParams = await contractController.createInitialParamsForWalletController();
+        let walletControllerParams = await contractController.createParamsForWalletController();
         let walletControllerCreatePayload = await contractController.addContractCode(
             contractInfo.WALLET_CONTROLLER.id,
             walletControllerInitialData,
-            walletControllerInitialParams
+            walletControllerParams
         );
         console.log(await msigWallet.transfer(
             contractController.address,

@@ -111,7 +111,7 @@ class ContractController extends Contract {
      * Create TvmCell with initialData for TIP3Deployer contract
      * @param {String} ownerAddress_ 
      */
-    async craeteInitialDataForTIP3Deployer(ownerAddress_) {}
+    async createInitialDataForTIP3Deployer(ownerAddress_) {}
 
     /**
      * Create TvmCell with params for TIP3Deployer contract
@@ -309,7 +309,7 @@ function extendContractToContractController(contract) {
         });
     }
 
-    contract.craeteInitialDataForTIP3Deployer = async function(ownerAddress_) {
+    contract.createInitialDataForTIP3Deployer = async function(ownerAddress_) {
         return await contract.call({
             method: 'createInitialDataForTIP3Deployer',
             params: {

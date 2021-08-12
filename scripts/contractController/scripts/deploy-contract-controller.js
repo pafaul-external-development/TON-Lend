@@ -1,6 +1,3 @@
-const { expect } = require('chai');
-const { Locklift } = require('locklift/locklift');
-const Contract = require('locklift/locklift/contract');
 const logger = require('mocha-logger');
 const tryToExtractAddress = require('../../errorHandler/errorHandler');
 const initializeLocklift = require('../../initializeLocklift');
@@ -8,8 +5,6 @@ const { writeContractData, loadContractData } = require('../../migration/manageC
 
 const configuration = require('../../scripts.conf');
 const { extendContractToContractController, ContractController } = require('../modules/contractControllerWrapper');
-
-let keyPair = undefined;
 
 async function main() {
     let locklift = await initializeLocklift(configuration.pathToLockliftConfig, configuration.network);
