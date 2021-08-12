@@ -72,8 +72,6 @@ contract Market is IUpgradableContract
                 2. initialData
                     bits:
                         1. address token
-                        2. address swapPairAddress
-                        3. bool isLeft
                     refs:
                         1. Custom contracts
                             bits:
