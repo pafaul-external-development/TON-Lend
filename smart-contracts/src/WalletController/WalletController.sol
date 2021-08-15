@@ -49,6 +49,7 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
      * @param data Data builded in upgradeContractCode
      */
     function onCodeUpgrade(TvmCell data) private {
+        tvm.resetStorage();
         TvmSlice dataSlice = data.toSlice();
         (root, contractType) = dataSlice.decode(address, uint8);
         contractCodeVersion = 0;

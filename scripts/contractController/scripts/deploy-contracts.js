@@ -9,8 +9,8 @@
 
 const { ContractController, extendContractToContractController } = require("../modules/contractControllerWrapper");
 
-const initializeLocklift = require("../../initializeLocklift");
-const { loadContractData } = require("../../migration/manageContractData");
+const initializeLocklift = require("../../utils/initializeLocklift");
+const { loadContractData, writeContractData } = require("../../utils/migration/manageContractData");
 
 const configuration = require("../../scripts.conf");
 const { contractInfo, operationsCost } = require("../modules/contractControllerConstants");
@@ -19,7 +19,7 @@ const { extendContractToWallet, MsigWallet } = require("../../wallet/modules/wal
 const { operationFlags } = require("../../utils/transferFlags");
 const { describeTransaction } = require("../../utils/utils");
 const Contract = require("locklift/locklift/contract");
-const { abiContract } = require("@tonclient/core");
+const { abiContract, signerNone } = require("@tonclient/core");
 
 async function main() {
     let locklift = await initializeLocklift(configuration.pathToLockliftConfig, configuration.network);
@@ -136,24 +136,18 @@ async function main() {
 
     try {
         let tip3DeployerAddress = (await contractController.getContractAddresses(contractInfo.TIP3_DEPLOYER.id))[0];
-        const {
-            result: [{
-                boc
-            }]
-        } = await locklift.ton.client.net.query_collection({
-            collection: 'accounts',
-            filter: {
-                id: {
-                    eq: tip3DeployerAddress,
-                }
-            },
-            result: 'boc'
-        });
+        let oracleAddress = (await contractController.getContractAddresses(contractInfo.ORACLE.id))[0];
+        let walletControllerAddress = (await contractController.getContractAddresses(contractInfo.WALLET_CONTROLLER.id))[0];
+        let userAccountManagerAddress = (await contractController.getContractAddresses(contractInfo.USER_ACCOUNT_MANAGER.id))[0];
+        tip3DeployerContract.setAddress(tip3DeployerAddress);
+        oracleContract.setAddress(oracleAddress);
+        walletControllerContract.setAddress(walletControllerAddress);
+        UserAccountManagerContract.setAddress(userAccountManagerAddress);
 
-        console.log(await locklift.ton.client.abi.decode_account_data({
-            abi: abiContract(platform.abi),
-            data: boc
-        }));
+        writeContractData(tip3DeployerContract, 'TIP3DeployerContract.json');
+        writeContractData(oracleContract, 'Oracle.json');
+        writeContractData(walletControllerContract, 'WalletController.json');
+        writeContractData(UserAccountManagerContract, 'UserAccountManager.json');
 
         console.log(tip3DeployerAddress);
         console.log(await contractController.getContractAddresses(contractInfo.ORACLE.id));

@@ -41,9 +41,9 @@ contract TIP3TokenDeployer is ITIP3Deployer, ITIP3DeployerManageCode, ITIP3Deplo
                 bits:
                     address ownerAddress
      */
-    function onCodeUpgrade(TvmCell data) private {
-        tvm.accept();
-        TvmSlice dataSlice = data.toSlice();
+    function onCodeUpgrade(TvmCell upgradeData) private {
+        tvm.resetStorage();
+        TvmSlice dataSlice = upgradeData.toSlice();
         (root, contractType) = dataSlice.decode(address, uint8);
 
         platformCode = dataSlice.loadRef();         // Loading platform code

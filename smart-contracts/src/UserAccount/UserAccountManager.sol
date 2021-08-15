@@ -56,15 +56,13 @@ contract UserAccountManager is IUpgradableContract, IReceiveAddressCallback {
         bits:
             address root
             uint8 platformType
-            address gasTo ?
         refs:
             1. platformCode
      */
     function onCodeUpgrade(TvmCell data) private {
+        tvm.resetStorage();
         TvmSlice dataSlice = data.toSlice();
-        (address root_, uint8 platformType, address sendGasTo) = dataSlice.decode(address, uint8, address);
-        root = root_;
-        contractType = platformType;
+        (root, contractType) = dataSlice.decode(address, uint8);
 
         platformCode = dataSlice.loadRef();         // Loading platform code
     }

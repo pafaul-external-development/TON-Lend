@@ -1,7 +1,7 @@
 const logger = require('mocha-logger');
 const tryToExtractAddress = require('../../errorHandler/errorHandler');
-const initializeLocklift = require('../../initializeLocklift');
-const { writeContractData, loadContractData } = require('../../migration/manageContractData');
+const initializeLocklift = require('../../utils/initializeLocklift');
+const { writeContractData, loadContractData } = require('../../utils/migration/manageContractData');
 
 const configuration = require('../../scripts.conf');
 const { extendContractToContractController, ContractController } = require('../modules/contractControllerWrapper');

@@ -2,9 +2,9 @@ const { Locklift } = require('locklift/locklift');
 const Contract = require('locklift/locklift/contract');
 
 const tryToExtractAddress = require('../../errorHandler/errorHandler');
-const { writeContractData } = require('../../migration/manageContractData');
+const { writeContractData } = require('../../utils/migration/manageContractData');
 
-const initializeLocklift = require('../../initializeLocklift');
+const initializeLocklift = require('../../utils/initializeLocklift');
 const configuration = require('../../scripts.conf');
 
 async function main() {

@@ -37,10 +37,11 @@ class Oracle extends Contract {
     /**
      * 
      * @param {String} tokenRoot
-     * @param {String} costToUSD 
+     * @param {String} tokens
+     * @param {String} usd 
      * @returns {Promise<Object>}
      */
-    async externalUpdatePrice(tokenRoot, costToUSD) {};
+    async externalUpdatePrice(tokenRoot, tokens, usd) {};
 
     /**
      * 
@@ -124,13 +125,14 @@ function extendContractToOracle(contract) {
         })
     }
 
-    contract.externalUpdatePrice = async function(tokenRoot, costToUSD) {
+    contract.externalUpdatePrice = async function(tokenRoot, tokens, usd) {
         return await encodeMessageBody({
             contract: contract,
             functionName: 'externalUpdatePrice',
             input: {
                 tokenRoot: tokenRoot,
-                costToUSD: costToUSD
+                tokens: tokens,
+                usd: usd
             }
         })
     }

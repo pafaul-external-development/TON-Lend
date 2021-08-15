@@ -39,6 +39,7 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
                     address msigOwner
      */
     function onCodeUpgrade(TvmCell data) private {
+        tvm.resetStorage();
         TvmSlice dataSlice = data.toSlice();
         address sendGasTo;
         (root, contractType, sendGasTo) = dataSlice.decode(address, uint8, address);

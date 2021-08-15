@@ -1,7 +1,7 @@
 const { ContractController, extendContractToContractController } = require("../modules/contractControllerWrapper");
 
-const initializeLocklift = require("../../initializeLocklift");
-const { loadContractData } = require("../../migration/manageContractData");
+const initializeLocklift = require("../../utils/initializeLocklift");
+const { loadContractData } = require("../../utils/migration/manageContractData");
 
 const configuration = require("../../scripts.conf");
 const { contractInfo, operationsCost } = require("../modules/contractControllerConstants");
@@ -80,11 +80,11 @@ async function main() {
         console.log(describeError(err));
     }
 
-    let walletContract = await locklift.factory.getContract(contractInfo.WALLET_CONTROLLER.name, configuration.buildDirectory);
+    let walletControllerContract = await locklift.factory.getContract(contractInfo.WALLET_CONTROLLER.name, configuration.buildDirectory);
     try {
         let walletControllerUploadPayload = await contractController.addContractCode(
             contractInfo.WALLET_CONTROLLER.id,
-            walletContract.code,
+            walletControllerContract.code,
             contractInfo.WALLET_CONTROLLER.codeVersion,
             locklift.utils.convertCrystal(contractInfo.WALLET_CONTROLLER.deployTonCost, 'nano')
         );

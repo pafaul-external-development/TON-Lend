@@ -119,22 +119,27 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
      * @param initialData InitialData for deployed smart contract
      * @param params Parameters for smart contract deployment
      */
-    function createContract(uint8 contractType, TvmCell initialData, TvmCell params) override external responsible creator contractTypeExists(contractType, true) returns (address) {
+    function createContract(uint8 contractType, TvmCell initialData, TvmCell params) override external responsible creator contractTypeExists(contractType, true) returns(address)
+    {
         require(msg.value >= contractCodes[contractType].deployCost, ContractControllerErrorCodes.ERROR_MSG_VALUE_LOW);
-        tvm.accept();
-        address newContract = new Platform{
-            contr: Platform,
-            varInit: {
-                root: address(this),
-                platformType: contractType,
-                platformCode: contractCodes[PlatformCodes.PLATFORM].code,
-                initialData: initialData
-            },
-            value: contractCodes[contractType].deployCost
-        }(contractCodes[contractType].code, params);
-        knownContracts[newContract] = contractType;
-        deployedContracts[contractType].push(newContract);
-        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } newContract;
+        address newContract;
+        bool contractExists = knownContracts.exists(newContract);
+        if (!contractExists) {
+            tvm.rawReserve(msg.value, 2);
+            newContract = new Platform{
+                stateInit: _buildInitialData(contractType, initialData),
+                code: contractCodes[PlatformCodes.PLATFORM].code,
+                value: contractCodes[contractType].deployCost
+            }(contractCodes[contractType].code, params); 
+        } else {
+            revert();
+        }
+
+        if (contractType != PlatformCodes.USER_ACCOUNT && !contractExists) {
+            knownContracts[newContract] = contractType;
+            deployedContracts[contractType].push(newContract);
+        }
+        return newContract;
     }
 
     /**
@@ -231,13 +236,19 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
                 platformCode: contractCodes[PlatformCodes.PLATFORM].code,
                 initialData: initialData
             },
-            pubkey: 0,
+            pubkey: tvm.pubkey(),
             code: contractCodes[PlatformCodes.PLATFORM].code
         });
     }
 
     /*********************************************************************************************************/
     // modifiers
+
+    modifier onlySelf() {
+        require(msg.sender == address(this));
+        _;
+    }
+
     modifier onlyOwner() {
         require(msg.sender == ownerAddress, ContractControllerErrorCodes.ERROR_MSG_SENDER_IS_NOT_ROOT);
         _;

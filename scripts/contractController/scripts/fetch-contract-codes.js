@@ -1,5 +1,5 @@
-const initializeLocklift = require("../../initializeLocklift");
-const { loadContractData } = require("../../migration/manageContractData");
+const initializeLocklift = require("../../utils/initializeLocklift");
+const { loadContractData } = require("../../utils/migration/manageContractData");
 const configuration = require("../../scripts.conf");
 const { contractInfo } = require("../modules/contractControllerConstants");
 const { ContractController, extendContractToContractController } = require("../modules/contractControllerWrapper");
