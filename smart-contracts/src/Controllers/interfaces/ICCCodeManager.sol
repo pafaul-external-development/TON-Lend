@@ -6,7 +6,7 @@ pragma AbiHeader pubkey;
 interface IContractControllerCodeManager {
     
     function addContractCode(uint8 contractType, TvmCell code, uint32 codeVersion, uint128 deployCost) external;
-    function createContract(uint8 contractType, TvmCell initialData, TvmCell params) external responsible returns (address);
+    function createContract(uint8 contractType, TvmCell initialData, TvmCell params) external responsible returns(address);
     function updateContractCode(uint8 contractType, TvmCell code, uint32 codeVersion) external;
     function updateContract(uint8 contractType, address contractAddress, TvmCell updateParams) external;
     function updateContracts(uint8 contractType, TvmCell updateParams) external;

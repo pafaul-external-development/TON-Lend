@@ -1,6 +1,7 @@
 pragma ton-solidity >= 0.39.0;
 
 import "./libraries/CostConstants.sol";
+import "./libraries/MarketErrorCodes.sol";
 
 import "../Controllers/interfaces/ICCMarketDeployed.sol";
 import "../TIP3Deployer/interfaces/ITIP3Deployer.sol";
@@ -83,6 +84,7 @@ contract Market is IUpgradableContract
      * @param data Data builded in upgradeContractCode
      */
     function onCodeUpgrade(TvmCell data) private {
+        tvm.resetStorage();
         TvmSlice dataSlice = data.toSlice();
         (root, contractType) = dataSlice.decode(address, uint8);
         contractCodeVersion = 0;
@@ -106,11 +108,17 @@ contract Market is IUpgradableContract
         }();
     }
 
+    /**
+     * @param rootTokenDetails Received information about real token
+     */
     function receiveTIP3Information(IRootTokenContract.IRootTokenContractDetails rootTokenDetails) external view onlyRealTokenRoot {
         tvm.accept();
         prepareDataForNewTIP3(rootTokenDetails);
     }
 
+    /**
+     * @param rootTokenDetails Received information about real token
+     */
     function prepareDataForNewTIP3(IRootTokenContract.IRootTokenContractDetails rootTokenDetails) private view {
         IRootTokenContract.IRootTokenContractDetails newRootInfo;
         string initialName = "v";
@@ -126,6 +134,9 @@ contract Market is IUpgradableContract
         deployNewTIP3Token(newRootInfo);
     }
 
+    /**
+     * @param newRootTokenDetails Root token information prepared for new token deployment
+     */
     function deployNewTIP3Token(IRootTokenContract.IRootTokenContractDetails newRootTokenDetails) private view {
         tvm.accept();
         ITIP3Deployer(tip3Deployer).deployTIP3{
@@ -135,6 +146,9 @@ contract Market is IUpgradableContract
         }(newRootTokenDetails, CostConstants.USE_TO_DEPLOY_TIP3_ROOT, tvm.pubkey());
     }
 
+    /**
+     * @param tip3RootAddress Received address of virtual token root
+     */
     function receiveNewTIP3Address(address tip3RootAddress) external onlyTIP3Deployer {
         tvm.accept();
         wrappedToken = tip3RootAddress;
@@ -147,34 +161,36 @@ contract Market is IUpgradableContract
     /*********************************************************************************************************/
     // modifiers
 
-    // TODO: add error codes
     modifier onlyRoot() {
-        require(msg.sender == root);
+        require(msg.sender == root, MarketErrorCodes.ERROR_MSG_SENDER_IS_NOT_ROOT);
         _;
     }
 
     modifier onlySelf() {
-        require(msg.sender == address(this));
+        require(msg.sender == address(this), MarketErrorCodes.ERROR_MSG_SENDER_IS_NOT_SELF);
         _;
     }
 
     modifier onlyRealTokenRoot() {
-        require(msg.sender == token);
+        require(msg.sender == token, MarketErrorCodes.ERROR_MSG_SENDER_IS_NOT_REAL_TOKEN);
         _;
     }
 
     modifier onlyVirtualTokenRoot() {
-        require(msg.sender == wrappedToken);
+        require(msg.sender == wrappedToken, MarketErrorCodes.ERROR_MSG_SENDER_IS_NOT_VIRTUAL_TOKEN);
         _;
     }
 
     modifier onlyTIP3Deployer() {
-        require(msg.sender == tip3Deployer);
+        require(msg.sender == tip3Deployer, MarketErrorCodes.ERROR_MSG_SENDER_IS_NOT_TIP3_DEPLOYER);
         _;
     }
 
+    /**
+     * @param contractType_ Type of contract
+     */
     modifier correctContractType(uint8 contractType_) {
-        require(contractType == contractType_);
+        require(contractType == contractType_, MarketErrorCodes.ERROR_INVALID_CONTRACT_TYPE);
         _;
     }
 }

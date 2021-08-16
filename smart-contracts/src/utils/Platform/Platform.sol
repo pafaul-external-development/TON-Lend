@@ -1,4 +1,6 @@
 pragma ton-solidity >= 0.39.0;
+pragma AbiHeader time;
+pragma AbiHeader expire;
 
 import "../libraries/MsgFlag.sol";
 
@@ -8,16 +10,13 @@ contract Platform {
     TvmCell static initialData;
     TvmCell static platformCode;
 
-    constructor(TvmCell code, TvmCell params) public {
-        if (msg.sender != root) {
-           msg.sender.transfer({value: 0, flag: MsgFlag.ALL_NOT_RESERVED + MsgFlag.DESTROY_IF_ZERO, bounce: false});
-        } else {
-            initialize(code, params);
-        }
+    constructor(TvmCell contractCode, TvmCell params) public {
+        tvm.accept();
+        initializeContract(contractCode, params);
     }
 
-    function initialize(TvmCell code, TvmCell params) private {
-
+    function initializeContract(TvmCell contractCode, TvmCell params) private {
+        tvm.accept();
         TvmBuilder builder;
 
         builder.store(root);
@@ -27,8 +26,8 @@ contract Platform {
         builder.store(initialData);  // ref 2
         builder.store(params);       // ref 3
 
-        tvm.setcode(code);
-        tvm.setCurrentCode(code);
+        tvm.setcode(contractCode);
+        tvm.setCurrentCode(contractCode);
 
         onCodeUpgrade(builder.toCell());
     }

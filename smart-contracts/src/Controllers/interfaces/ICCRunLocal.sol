@@ -7,8 +7,8 @@ interface IContractControllerRunLocal {
     function createInitialDataForOracle(uint256 pubkey, address addr) external returns (TvmCell);
     function createParamsForOracle() external returns (TvmCell);
 
-    function craeteInitialDataForTIP3Deployer(address ownerAddress_) external returns (TvmCell);
-    function craeteParamsForTIP3Deployer() external returns (TvmCell);
+    function createInitialDataForTIP3Deployer(address ownerAddress_) external returns (TvmCell);
+    function createParamsForTIP3Deployer() external returns (TvmCell);
 
     function createInitialDataForUserAccount(address msigOwner) external returns (TvmCell);
     function createParamsForUserAccount() external returns (TvmCell);

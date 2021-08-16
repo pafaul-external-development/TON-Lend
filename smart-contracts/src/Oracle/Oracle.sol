@@ -113,11 +113,12 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
                     uint256 ownerPubkey
                     address ownerAddress
      */
-    
+
     /**
      * @param data Data builded in upgradeContractCode
      */
     function onCodeUpgrade(TvmCell data) private {
+        tvm.resetStorage();
         TvmSlice dataSlice = data.toSlice();
         (root, contractType) = dataSlice.decode(address, uint8);
 
@@ -156,11 +157,13 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
     // Update price functions
     /**
      * @param tokenRoot Address of token root to update
-     * @param costToUSD Cost of token to USD
+     * @param tokens Amount of tokens in swap pair
+     * @param usd Amount of usd in swap pair
      */
-    function externalUpdatePrice(address tokenRoot, uint256 costToUSD) override external onlyOwner onlyKnownTokenRoot(tokenRoot) {
+    function externalUpdatePrice(address tokenRoot, uint128 tokens, uint128 usd) override external onlyOwner onlyKnownTokenRoot(tokenRoot) {
         tvm.accept();
-        prices[tokenRoot].priceToUSD = costToUSD;
+        prices[tokenRoot].tokens = tokens;
+        prices[tokenRoot].usd = usd;
     }
 
     /**
@@ -182,7 +185,8 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
     function internalGetUpdatedPrice(IDexPairBalances updatedPrice) override external onlyTrustedSwapPair {
         tvm.rawReserve(msg.value, 2);
         address affectedToken = swapPairToTokenRoot[msg.sender];
-        prices[affectedToken].priceToUSD = prices[affectedToken].isLeft ? updatedPrice.left_balance/updatedPrice.right_balance : updatedPrice.right_balance/updatedPrice.left_balance;
+        prices[affectedToken].tokens = prices[affectedToken].isLeft ? updatedPrice.left_balance : updatedPrice.right_balance;
+        prices[affectedToken].usd = prices[affectedToken].isLeft ? updatedPrice.right_balance : updatedPrice.left_balance;
     }
 
     /*********************************************************************************************************/
@@ -191,8 +195,8 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
      * @param tokenRoot Address of token root
      * @param payload Payload attached to message (contains information about operation)
      */
-    function getTokenPrice(address tokenRoot, TvmCell payload) override external responsible view returns(uint256, TvmCell) {
-        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } (prices[tokenRoot].priceToUSD, payload);
+    function getTokenPrice(address tokenRoot, TvmCell payload) override external responsible view returns(uint128, uint128, TvmCell) {
+        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } (prices[tokenRoot].tokens, prices[tokenRoot].usd, payload);
     }
 
     /**
@@ -212,7 +216,7 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
     function addToken(address tokenRoot, address swapPairAddress, bool isLeft) override external onlyOwner {
         tvm.accept();
         swapPairToTokenRoot[swapPairAddress] = tokenRoot;
-        prices[tokenRoot] = MarketPriceInfo(swapPairAddress, isLeft, 0);
+        prices[tokenRoot] = MarketPriceInfo(swapPairAddress, isLeft, 0, 0);
         this.internalUpdatePrice{value: CostConstants.TOKEN_INITIAL_UPDATE_PRICE, bounce: false}(tokenRoot);
     }
 

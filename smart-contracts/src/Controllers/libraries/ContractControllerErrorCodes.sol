@@ -1,9 +1,10 @@
 pragma ton-solidity >= 0.39.0;
 
 library ContractControllerErrorCodes {
-    uint8 constant ERROR_MSG_SENDER_IS_NOT_ROOT = 100;
-    uint8 constant ERROR_MSG_SENDER_IS_NOT_KNOWN = 101;
-    uint8 constant ERROR_MSG_SENDER_IS_NOT_CREATOR = 102;
+    uint8 constant ERROR_MSG_SENDER_IS_NOT_SELF = 100;
+    uint8 constant ERROR_MSG_SENDER_IS_NOT_ROOT = 101;
+    uint8 constant ERROR_MSG_SENDER_IS_NOT_KNOWN = 102;
+    uint8 constant ERROR_MSG_SENDER_IS_NOT_CREATOR = 103;
 
     uint8 constant ERROR_CONTRACT_TYPE_ALREADY_EXISTS = 110;
     uint8 constant ERROR_CONTRACT_TYPE_DOES_NOT_EXIST = 111;
