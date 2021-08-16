@@ -48,7 +48,13 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
                         3. mapping(address => uint8) knownContracts
      */
     // From version 0 to version 1
-    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion_, uint8 contractType_) override external onlyOwner correctContractType(contractType_) newVersion(contractCodeVersion, codeVersion_) {
+    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion_, uint8 contractType_) 
+        override 
+        external 
+        onlyOwner 
+        correctContractType(contractType_) 
+        newVersion(contractCodeVersion, codeVersion_) 
+    {
         tvm.accept();
         TvmBuilder dataBuilder;
         dataBuilder.store(ownerAddress);
@@ -123,22 +129,33 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
     {
         require(msg.value >= contractCodes[contractType].deployCost, ContractControllerErrorCodes.ERROR_MSG_VALUE_LOW);
         address newContract;
-        bool contractExists = knownContracts.exists(newContract);
-        if (!contractExists) {
+        bool contractExists;
+        TvmCell contractStateInit;
+
+        if (knownContracts[msg.sender] == PlatformCodes.USER_ACCOUNT_MANAGER && contractType != PlatformCodes.USER_ACCOUNT) {
+            revert();
+        } else {
             tvm.rawReserve(msg.value, 2);
+            stateInit = _buildInitialData(contractType, initialData);
+            newContract = address.makeAddrStd(0, tvm.hash(contractStateInit));
+            contractExists = knownContracts.exists(newContract);
+        }
+
+        if (!contractExists || knownContracts[msg.sender] == PlatformCodes.USER_ACCOUNT_MANAGER ) {
             newContract = new Platform{
-                stateInit: _buildInitialData(contractType, initialData),
+                stateInit: contractStateInit,
                 code: contractCodes[PlatformCodes.PLATFORM].code,
                 value: contractCodes[contractType].deployCost
-            }(contractCodes[contractType].code, params); 
+            }(contractCodes[contractType].code, params);
+
+            if (contractType != PlatformCodes.USER_ACCOUNT && !contractExists) {
+            knownContracts[newContract] = contractType;
+            deployedContracts[contractType].push(newContract);
+        }
         } else {
             revert();
         }
 
-        if (contractType != PlatformCodes.USER_ACCOUNT && !contractExists) {
-            knownContracts[newContract] = contractType;
-            deployedContracts[contractType].push(newContract);
-        }
         return newContract;
     }
 
@@ -220,7 +237,7 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
      * @param initialData Initial data used for contract
      */
     function calculateFutureAddress(uint8 contractType, TvmCell initialData) override external responsible returns (address) {
-        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } address(tvm.hash(_buildInitialData(contractType, initialData)));
+        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } address.makeAddrStd(0, tvm.hash(_buildInitialData(contractType, initialData)));
     }
 
     /**
@@ -245,7 +262,7 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
     // modifiers
 
     modifier onlySelf() {
-        require(msg.sender == address(this));
+        require(msg.sender == address(this), ContractControllerErrorCodes.ERROR_MSG_SENDER_IS_NOT_SELF);
         _;
     }
 

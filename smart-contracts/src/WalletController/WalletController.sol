@@ -7,6 +7,7 @@ import "./interfaces/IWalletControllerMarketInteractions.sol";
 import "./interfaces/IWalletControllerMarketManagement.sol";
 
 import "./libraries/CostConstants.sol";
+import "./libraries/WalletControllerErrorCodes.sol";
 
 import "../utils/interfaces/IUpgradableContract.sol";
 import "../utils/TIP3/interfaces/ITokenWalletDeployedCallback.sol";
@@ -175,19 +176,14 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
 
     /*********************************************************************************************************/
     // modifiers
-    /**
-     * @param rootAddress msg.sender parameter
-     */
-    modifier onlyExisingTIP3Root(address rootAddress) {
-        require(wallets.exists(rootAddress));
+    
+    modifier onlyRoot() {
+        require(msg.sender == root, WalletControllerErrorCodes.ERROR_MSG_SENDER_IS_NOT_ROOT);
         _;
     }
 
-    /**
-     * @param contractType_ Received contract type
-     */
-    modifier correctContractType(uint8 contractType_) {
-        require(contractType == contractType_);
+    modifier onlyMarket() {
+        require(marketAddresses.exists(msg.sender), WalletControllerErrorCodes.ERROR_MSG_SENDER_IS_NOT_MARKET);
         _;
     }
 
@@ -196,17 +192,24 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
      * @param tokenWallet Address of TIP-3 wallet
      */
     modifier onlyOwnWallet(address tokenRoot, address tokenWallet) {
-        require(wallets[tokenRoot] == tokenWallet);
+        require(wallets[tokenRoot] == tokenWallet, WalletControllerErrorCodes.ERROR_MSG_SENDER_IS_NOT_OWN_WALLET);
         _;
     }
 
-    modifier onlyMarket() {
-        require(marketAddresses.exists(msg.sender));
+    /**
+     * @param rootAddress msg.sender parameter
+     */
+    modifier onlyExisingTIP3Root(address rootAddress) {
+        require(wallets.exists(rootAddress), WalletControllerErrorCodes.ERROR_TIP3_ROOT_IS_UNKNOWN);
         _;
     }
 
-    modifier onlyRoot() {
-        require(msg.sender == root);
+    /**
+     * @param contractType_ Received contract type
+     */
+    modifier correctContractType(uint8 contractType_) {
+        require(contractType == contractType_, WalletControllerErrorCodes.ERROR_INVALID_CONTRACT_TYPE);
         _;
     }
+
 }

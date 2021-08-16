@@ -52,6 +52,7 @@ function extendContractToTIP3Deployer(contract) {
             contract: contract,
             functionName: 'deployTIP3',
             input: {
+                _answer_id: 0,
                 rootInfo: rootInfo,
                 deployGrams: deployGrams,
                 pubkeyToInsert: pubkeyToInsert
@@ -97,6 +98,8 @@ function extendContractToTIP3Deployer(contract) {
             keyPair: contract.keyPair
         });
     };
+
+    return contract;
 }
 
 module.exports = {

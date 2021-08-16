@@ -13,7 +13,7 @@ const initializeLocklift = require("../../utils/initializeLocklift");
 const { loadContractData, writeContractData } = require("../../utils/migration/manageContractData");
 
 const configuration = require("../../scripts.conf");
-const { contractInfo, operationsCost } = require("../modules/contractControllerConstants");
+const { contractInfo, operationsCost, testTokenRoot } = require("../modules/contractControllerConstants");
 const { describeError } = require("../modules/errorDescription");
 const { extendContractToWallet, MsigWallet } = require("../../wallet/modules/walletWrapper");
 const { operationFlags } = require("../../utils/transferFlags");
@@ -23,11 +23,6 @@ const { abiContract, signerNone } = require("@tonclient/core");
 
 async function main() {
     let locklift = await initializeLocklift(configuration.pathToLockliftConfig, configuration.network);
-
-    /**
-     * @type {Contract}
-     */
-    let platform = await locklift.factory.getContract('Platform', configuration.buildDirectory);
 
     /**
      * @type {ContractController}
@@ -114,7 +109,7 @@ async function main() {
         console.log(describeError(err));
     }
 
-    let UserAccountManagerContract = await locklift.factory.getContract(contractInfo.USER_ACCOUNT_MANAGER.name, configuration.buildDirectory);
+    let userAccountManagerContract = await locklift.factory.getContract(contractInfo.USER_ACCOUNT_MANAGER.name, configuration.buildDirectory);
     try {
         let userAccountManagerInitialData = await contractController.createInitialDataForUserAccountManager();
         let userAccountManagerParams = await contractController.createParamsForUserAccountManager();
@@ -139,10 +134,11 @@ async function main() {
         let oracleAddress = (await contractController.getContractAddresses(contractInfo.ORACLE.id))[0];
         let walletControllerAddress = (await contractController.getContractAddresses(contractInfo.WALLET_CONTROLLER.id))[0];
         let userAccountManagerAddress = (await contractController.getContractAddresses(contractInfo.USER_ACCOUNT_MANAGER.id))[0];
+
         tip3DeployerContract.setAddress(tip3DeployerAddress);
         oracleContract.setAddress(oracleAddress);
         walletControllerContract.setAddress(walletControllerAddress);
-        UserAccountManagerContract.setAddress(userAccountManagerAddress);
+        userAccountManagerContract.setAddress(userAccountManagerAddress);
 
         writeContractData(tip3DeployerContract, 'TIP3DeployerContract.json');
         writeContractData(oracleContract, 'Oracle.json');
@@ -153,6 +149,37 @@ async function main() {
         console.log(await contractController.getContractAddresses(contractInfo.ORACLE.id));
         console.log(await contractController.getContractAddresses(contractInfo.WALLET_CONTROLLER.id));
         console.log(await contractController.getContractAddresses(contractInfo.USER_ACCOUNT_MANAGER.id));
+    } catch (err) {
+        console.log(describeError(err));
+    }
+
+    let marketContract = await locklift.factory.getContract(contractInfo.MARKET.name, configuration.buildDirectory);
+    try {
+        let marketInitialData = await contractController.createInitialDataForMarket(testTokenRoot, tip3DeployerContract.address, walletControllerContract.address, oracleContract.address);
+        let marketParams = await contractController.createParamsForMarket();
+
+        let walletControllerCreatePayload = await contractController.createContract(
+            contractInfo.MARKET.id,
+            marketInitialData,
+            marketParams
+        );
+
+        console.log(await msigWallet.transfer(
+            contractController.address,
+            locklift.utils.convertCrystal(operationsCost.uploadContractCode + contractInfo.WALLET_CONTROLLER.deployTonCost, 'nano'),
+            operationFlags.FEE_FROM_CONTRACT_BALANCE,
+            false,
+            walletControllerCreatePayload
+        ));
+    } catch (err) {
+        console.log(describeError(err));
+    }
+
+    try {
+        let marketAddress = (await contractController.getContractAddresses(contractInfo.MARKET.id))[0];
+        marketContract.setAddress(marketAddress);
+        writeContractData(marketContract, 'Market.json');
+        console.log(await contractController.getContractAddresses(contractInfo.MARKET.id));
     } catch (err) {
         console.log(describeError(err));
     }

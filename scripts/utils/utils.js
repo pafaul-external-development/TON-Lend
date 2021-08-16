@@ -32,7 +32,12 @@ function describeTransaction(tx) {
     return description;
 }
 
+const stringToBytesArray = (dataString) => {
+    return Buffer.from(dataString).toString('hex')
+};
+
 module.exports = {
     encodeMessageBody,
-    describeTransaction
+    describeTransaction,
+    stringToBytesArray
 }

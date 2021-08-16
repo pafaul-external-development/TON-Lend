@@ -64,7 +64,10 @@ const operationsCost = {
     deployContract: 0.6
 }
 
+const testTokenRoot = '0:145cffcc0b44d428ec04fa5d6784714d8fd16b0e576761afca9ca4e536c3f747';
+
 module.exports = {
     contractInfo,
-    operationsCost
+    operationsCost,
+    testTokenRoot
 }

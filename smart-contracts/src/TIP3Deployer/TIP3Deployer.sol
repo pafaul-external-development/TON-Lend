@@ -9,6 +9,8 @@ import './interfaces/ITIP3DeployerServiceInfo.sol';
 
 import './libraries/TIP3DeployerErrorCodes.sol';
 
+import '../utils/libraries/MsgFlag.sol';
+
 import '../utils/interfaces/IUpgradableContract.sol';
 import '../utils/TIP3/RootTokenContract.sol';
 
@@ -98,7 +100,13 @@ contract TIP3TokenDeployer is ITIP3Deployer, ITIP3DeployerManageCode, ITIP3Deplo
      * @param deployGrams Amount of tons to transfer to root contract
      * @param pubkeyToInsert Pubker used for contract
      */
-    function deployTIP3(IRootTokenContract.IRootTokenContractDetails rootInfo, uint128 deployGrams, uint256 pubkeyToInsert) external responsible override checkMsgValue(deployGrams) returns (address) {
+    function deployTIP3(IRootTokenContract.IRootTokenContractDetails rootInfo, uint128 deployGrams, uint256 pubkeyToInsert) 
+        external
+        responsible
+        override
+        checkMsgValue(deployGrams)
+        returns (address) 
+    {
         tvm.rawReserve(msg.value, 2);
         address tip3TokenAddress = new RootTokenContract{
             value: deployGrams,
@@ -114,7 +122,7 @@ contract TIP3TokenDeployer is ITIP3Deployer, ITIP3DeployerManageCode, ITIP3Deplo
             }
         }(rootInfo.root_public_key, rootInfo.root_owner_address);
 
-        return {value: 0, flag: 64} tip3TokenAddress;
+        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } tip3TokenAddress;
     }
 
     /**
