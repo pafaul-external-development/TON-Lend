@@ -143,7 +143,7 @@ async function main() {
         writeContractData(tip3DeployerContract, 'TIP3DeployerContract.json');
         writeContractData(oracleContract, 'Oracle.json');
         writeContractData(walletControllerContract, 'WalletController.json');
-        writeContractData(UserAccountManagerContract, 'UserAccountManager.json');
+        writeContractData(userAccountManagerContract, 'UserAccountManager.json');
 
         console.log(tip3DeployerAddress);
         console.log(await contractController.getContractAddresses(contractInfo.ORACLE.id));

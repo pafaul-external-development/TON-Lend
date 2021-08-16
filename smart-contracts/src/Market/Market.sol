@@ -117,7 +117,7 @@ contract Market is IUpgradableContract
     }
 
     /**
-     * @param rootTokenDetail Received information about real token
+     * @param rootTokenDetails Received information about real token
      */
     function prepareDataForNewTIP3(IRootTokenContract.IRootTokenContractDetails rootTokenDetails) private view {
         IRootTokenContract.IRootTokenContractDetails newRootInfo;

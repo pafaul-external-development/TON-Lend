@@ -136,9 +136,9 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
             revert();
         } else {
             tvm.rawReserve(msg.value, 2);
-            stateInit = _buildInitialData(contractType, initialData);
+            contractStateInit = _buildInitialData(contractType, initialData);
             newContract = address.makeAddrStd(0, tvm.hash(contractStateInit));
-            contractExists = knownContracts.exists(newContract);
+            contractExists = knownContracts[newContract] == contractType;
         }
 
         if (!contractExists || knownContracts[msg.sender] == PlatformCodes.USER_ACCOUNT_MANAGER ) {
