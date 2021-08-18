@@ -1,0 +1,28 @@
+{
+    "name": "ton-lend",
+    "version": "0.1.0",
+    "description": "Package for operating TON-Lend smart contract system",
+    "main": "index.js",
+    "dependencies": {
+        "locklift": "^1.4.4"
+    },
+    "devDependencies": {},
+    "scripts": {
+        "test": "mocha"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/SVOIcom/TON-Lend.git"
+    },
+    "keywords": [
+        "Free-TON",
+        "TON-Lend",
+        "lending"
+    ],
+    "author": "Paul Mikhaylov",
+    "license": "Apache-2.0",
+    "bugs": {
+        "url": "https://github.com/SVOIcom/TON-Lend/issues"
+    },
+    "homepage": "https://github.com/SVOIcom/TON-Lend#readme"
+}
