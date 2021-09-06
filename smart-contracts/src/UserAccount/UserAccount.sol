@@ -5,6 +5,7 @@ pragma AbiHeader time;
 
 import "./interfaces/IUserAccount.sol";
 import "./interfaces/IUserAccountDataOperations.sol";
+import "./libraries/UserAccountErrorCodes.sol";
 
 import "../utils/interfaces/IUpgradableContract.sol";
 import "../utils/libraries/MsgFlag.sol";
@@ -21,6 +22,8 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
     // User data
     // TODO: определиться с хранимыми данными и способом доступа к ним
     mapping(address => TvmCell) userData;
+
+    mapping(address => TvmCell) markets;
 
     // Contract is deployed via platform
     constructor() public { 
@@ -91,8 +94,28 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } msigOwner;
     }
 
-    function enterMarket(address market) external override responsible view onlyOwner returns(address) {
 
+
+    /*********************************************************************************************************/
+    // Market callbacks functions
+    function supplyCallback(uint128 supplied) external enteredMarket(msg.sender) {
+
+    }
+
+    function borrowCallback(uint128 borrowed) external enteredMarket(msg.sender) {
+
+    }
+
+    function repayCallback(uint128 repaid) external enteredMarket(msg.sender) {
+
+    }
+    
+
+    /*********************************************************************************************************/
+
+    // Functon can only be called by the AccauntManaget contract
+    function enterMarket(address market) external override onlyRoot returns(address) {
+        
     }
 
     function getAllData(TvmCell request) external override responsible view returns (TvmCell, bool) {
@@ -131,6 +154,9 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
 
     }
 
+
+
+    /*********************************************************************************************************/
     // modifiers
     modifier onlyRoot() {
         require(msg.sender == root);
@@ -144,6 +170,11 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
 
     modifier correctContractType(uint8 contractType_) {
         require(contractType == contractType_);
+        _;
+    }
+
+    modifier enteredMarket(address market) {
+        require(markets.exists(market), UserAccountErrorCodes.ERROR_NOT_ENTERED_MARKET);
         _;
     }
 }

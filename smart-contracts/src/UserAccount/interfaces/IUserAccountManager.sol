@@ -6,4 +6,7 @@ interface IUserAccountManager {
     function calculateUserAccountAddress(address tonWallet) external responsible view returns (address);
 
     function getAddressCallback(address resultAddress) external view;
+
+    function addMarket(address market) external;
+    function removeMarket(address market) external;
 }

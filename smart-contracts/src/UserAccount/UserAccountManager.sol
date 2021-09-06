@@ -22,6 +22,8 @@ contract UserAccountManager is IUpgradableContract, IReceiveAddressCallback {
     uint32 contractCodeVersion;
     TvmCell platformCode;
 
+    mapping(address => uint8) approvedMarkets;
+
     /*********************************************************************************************************/
     // Functions for deployment and upgrade
     // Contract is deployed via platform
@@ -45,6 +47,7 @@ contract UserAccountManager is IUpgradableContract, IReceiveAddressCallback {
         builder.store(contractType);
         builder.store(codeVersion_);
         builder.store(platformCode);
+        // TODO: засунуть approvedMarkets
 
         tvm.setcode(code);
         tvm.setCurrentCode(code);
@@ -110,6 +113,26 @@ contract UserAccountManager is IUpgradableContract, IReceiveAddressCallback {
         return userData.toCell();
     }
 
+
+    /*********************************************************************************************************/
+    // Functions for user account
+    function enterMarket(address tonWallet) external responsible approvedMarket(msg.sender) returns (address) {
+        address userAccount = calculateUserAccountAddress(tonWallet);
+        // TODO: вызвать функцию добавления маркета из аккаунта
+    }
+
+
+    /*********************************************************************************************************/
+    // TODO: вызывать функции при деплое маркетов
+    function addMarket(address market) external override onlyRoot {
+        approvedMarkets[market] = 1;
+    }
+
+    function removeMarket(address market) external override onlyRoot {
+        delete approvedMarkets[market];
+    }
+
+
     /*********************************************************************************************************/
     // modifiers
     modifier onlyRoot() {
@@ -119,6 +142,11 @@ contract UserAccountManager is IUpgradableContract, IReceiveAddressCallback {
 
     modifier correctContractType(uint8 contractType_) {
         require(contractType == contractType_, UserAccountErrorCodes.ERROR_INVALID_CONTRACT_TYPE);
+        _;
+    }
+
+    modifier approvedMarket(address market) {
+        require(approvedMarkets[market] == 1, UserAccountErrorCodes.ERROR_NOT_APPROVED_MARKET);
         _;
     }
 }

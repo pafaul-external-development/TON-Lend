@@ -3,13 +3,15 @@ pragma ton-solidity >= 0.39.0;
 import "./libraries/CostConstants.sol";
 import "./libraries/MarketErrorCodes.sol";
 
+import "./Structures.sol";
+
 import "../Controllers/interfaces/ICCMarketDeployed.sol";
 import "../TIP3Deployer/interfaces/ITIP3Deployer.sol";
 
 import "../utils/interfaces/IUpgradableContract.sol";
 import "../utils/TIP3/interfaces/IRootTokenContract.sol";
 
-// import "./interfaces/IBorrow.sol";
+// import "./interfaces/IBorrow.sol";   
 // import "./interfaces/ISupply.sol";
 // import "./interfaces/IRepay.sol";
 // import "./interfaces/ILiquidate.sol";
@@ -25,7 +27,7 @@ contract Market is IUpgradableContract
 
     // External contracts
     address token;
-    address wrappedToken;
+    address virtualToken;
 
     // Contract addresses
     address tip3Deployer;
@@ -37,6 +39,12 @@ contract Market is IUpgradableContract
     uint32 kinkDenominator;
     uint32 collateralFactorNominator;
     uint32 collateralFactorDenominator;
+
+    uint256 totalBorrowed = 0;
+    uint256 totalReserves = 0;
+    uint256 totalSupply = 0;
+
+    uint256 
 
     /*********************************************************************************************************/
     // Base functions - for deploying and upgrading contract
@@ -151,11 +159,26 @@ contract Market is IUpgradableContract
      */
     function receiveNewTIP3Address(address tip3RootAddress) external onlyTIP3Deployer {
         tvm.accept();
-        wrappedToken = tip3RootAddress;
+        virtualToken = tip3RootAddress;
         ICCMarketDeployed(root).marketDeployed{
             value: CostConstants.NOTIFY_CONTRACT_CONTROLLER,
             bounce: false
-        }(token, wrappedToken);
+        }(token, virtualToken);
+    }
+
+
+    /*********************************************************************************************************/
+    // Functions
+
+    function getInfo() external view responsible returns (MarketInfo) {
+        return MarketInfo({
+            token: token,
+            virtualToken: virtualToken,
+            kinkNominator: kinkNominator,
+            kinkDenominator: kinkDenominator,
+            collateralFactorNominator: collateralFactorNominator,
+            collateralFactorDenominator: collateralFactorDenominator
+        });
     }
 
     /*********************************************************************************************************/
@@ -177,7 +200,7 @@ contract Market is IUpgradableContract
     }
 
     modifier onlyVirtualTokenRoot() {
-        require(msg.sender == wrappedToken, MarketErrorCodes.ERROR_MSG_SENDER_IS_NOT_VIRTUAL_TOKEN);
+        require(msg.sender == virtualToken, MarketErrorCodes.ERROR_MSG_SENDER_IS_NOT_VIRTUAL_TOKEN);
         _;
     }
 
