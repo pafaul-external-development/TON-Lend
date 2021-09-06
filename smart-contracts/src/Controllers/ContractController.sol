@@ -192,12 +192,16 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
      * @param realTokenRoot Address of market's real token (ex. wTON)
      * @param virtualTokenRoot Address of market's virtual token (ex. vTON)
      */
-    function marketDeployed(address realTokenRoot, address virtualTokenRoot) external override onlyKnownContract(PlatformCodes.MARKET) {
+    function marketDeployed(uint32 marketId, address realTokenRoot, address virtualTokenRoot) external override onlyKnownContract(PlatformCodes.MARKET) {
         tvm.accept();
         address market = msg.sender;
 
         for (address walletController: deployedContracts[PlatformCodes.WALLET_CONTROLLER]) {
-            IWalletControllerMarketManagement(walletController).addMarket(market, realTokenRoot, virtualTokenRoot);
+            IWalletControllerMarketManagement(walletController).addMarket(marketId, realTokenRoot, virtualTokenRoot);
+        }
+
+        for (address userAccountManager: deployedContarcts[PlatformCodes.USER_ACCOUNT_MANAGER]) {
+            IUserAccountManagerMarkets(userAccountManager).addMarket(marketId);
         }
     }
     

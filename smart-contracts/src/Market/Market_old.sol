@@ -44,8 +44,6 @@ contract Market is IUpgradableContract
     uint256 totalReserves = 0;
     uint256 totalSupply = 0;
 
-    uint256 
-
     /*********************************************************************************************************/
     // Base functions - for deploying and upgrading contract
     // We are using Platform so constructor is not available
@@ -179,6 +177,13 @@ contract Market is IUpgradableContract
             collateralFactorNominator: collateralFactorNominator,
             collateralFactorDenominator: collateralFactorDenominator
         });
+    }
+
+    /*********************************************************************************************************/
+    // UserAccountManager functions
+
+    function notifyMarketCreated(uint32 marketId) external pure {
+        
     }
 
     /*********************************************************************************************************/

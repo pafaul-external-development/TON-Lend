@@ -100,12 +100,12 @@ contract TIP3TokenDeployer is ITIP3Deployer, ITIP3DeployerManageCode, ITIP3Deplo
      * @param deployGrams Amount of tons to transfer to root contract
      * @param pubkeyToInsert Pubker used for contract
      */
-    function deployTIP3(IRootTokenContract.IRootTokenContractDetails rootInfo, uint128 deployGrams, uint256 pubkeyToInsert) 
+    function deployTIP3(IRootTokenContract.IRootTokenContractDetails rootInfo, uint128 deployGrams, uint256 pubkeyToInsert, TvmCell payloadToReturn) 
         external
         responsible
         override
         checkMsgValue(deployGrams)
-        returns (address) 
+        returns (address, TvmCell) 
     {
         tvm.rawReserve(msg.value, 2);
         address tip3TokenAddress = new RootTokenContract{
@@ -122,7 +122,7 @@ contract TIP3TokenDeployer is ITIP3Deployer, ITIP3DeployerManageCode, ITIP3Deplo
             }
         }(rootInfo.root_public_key, rootInfo.root_owner_address);
 
-        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } tip3TokenAddress;
+        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } (tip3TokenAddress, payloadToReturn);
     }
 
     /**

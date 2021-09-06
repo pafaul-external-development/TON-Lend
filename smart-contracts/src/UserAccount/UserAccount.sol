@@ -12,6 +12,8 @@ import "../utils/libraries/MsgFlag.sol";
 
 contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableContract {
     address msigOwner;
+    // TODO: add userAccountManager
+    address userAccountManager;
 
     // Information for update
     address root;
@@ -19,11 +21,9 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
     uint32 contractCodeVersion;
     TvmCell platformCode;
 
-    // User data
-    // TODO: определиться с хранимыми данными и способом доступа к ним
-    mapping(address => TvmCell) userData;
+    mapping(uint32 => TvmCell) userData;
 
-    mapping(address => TvmCell) markets;
+    mapping(uint32 => TvmCell) markets;
 
     // Contract is deployed via platform
     constructor() public { 
@@ -98,24 +98,20 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
 
     /*********************************************************************************************************/
     // Market callbacks functions
-    function supplyCallback(uint128 supplied) external enteredMarket(msg.sender) {
-
-    }
-
-    function borrowCallback(uint128 borrowed) external enteredMarket(msg.sender) {
-
-    }
-
-    function repayCallback(uint128 repaid) external enteredMarket(msg.sender) {
-
-    }
-    
+    function fetchInformation(TvmCell payload) external override responsible returns(address, TvmCell) {
+        tvm.rawReserve(msg.value, 2);
+        TvmCell information;
+        // TODO: get information
+        return {flag: 64} (msigOwner, information);
+    }    
 
     /*********************************************************************************************************/
 
     // Functon can only be called by the AccauntManaget contract
-    function enterMarket(address market) external override onlyRoot returns(address) {
-        
+    function enterMarket(uint32 marketId) external override onlyRoot {
+        tmv.rawReserve(msg.value, 2);
+        // TODO: enter market
+        address(msigOwner).transfer({value: 0, flag: 64});
     }
 
     function getAllData(TvmCell request) external override responsible view returns (TvmCell, bool) {
@@ -165,6 +161,11 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
 
     modifier onlyOwner() {
         require(msg.sender == msigOwner);
+        _;
+    }
+
+    modifier onlyUserAccountManager() {
+        require(msg.sender == userAccountManager);
         _;
     }
 

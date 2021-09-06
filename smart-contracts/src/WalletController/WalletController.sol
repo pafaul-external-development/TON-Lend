@@ -9,6 +9,8 @@ import "./interfaces/IWalletControllerMarketManagement.sol";
 import "./libraries/CostConstants.sol";
 import "./libraries/WalletControllerErrorCodes.sol";
 
+import "../Market/libraries/MarketOperations.sol";
+
 import "../utils/interfaces/IUpgradableContract.sol";
 import "../utils/TIP3/interfaces/ITokenWalletDeployedCallback.sol";
 import "../utils/TIP3/interfaces/ITokensReceivedCallback.sol";
@@ -21,6 +23,8 @@ import "../utils/libraries/MsgFlag.sol";
 struct MarketTokenAddresses {
     address realToken;
     address virtualToken;
+    address realTokenWallet;
+    address virtualTokenWallet;
 }
 
 contract WalletController is IWalletControllerMarketInteractions, IWalletControllerMarketManagement, IUpgradableContract, ITokenWalletDeployedCallback, ITokensReceivedCallback {
@@ -30,9 +34,13 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
     uint32 contractCodeVersion;
     TvmCell platformCode;
 
+    address marketAddress;
+
     // Root TIP-3 to market address mapping
     mapping (address => MarketTokenAddresses) marketAddresses; // Будет использовано для проверки корректности операций
     mapping (address => address) wallets;
+
+    mapping (uint32 => MarketTokenAddress) marketTIP3Info;
 
     /*********************************************************************************************************/
     // Functions for deployment and upgrade
@@ -98,24 +106,32 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
 
     /*********************************************************************************************************/
     // Market functions
-    /**
-     * @param market Address of new market
-     * @param realTokenRoot Address of market's real token root (ex. USDT)
-     * @param virtualTokenRoot Address of market's virtual token root (ex. vUSDT)
-     */
-    function addMarket(address market, address realTokenRoot, address virtualTokenRoot) external override onlyRoot {
-        marketAddresses[market] = MarketTokenAddresses(realTokenRoot, virtualTokenRoot);
+    function addMarketAddress(address market_) external onlyRoot {
+        tvm.rawReserve(msg.value, 2);
+        market = market_;
+        address(msg.sender).transfer({value: 0, flag: 64});
+    }
+
+    function addNewRootTokensInfo(address realTokenRoot, address virtualTokenRoot, uint32 marketId) external onlyMarket {
+        tvm.rawReserve(msg.value, 2);
+        marketTIP3Info[marketId] = MarketTokenAddresses({
+            realToken: realTokenRoot, 
+            virtualToken: virtualTokenRoot,
+            realTokenWallet: address.makeAddrStd(0, 0),
+            virtualTokenWallet: address.makeAddrStd(0, 0)
+        });
 
         wallets[realTokenRoot] = address.makeAddrStd(0, 0);
         wallets[virtualTokenRoot] = address.makeAddrStd(0, 0);
+
         addWallet(realTokenRoot);
         addWallet(virtualTokenRoot);
     }
 
     /**
-     * @param market Address of market to remove
+     * @param marketId Id of market to remove
      */
-    function removeMarket(address market) external override onlyRoot {
+    function removeMarket(uint32 marketId) external override onlyRoot {
         MarketTokenAddresses marketTokenAddresses = marketAddresses[market];
 
         delete wallets[marketTokenAddresses.realToken];
@@ -171,7 +187,17 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
         uint128 updated_balance,
         TvmCell payload
     ) external override onlyOwnWallet(token_root, token_wallet) {
+        
+    }
 
+    /*********************************************************************************************************/
+    // Getter functions
+    function getMarketAddresses(uint32 marketId) external view returns(MarketTokenAddresses) {
+        return {flag: 64} marketTIP3Info[marketId];
+    }
+
+    function getAllMarkets() external view returns(mapping(uint32 => MarketTokenAddresses)) {
+        return {flag: 64} marketTIP3Info;
     }
 
     /*********************************************************************************************************/
@@ -212,4 +238,28 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
         _;
     }
 
+    /*********************************************************************************************************/
+    // Functions for payload creation
+
+    function createSupplyPayload(address userAddress) external view returns(TvmCell) {
+        TvmBuilder builder;
+        builder.store(MarketOperations.SUPPLY_TOKENS);
+        TvmBuilder informationBuilder;
+        informationBuilder.store(userAddress);
+        builder.store(informationBuilder.toCell());
+
+        return builder.toCell();
+    }
+
+    function craeteWithdrawPayload(address userAddress, uint128 amountToWithdraw) external view returns(TvmCell) {
+        TvmBuilder builder;
+        builder.store(MarketOperations.WITHDRAW_TOKENS);
+        TvmBuilder informationBuilder;
+        informationBuilder.store(userAddress);
+        informationBuilder.store(amountToWithdraw);
+        builder.store(informationBuilder.toCell);
+        return builder.toCell();
+    }
+
+    function decodePayload(TvmCell payload) internal returns(TvmCell) {}
 }

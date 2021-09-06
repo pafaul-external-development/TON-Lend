@@ -22,7 +22,8 @@ contract UserAccountManager is IUpgradableContract, IReceiveAddressCallback {
     uint32 contractCodeVersion;
     TvmCell platformCode;
 
-    mapping(address => uint8) approvedMarkets;
+    address market;
+    mapping(uint32 => bool) marketIds;
 
     /*********************************************************************************************************/
     // Functions for deployment and upgrade
@@ -82,14 +83,13 @@ contract UserAccountManager is IUpgradableContract, IReceiveAddressCallback {
         }(PlatformCodes.USER_ACCOUNT, _buildUserAccountInitialData(tonWallet), empty);
     }
 
-    // TODO: return remaining gas to owner
-    function getDeployedAddressCallback(address) external override onlyRoot {
-        revert();
-    }
-
     // address calculation functions
     function calculateUserAccountAddress(address tonWallet) external responsible view returns (address) {
-        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } address(tvm.hash(_buildUserAccountData(tonWallet)));
+        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } _calculateUserAccountAddress(tonWallet);
+    }
+
+    function _calculateUserAccountAddress(address tonWallet) internal view returns(address) {
+        return address(tvm.hash(_buildUserAccountData(tonWallet)));
     }
 
     function _buildUserAccountData(address tonWallet) private view returns (TvmCell data) {
@@ -116,20 +116,46 @@ contract UserAccountManager is IUpgradableContract, IReceiveAddressCallback {
 
     /*********************************************************************************************************/
     // Functions for user account
-    function enterMarket(address tonWallet) external responsible approvedMarket(msg.sender) returns (address) {
-        address userAccount = calculateUserAccountAddress(tonWallet);
-        // TODO: вызвать функцию добавления маркета из аккаунта
+    function enterMarket(address tonWallet, uint32 marketId) external responsible approvedMarket(msg.sender) returns (address) {
+        tvm.rawReserve(msg.value, 2);
+        if (marketIds[marketId]) {
+            address userAccount = _calculateUserAccountAddress(tonWallet);
+            UserAccount(userAccount).enterMarket{flag: 64}(marketId);
+        } else {
+            address(msg.sender).transfer({value: 0, flag: 64});
+        }
     }
 
+    function fetchInformationFromUserAccount(address tonWallet, TvmCell payload) external onlyMarket {
+        tvm.rawReserve(msg.value, 2);
+        address userAccount = _calculateUserAccountAddress(tonWallet);
+        UserAccount(userAccount).fetchInformation{
+            flag: 64,
+            callback: this.passInformationToMarket
+        }(payload);
+    }
 
+    function passInformationToMarket(address tonWallet, TvmCell payload) external onlyValidUserAccount(tonWallet) {
+        tvm.rawReserve(msg.value, 2);
+        MarketAggregator(market).receiveInformationFromUser(tonWallet, payload);
+    }
+
+    function writeInformationToUserAccount(address tonWallet, TvmCell payload) external onlyMarket {
+        tvm.rawReserve(msg.value, 2);
+        address userAccount = _calculateUserAccountAddress(tonWallet);
+        UserAccount(userAccount).writeInformation{flag: 64}(payload);
+    }
+ 
     /*********************************************************************************************************/
     // TODO: вызывать функции при деплое маркетов
-    function addMarket(address market) external override onlyRoot {
-        approvedMarkets[market] = 1;
+    function addMarket(uint32 marketId) external override onlyRoot {
+        tmv.accept();
+        approvedMarkets[market] = true;
     }
 
-    function removeMarket(address market) external override onlyRoot {
-        delete approvedMarkets[market];
+    function removeMarket(uint32 marketId) external override onlyRoot {
+        tmv.accept();
+        delete approvedMarkets[marketId];
     }
 
 
@@ -137,6 +163,17 @@ contract UserAccountManager is IUpgradableContract, IReceiveAddressCallback {
     // modifiers
     modifier onlyRoot() {
         require(msg.sender == root, UserAccountErrorCodes.ERROR_NOT_ROOT);
+        _;
+    }
+
+    modifier onlyMarket() {
+        // TODO
+        require(msg.sender == market);
+        _;
+    }
+
+    modifier onlyValidUserAccount(address tonWallet) {
+        require(msg.sender == _calculateUserAccountAddress(tonWallet));
         _;
     }
 
