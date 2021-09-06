@@ -1,7 +1,7 @@
 pragma ton-solidity >= 0.39.0;
 
 interface IContractControllerRunLocal {
-    function createInitialDataForMarket(address tokenRoot, address tip3Deployer, address walletController, address oracle) external returns (TvmCell);
+    function createInitialDataForMarket(address tip3Deployer, address walletController, address oracle) external returns (TvmCell);
     function createParamsForMarket() external returns (TvmCell);
 
     function createInitialDataForOracle(uint256 pubkey, address addr) external returns (TvmCell);

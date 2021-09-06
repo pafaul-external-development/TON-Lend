@@ -21,8 +21,8 @@ contract MarketAggregator is IMarketUAM, IUpgradableContract, IMarketOracle, IMa
     uint8 contractType;
     uint32 contractCodeVersion;
     TvmCell platformCode;
-
-    // TODO: add owner to initial parameters
+    
+    // owner info
     address owner;
 
     address userAccountManager;
@@ -113,6 +113,7 @@ contract MarketAggregator is IMarketUAM, IUpgradableContract, IMarketOracle, IMa
             });
 
             tokensToMarkets[realToken] = marketId;
+            realTokenRoots[realToken] = true;
 
             this.fetchTIP3Information{flag: MsgFlag.REMAINING_GAS}(realToken);
         } else {
@@ -180,6 +181,7 @@ contract MarketAggregator is IMarketUAM, IUpgradableContract, IMarketOracle, IMa
         TvmSlice s = payload.toSlice();
         uint32 marketId = s.decode(uint32);
         marketsInfo[marketId].virtualToken = tip3RootAddress;
+        virtualTokenRoots[tip3RootAddress] = true;
 
         ICCMarketDeployed(root).marketDeployed{
             value: CostConstants.NOTIFY_CONTRACT_CONTROLLER,

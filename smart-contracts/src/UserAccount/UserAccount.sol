@@ -12,7 +12,8 @@ import "../utils/libraries/MsgFlag.sol";
 
 contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     address msigOwner;
-    // TODO: add userAccountManager
+    
+    // Used for interactions with market 
     address userAccountManager;
 
     // Information for update
@@ -22,7 +23,6 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     TvmCell platformCode;
 
     mapping(uint32 => TvmCell) userData;
-
     mapping(uint32 => TvmCell) markets;
 
     // Contract is deployed via platform
@@ -64,6 +64,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
             2. user data:
                 bits:
                     address msigOwner
+                    address userAccountManager
                 refs:
                     1. mapping(address => TvmCell) userData
      */
@@ -78,6 +79,8 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
 
         TvmBuilder userDataBuilder;
         userDataBuilder.store(msigOwner);
+        userDataBuilder.store(userAccountManager);
+
         TvmBuilder userDataMapping;
         userDataMapping.store(userData);
         userDataBuilder.store(userDataMapping.toCell());
@@ -106,7 +109,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
 
     function writeInformationToUserAccount(TvmCell payload) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
-        // TODO
+        // TODO: write information to user account
     }
 
     /*********************************************************************************************************/

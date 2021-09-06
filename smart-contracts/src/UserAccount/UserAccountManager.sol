@@ -28,7 +28,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     uint32 contractCodeVersion;
     TvmCell platformCode;
 
-    address market;
+    address marketAddress;
     mapping(uint32 => bool) marketIds;
 
     /*********************************************************************************************************/
@@ -43,6 +43,11 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
             uint32 codeVersion
         refs:
             1. platformCode
+            2. additionalData:
+            bits:
+                1. address marketAddress
+            refs:
+                1. mapping(uint32 => bool) marketIds
      */
     function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion_, uint8 contractType_) override external onlyRoot correctContractType(contractType_) {
         tvm.accept();
@@ -54,6 +59,13 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         builder.store(contractType);
         builder.store(codeVersion_);
         builder.store(platformCode);
+
+        TvmBuilder additionalData;
+        additionalData.store(marketAddress);
+
+        TvmBuilder mappingData;
+        mappingData.store(marketIds);
+        additionalData.store(mappingData.toCell());
 
         tvm.setcode(code);
         tvm.setCurrentCode(code);
@@ -67,6 +79,9 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
             uint8 platformType
         refs:
             1. platformCode
+            2. initialData
+            bits:
+                1. marketAddress
      */
     function onCodeUpgrade(TvmCell data) private {
         tvm.resetStorage();
@@ -74,6 +89,8 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         (root, contractType) = dataSlice.decode(address, uint8);
 
         platformCode = dataSlice.loadRef();         // Loading platform code
+        TvmSlice addressData = dataSlice.loadRefAsSlice();
+        (marketAddress) = addressData.decode(address);
     }
 
     /*********************************************************************************************************/
@@ -141,7 +158,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
 
     function passInformationToMarket(address tonWallet, TvmCell payload) external override view onlyValidUserAccount(tonWallet) {
         tvm.rawReserve(msg.value, 2);
-        IMarketUAMCallbacks(market).receiveInformationFromUser{
+        IMarketUAMCallbacks(marketAddress).receiveInformationFromUser{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, payload);
     }
@@ -157,7 +174,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
 
     function setMarketAddress(address market_) external override onlyRoot {
         tvm.accept();
-        market = market_;
+        marketAddress = market_;
     }
 
     function addMarket(uint32 marketId) external override onlyRoot {
@@ -179,8 +196,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     }
 
     modifier onlyMarket() {
-        // TODO
-        require(msg.sender == market);
+        require(msg.sender == marketAddress);
         _;
     }
 

@@ -311,16 +311,19 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
     }
 
     /*********************************************************************************************************/
-    function createInitialDataForMarket(address tokenRoot, address tip3Deployer, address walletController, address oracle) external override returns (TvmCell) {
+    function createInitialDataForMarket(address tip3Deployer, address walletController, address oracle) external override returns (TvmCell) {
         TvmBuilder initialData;
-        initialData.store(tokenRoot);
 
         TvmBuilder helperContracts;
         helperContracts.store(tip3Deployer);
         helperContracts.store(walletController);
         helperContracts.store(oracle);
+        
+        TvmBuilder ownerContract;
+        ownerContract.store(ownerAddress);
 
         initialData.store(helperContracts.toCell());
+        initialData.store(ownerContract.toCell());
         return initialData.toCell();
     }
     function createParamsForMarket() external override returns (TvmCell) {
@@ -355,6 +358,7 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
     function createInitialDataForUserAccount(address msigOwner) external override returns (TvmCell) {
         TvmBuilder initialData;
         initialData.store(msigOwner);
+        initialData.store(deployedContracts[PlatformCodes.USER_ACCOUNT_MANAGER][0]);
         return initialData.toCell();
     }
     function createParamsForUserAccount() external override returns (TvmCell) {
