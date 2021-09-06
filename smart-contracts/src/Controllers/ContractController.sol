@@ -125,7 +125,7 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
      * @param initialData InitialData for deployed smart contract
      * @param params Parameters for smart contract deployment
      */
-    function createContract(uint8 contractType, TvmCell initialData, TvmCell params) override external responsible creator contractTypeExists(contractType, true) returns(address)
+    function createContract(uint8 contractType, TvmCell initialData, TvmCell params) override external responsible creator contractTypeExists(contractType, true)
     {
         require(msg.value >= contractCodes[contractType].deployCost, ContractControllerErrorCodes.ERROR_MSG_VALUE_LOW);
         address newContract;
@@ -155,8 +155,6 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
         } else {
             revert();
         }
-
-        return newContract;
     }
 
     /**

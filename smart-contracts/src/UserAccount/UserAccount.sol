@@ -102,53 +102,53 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
         tvm.rawReserve(msg.value, 2);
         TvmCell information;
         // TODO: get information
-        return {flag: 64} (msigOwner, information);
+        return {flag: MsgFlag.REMAINING_GAS} (msigOwner, information);
     }    
 
     /*********************************************************************************************************/
 
     // Functon can only be called by the AccauntManaget contract
     function enterMarket(uint32 marketId) external override onlyRoot {
-        tmv.rawReserve(msg.value, 2);
+        tvm.rawReserve(msg.value, 2);
         // TODO: enter market
-        address(msigOwner).transfer({value: 0, flag: 64});
+        address(msigOwner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
-    function getAllData(TvmCell request) external override responsible view returns (TvmCell, bool) {
+    // function getAllData(TvmCell request) external override responsible view returns (TvmCell, bool) {
 
-    }
+    // }
 
-    function getProvideData(TvmCell request) external override responsible view returns (TvmCell, bool) {
+    // function getProvideData(TvmCell request) external override responsible view returns (TvmCell, bool) {
 
-    }
+    // }
 
-    function getBorrowData(TvmCell request) external override responsible view returns (TvmCell, bool) {
+    // function getBorrowData(TvmCell request) external override responsible view returns (TvmCell, bool) {
 
-    }
+    // }
 
-    function getRepayData(TvmCell request) external override responsible view returns (TvmCell, bool) {
+    // function getRepayData(TvmCell request) external override responsible view returns (TvmCell, bool) {
 
-    }
+    // }
 
-    function getLiquidationData(TvmCell request) external override responsible view returns (TvmCell, bool) {
+    // function getLiquidationData(TvmCell request) external override responsible view returns (TvmCell, bool) {
 
-    }
+    // }
 
-    function writeProvideData(TvmCell data) external override responsible returns (TvmCell, bool) {
+    // function writeProvideData(TvmCell data) external override responsible returns (TvmCell, bool) {
 
-    }
+    // }
 
-    function writeBorrowData(TvmCell data) external override responsible returns (TvmCell, bool) {
+    // function writeBorrowData(TvmCell data) external override responsible returns (TvmCell, bool) {
 
-    }
+    // }
 
-    function writeRepayData(TvmCell data) external override responsible returns (TvmCell, bool) {
+    // function writeRepayData(TvmCell data) external override responsible returns (TvmCell, bool) {
 
-    }
+    // }
 
-    function writeLiquidationData(TvmCell data) external override responsible returns (TvmCell, bool) {
+    // function writeLiquidationData(TvmCell data) external override responsible returns (TvmCell, bool) {
 
-    }
+    // }
 
 
 
@@ -171,11 +171,6 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
 
     modifier correctContractType(uint8 contractType_) {
         require(contractType == contractType_);
-        _;
-    }
-
-    modifier enteredMarket(address market) {
-        require(markets.exists(market), UserAccountErrorCodes.ERROR_NOT_ENTERED_MARKET);
         _;
     }
 }

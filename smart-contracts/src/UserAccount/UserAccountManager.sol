@@ -5,9 +5,13 @@ pragma AbiHeader time;
 
 import "./interfaces/IUserAccountManager.sol";
 
+import "./interfaces/IUserAccount.sol";
+import "./interfaces/IUserAccountData.sol";
+
 import "./libraries/UserAccountErrorCodes.sol";
 
-import "../Controllers/interfaces/IReceiveAddressCallback.sol";
+import "../Market/interfaces/IMarketCallbacks.sol";
+
 import "../Controllers/interfaces/ICCCodeManager.sol";
 import "../Controllers/libraries/PlatformCodes.sol";
 
@@ -15,7 +19,7 @@ import "../utils/interfaces/IUpgradableContract.sol";
 import "../utils/libraries/MsgFlag.sol";
 import "../utils/Platform/Platform.sol";
 
-contract UserAccountManager is IUpgradableContract, IReceiveAddressCallback {
+contract UserAccountManager is IUpgradableContract, IUserAccountManager {
     // Information for update
     address root;
     uint8 contractType;
@@ -73,18 +77,17 @@ contract UserAccountManager is IUpgradableContract, IReceiveAddressCallback {
 
     /*********************************************************************************************************/
     // Functions for user account
-    function createUserAccount(address tonWallet) external responsible view returns (address) {
+    function createUserAccount(address tonWallet) external override view {
         TvmCell empty;
         IContractControllerCodeManager(root).createContract{
             value: 0,
             bounce: false,
-            flag: MsgFlag.REMAINING_GAS,
-            callback: this.getDeployedAddressCallback
+            flag: MsgFlag.REMAINING_GAS
         }(PlatformCodes.USER_ACCOUNT, _buildUserAccountInitialData(tonWallet), empty);
     }
 
     // address calculation functions
-    function calculateUserAccountAddress(address tonWallet) external responsible view returns (address) {
+    function calculateUserAccountAddress(address tonWallet) external override responsible view returns (address) {
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } _calculateUserAccountAddress(tonWallet);
     }
 
@@ -116,46 +119,48 @@ contract UserAccountManager is IUpgradableContract, IReceiveAddressCallback {
 
     /*********************************************************************************************************/
     // Functions for user account
-    function enterMarket(address tonWallet, uint32 marketId) external responsible approvedMarket(msg.sender) returns (address) {
+    function enterMarket(address tonWallet, uint32 marketId) external responsible returns (address) {
         tvm.rawReserve(msg.value, 2);
         if (marketIds[marketId]) {
             address userAccount = _calculateUserAccountAddress(tonWallet);
-            UserAccount(userAccount).enterMarket{flag: 64}(marketId);
+            IUserAccount(userAccount).enterMarket{flag: MsgFlag.REMAINING_GAS}(marketId);
         } else {
-            address(msg.sender).transfer({value: 0, flag: 64});
+            address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
         }
     }
 
     function fetchInformationFromUserAccount(address tonWallet, TvmCell payload) external onlyMarket {
         tvm.rawReserve(msg.value, 2);
         address userAccount = _calculateUserAccountAddress(tonWallet);
-        UserAccount(userAccount).fetchInformation{
-            flag: 64,
+        IUserAccountData(userAccount).fetchInformationFromUserAccount{
+            flag: MsgFlag.REMAINING_GAS,
             callback: this.passInformationToMarket
         }(payload);
     }
 
     function passInformationToMarket(address tonWallet, TvmCell payload) external onlyValidUserAccount(tonWallet) {
         tvm.rawReserve(msg.value, 2);
-        MarketAggregator(market).receiveInformationFromUser(tonWallet, payload);
+        IMarketUAMCallbacks(market).receiveInformationFromUser{
+            flag: MsgFlag.REMAINING_GAS
+        }(tonWallet, payload);
     }
 
     function writeInformationToUserAccount(address tonWallet, TvmCell payload) external onlyMarket {
         tvm.rawReserve(msg.value, 2);
         address userAccount = _calculateUserAccountAddress(tonWallet);
-        UserAccount(userAccount).writeInformation{flag: 64}(payload);
+        IUserAccountData(userAccount).writeInformationToUserAccount{flag: MsgFlag.REMAINING_GAS}(payload);
     }
  
     /*********************************************************************************************************/
     // TODO: вызывать функции при деплое маркетов
     function addMarket(uint32 marketId) external override onlyRoot {
-        tmv.accept();
-        approvedMarkets[market] = true;
+        tvm.accept();
+        marketIds[marketId] = true;
     }
 
     function removeMarket(uint32 marketId) external override onlyRoot {
-        tmv.accept();
-        delete approvedMarkets[marketId];
+        tvm.accept();
+        delete marketIds[marketId];
     }
 
 
@@ -182,8 +187,8 @@ contract UserAccountManager is IUpgradableContract, IReceiveAddressCallback {
         _;
     }
 
-    modifier approvedMarket(address market) {
-        require(approvedMarkets[market] == 1, UserAccountErrorCodes.ERROR_NOT_APPROVED_MARKET);
-        _;
-    }
+    // modifier approvedMarket(address market) {
+    //     require(approvedMarkets[market] == 1, UserAccountErrorCodes.ERROR_NOT_APPROVED_MARKET);
+    //     _;
+    // }
 }

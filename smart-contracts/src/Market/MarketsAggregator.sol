@@ -1,5 +1,7 @@
 pragma ton-solidity >= 0.39.0;
 
+import "./interfaces/IMarketCallbacks.sol"; 
+
 import "./libraries/CostConstants.sol";
 import "./libraries/MarketErrorCodes.sol";
 
@@ -8,12 +10,17 @@ import "./Structures.sol";
 import "../UserAccount/interfaces/IUserAccountDataOperations.sol";
 
 import "../Controllers/interfaces/ICCMarketDeployed.sol";
+
+import "../Oracle/interfaces/IOracleReturnPrices.sol";
+
 import "../TIP3Deployer/interfaces/ITIP3Deployer.sol";
 
 import "../utils/interfaces/IUpgradableContract.sol";
 import "../utils/TIP3/interfaces/IRootTokenContract.sol";
 
-contract MarketAggregator {
+import "../utils/libraries/MsgFlag.sol";
+
+contract MarketAggregator is IMarketUAMCallbacks{
 
     // Information for update
     address root;
@@ -30,6 +37,7 @@ contract MarketAggregator {
     mapping(uint32 => bool) createdMarkets;
     mapping(address => uint32) tokensToMarkets;
     mapping(uint32 => MarketInfo) marketsInfo;
+    mapping(address => MarketPriceInfo) tokenPrices;
 
     /*********************************************************************************************************/
     // Base functions - for deploying and upgrading contract
@@ -109,9 +117,9 @@ contract MarketAggregator {
 
             tokensToMarkets[realToken] = marketId;
 
-            this.fetchTIP3Information{flag: 64}(realToken);
+            this.fetchTIP3Information{flag: MsgFlag.REMAINING_GAS}(realToken);
         } else {
-            address(msg.sender).transfer({value: 0, flag: 64});
+            address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
         }
     }
 
@@ -188,7 +196,7 @@ contract MarketAggregator {
     function fetchInformationFromUserAccount(address userAccount, TvmCell payload) external view onlySelf {
         tvm.rawReserve(msg.value, 2);
         IUserAccountDataOperations(userAccountManager).fetchInformationFromUserAccount{
-            flag: 64
+            flag: MsgFlag.REMAINING_GAS
         }(userAccount, payload);
     } 
 
@@ -197,43 +205,83 @@ contract MarketAggregator {
     }
 
     /*********************************************************************************************************/
+    // Interactions with oracle
+
+    function updatePrice(address tokenRoot, TvmCell payload) internal view {
+        IOracleReturnPrices(oracle).getTokenPrice{
+            flag: 64,
+            callback: this.receiveUpdatedPrice
+        }(tokenRoot, payload);
+    }
+
+    function receiveUpdatedPrice(address tokenRoot, uint128 nom, uint128 denom, TvmCell payload) external onlyOracle {
+        tvm.rawReserve(msg.value, 2);
+        tokenPrices[tokenRoot].tokens = nom;
+        tokenPrices[tokenRoot].usd = denom;
+    }
+
+    function updateAllPrices(TvmCell payload) internal view {
+        IOracleReturnPrices(oracle).getAllTokenPrices{
+            flag: 64,
+            callback: this.receiveAllUpdatedPrices
+        }(payload);
+    }
+
+    function receiveAllUpdatedPrices(mapping(address => MarketPriceInfo) updatedPrices) external onlyOracle {
+        tvm.rawReserve(msg.value, 2);
+        tokenPrices = updatedPrices;
+    }
+
+    function forceUpdatePrice(address tokenRoot) external {
+        tvm.rawReserve(msg.value, 2);
+        TvmCell payload;
+        updatePrice(tokenRoot, payload);
+    }
+
+    function forceUpdateAllPrices() external {
+        tvm.rawReserve(msg.value, 2);
+        TvmCell payload;
+        updateAllPrices(payload);
+    }
+
+    /*********************************************************************************************************/
     // Setters
     function setUserAccountManager(address userAccountManager_) external onlyOwner {
         tvm.rawReserve(msg.value, 2);
         userAccountManager = userAccountManager_;
-        address(msg.sender).transfer({value: 0, flag: 64});
+        address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     function setTip3WalletController(address tip3WalletController_) external onlyOwner {
         tvm.rawReserve(msg.value, 2);
         tip3WalletController = tip3WalletController_;
-        address(msg.sender).transfer({value: 0, flag: 64});
+        address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     function setOracleAddress(address oracle_) external onlyOwner {
         tvm.rawReserve(msg.value, 2);
         oracle = oracle_;
-        address(msg.sender).transfer({value: 0, flag: 64});
+        address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     function transferOwnerShip(address newOwner) external onlyOwner {
         tvm.rawReserve(msg.value, 2);
         owner = newOwner;
-        address(msg.sender).transfer({value: 0, flag: 64});
+        address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     /*********************************************************************************************************/
     // Getters
     function getServiceContractAddresses() external view returns(address userAccountManager_, address tip3WalletController_, address oracle_) {
-        return {flag: 64} (userAccountManager, tip3WalletController, oracle);
+        return {flag: MsgFlag.REMAINING_GAS} (userAccountManager, tip3WalletController, oracle);
     }
 
     function getMarketInformation(uint32 marketId) external view returns(MarketInfo) {
-        return {flag: 64} marketsInfo[marketId];
+        return {flag: MsgFlag.REMAINING_GAS} marketsInfo[marketId];
     }
 
     function getAllMarkets(uint32 marketId) external view returns(mapping(uint32 => MarketInfo)) {
-        return {flag: 64} marketsInfo;
+        return {flag: MsgFlag.REMAINING_GAS} marketsInfo;
     }
 
     function withdrawExtraTons(uint128 amount) external onlyOwner {

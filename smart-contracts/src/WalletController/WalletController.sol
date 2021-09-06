@@ -109,7 +109,7 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
     function addMarketAddress(address market_) external onlyRoot {
         tvm.rawReserve(msg.value, 2);
         market = market_;
-        address(msg.sender).transfer({value: 0, flag: 64});
+        address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     function addNewRootTokensInfo(address realTokenRoot, address virtualTokenRoot, uint32 marketId) external onlyMarket {
@@ -193,11 +193,11 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
     /*********************************************************************************************************/
     // Getter functions
     function getMarketAddresses(uint32 marketId) external view returns(MarketTokenAddresses) {
-        return {flag: 64} marketTIP3Info[marketId];
+        return {flag: MsgFlag.REMAINING_GAS} marketTIP3Info[marketId];
     }
 
     function getAllMarkets() external view returns(mapping(uint32 => MarketTokenAddresses)) {
-        return {flag: 64} marketTIP3Info;
+        return {flag: MsgFlag.REMAINING_GAS} marketTIP3Info;
     }
 
     /*********************************************************************************************************/

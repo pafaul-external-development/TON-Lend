@@ -195,8 +195,8 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
      * @param tokenRoot Address of token root
      * @param payload Payload attached to message (contains information about operation)
      */
-    function getTokenPrice(address tokenRoot, TvmCell payload) override external responsible view returns(uint128, uint128, TvmCell) {
-        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } (prices[tokenRoot].tokens, prices[tokenRoot].usd, payload);
+    function getTokenPrice(address tokenRoot, TvmCell payload) override external responsible view returns(address, uint128, uint128, TvmCell) {
+        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } (tokenRoot, prices[tokenRoot].tokens, prices[tokenRoot].usd, payload);
     }
 
     /**
