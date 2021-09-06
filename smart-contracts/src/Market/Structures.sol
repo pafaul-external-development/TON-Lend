@@ -1,6 +1,5 @@
 pragma ton-solidity >= 0.39.0;
 
-
 struct MarketInfo {
     address token;
     address virtualToken;

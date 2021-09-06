@@ -4,13 +4,13 @@ pragma AbiHeader expire;
 pragma AbiHeader time;
 
 import "./interfaces/IUserAccount.sol";
-import "./interfaces/IUserAccountDataOperations.sol";
+import "./interfaces/IUserAccountData.sol";
 import "./libraries/UserAccountErrorCodes.sol";
 
 import "../utils/interfaces/IUpgradableContract.sol";
 import "../utils/libraries/MsgFlag.sol";
 
-contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableContract {
+contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     address msigOwner;
     // TODO: add userAccountManager
     address userAccountManager;
@@ -40,6 +40,7 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
             2. initialData
                 bits:
                     address msigOwner
+                    address userAccountManager
      */
     function onCodeUpgrade(TvmCell data) private {
         tvm.resetStorage();
@@ -50,9 +51,7 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
 
         platformCode = dataSlice.loadRef();         // Loading platform code
         TvmSlice ownerData = dataSlice.loadRefAsSlice();
-        (msigOwner) = ownerData.decode(address);
-
-        address(msigOwner).transfer({ value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS });
+        (msigOwner, userAccountManager) = ownerData.decode(address, address);
     }
 
     /*  Upgrade data for version 1 (from 0):
@@ -97,13 +96,18 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
 
 
     /*********************************************************************************************************/
-    // Market callbacks functions
-    function fetchInformation(TvmCell payload) external override responsible returns(address, TvmCell) {
+    // UserAccountManager interactions
+    function fetchInformationFromUserAccount(TvmCell payload) external override responsible returns(address, TvmCell) {
         tvm.rawReserve(msg.value, 2);
         TvmCell information;
         // TODO: get information
         return {flag: MsgFlag.REMAINING_GAS} (msigOwner, information);
-    }    
+    }
+
+    function writeInformationToUserAccount(TvmCell payload) external override onlyUserAccountManager {
+        tvm.rawReserve(msg.value, 2);
+        // TODO
+    }
 
     /*********************************************************************************************************/
 
@@ -114,43 +118,12 @@ contract UserAccount is IUserAccount, IUserAccountDataOperations, IUpgradableCon
         address(msigOwner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
-    // function getAllData(TvmCell request) external override responsible view returns (TvmCell, bool) {
+    /*********************************************************************************************************/
+    // Functions for owner
 
-    // }
-
-    // function getProvideData(TvmCell request) external override responsible view returns (TvmCell, bool) {
-
-    // }
-
-    // function getBorrowData(TvmCell request) external override responsible view returns (TvmCell, bool) {
-
-    // }
-
-    // function getRepayData(TvmCell request) external override responsible view returns (TvmCell, bool) {
-
-    // }
-
-    // function getLiquidationData(TvmCell request) external override responsible view returns (TvmCell, bool) {
-
-    // }
-
-    // function writeProvideData(TvmCell data) external override responsible returns (TvmCell, bool) {
-
-    // }
-
-    // function writeBorrowData(TvmCell data) external override responsible returns (TvmCell, bool) {
-
-    // }
-
-    // function writeRepayData(TvmCell data) external override responsible returns (TvmCell, bool) {
-
-    // }
-
-    // function writeLiquidationData(TvmCell data) external override responsible returns (TvmCell, bool) {
-
-    // }
-
-
+    function withdrawExtraTons() external view onlyOwner {
+        address(msigOwner).transfer({ value: 0, bounce: false, flag: MsgFlag.ALL_NOT_RESERVED });
+    }
 
     /*********************************************************************************************************/
     // modifiers

@@ -1,26 +1,20 @@
 pragma ton-solidity >= 0.39.0;
 
-import "./interfaces/IMarketCallbacks.sol"; 
+import "./interfaces/IMarketInteractions.sol"; 
+import "./interfaces/IMarketGetters.sol";
 
 import "./libraries/CostConstants.sol";
 import "./libraries/MarketErrorCodes.sol";
 
-import "./Structures.sol";
-
-import "../UserAccount/interfaces/IUserAccountDataOperations.sol";
-
 import "../Controllers/interfaces/ICCMarketDeployed.sol";
-
-import "../Oracle/interfaces/IOracleReturnPrices.sol";
 
 import "../TIP3Deployer/interfaces/ITIP3Deployer.sol";
 
 import "../utils/interfaces/IUpgradableContract.sol";
-import "../utils/TIP3/interfaces/IRootTokenContract.sol";
 
 import "../utils/libraries/MsgFlag.sol";
 
-contract MarketAggregator is IMarketUAMCallbacks{
+contract MarketAggregator is IMarketUAM, IUpgradableContract, IMarketOracle, IMarketSetters, IMarketTIP3Root, IMarketOwnerFunctions, IMarketGetters {
 
     // Information for update
     address root;
@@ -34,10 +28,13 @@ contract MarketAggregator is IMarketUAMCallbacks{
     address userAccountManager;
     address tip3WalletController;
     address oracle;
+    address tip3Deployer;
     mapping(uint32 => bool) createdMarkets;
     mapping(address => uint32) tokensToMarkets;
     mapping(uint32 => MarketInfo) marketsInfo;
     mapping(address => MarketPriceInfo) tokenPrices;
+    mapping(address => bool) realTokenRoots;
+    mapping(address => bool) virtualTokenRoots;
 
     /*********************************************************************************************************/
     // Base functions - for deploying and upgrading contract
@@ -112,7 +109,7 @@ contract MarketAggregator is IMarketUAMCallbacks{
                 kinkNominator: kinkNom,
                 kinkDenominator: kinkDenom,
                 collateralFactorNominator: collNom,
-                callateralFactorDenominator: collDenom
+                collateralFactorDenominator: collDenom
             });
 
             tokensToMarkets[realToken] = marketId;
@@ -125,7 +122,7 @@ contract MarketAggregator is IMarketUAMCallbacks{
 
     /*********************************************************************************************************/
     // functions for interfaction with TIP-3 tokens
-    function fetchTIP3Information(address realToken) external view onlySelf {
+    function fetchTIP3Information(address realToken) external override pure onlySelf {
         tvm.accept();
         IRootTokenContract(realToken).getDetails{
             value: CostConstants.FETCH_TIP3_ROOT_INFORMATION,
@@ -137,11 +134,11 @@ contract MarketAggregator is IMarketUAMCallbacks{
     /**
      * @param rootTokenDetails Received information about real token
      */
-    function receiveTIP3Information(IRootTokenContract.IRootTokenContractDetails rootTokenDetails) external view onlyRealTokenRoot {
+    function receiveTIP3Information(IRootTokenContract.IRootTokenContractDetails rootTokenDetails) external override view onlyRealTokenRoot {
         tvm.accept();
         TvmBuilder marketIdInfo;
         marketIdInfo.store(tokensToMarkets[msg.sender]);
-        prepareDataForNewTIP3(rootTokenDetails. marketIdInfo.toCell());
+        prepareDataForNewTIP3(rootTokenDetails, marketIdInfo.toCell());
     }
 
     /**
@@ -178,7 +175,7 @@ contract MarketAggregator is IMarketUAMCallbacks{
     /**
      * @param tip3RootAddress Received address of virtual token root
      */
-    function receiveNewTIP3Address(address tip3RootAddress, TvmCell payload) external onlyTIP3Deployer {
+    function receiveNewTIP3Address(address tip3RootAddress, TvmCell payload) external override onlyTIP3Deployer {
         tvm.accept();
         TvmSlice s = payload.toSlice();
         uint32 marketId = s.decode(uint32);
@@ -193,14 +190,14 @@ contract MarketAggregator is IMarketUAMCallbacks{
     /*********************************************************************************************************/
     // Interactions with UserAccountManager
 
-    function fetchInformationFromUserAccount(address userAccount, TvmCell payload) external view onlySelf {
+    function fetchInformationFromUserAccount(address userAccount, TvmCell payload) external override view onlySelf {
         tvm.rawReserve(msg.value, 2);
-        IUserAccountDataOperations(userAccountManager).fetchInformationFromUserAccount{
+        IUAMUserAccount(userAccountManager).fetchInformationFromUserAccount{
             flag: MsgFlag.REMAINING_GAS
         }(userAccount, payload);
     } 
 
-    function receiveInformationFromUser(address userAccount, TvmCell payload) external view onlyUserAccountManager {
+    function receiveInformationFromUser(address userAccount, TvmCell payload) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
     }
 
@@ -214,7 +211,7 @@ contract MarketAggregator is IMarketUAMCallbacks{
         }(tokenRoot, payload);
     }
 
-    function receiveUpdatedPrice(address tokenRoot, uint128 nom, uint128 denom, TvmCell payload) external onlyOracle {
+    function receiveUpdatedPrice(address tokenRoot, uint128 nom, uint128 denom, TvmCell payload) external override onlyOracle {
         tvm.rawReserve(msg.value, 2);
         tokenPrices[tokenRoot].tokens = nom;
         tokenPrices[tokenRoot].usd = denom;
@@ -227,18 +224,18 @@ contract MarketAggregator is IMarketUAMCallbacks{
         }(payload);
     }
 
-    function receiveAllUpdatedPrices(mapping(address => MarketPriceInfo) updatedPrices) external onlyOracle {
+    function receiveAllUpdatedPrices(mapping(address => MarketPriceInfo) updatedPrices, TvmCell payload) external override onlyOracle {
         tvm.rawReserve(msg.value, 2);
         tokenPrices = updatedPrices;
     }
 
-    function forceUpdatePrice(address tokenRoot) external {
+    function forceUpdatePrice(address tokenRoot) external override {
         tvm.rawReserve(msg.value, 2);
         TvmCell payload;
         updatePrice(tokenRoot, payload);
     }
 
-    function forceUpdateAllPrices() external {
+    function forceUpdateAllPrices() external override {
         tvm.rawReserve(msg.value, 2);
         TvmCell payload;
         updateAllPrices(payload);
@@ -246,25 +243,25 @@ contract MarketAggregator is IMarketUAMCallbacks{
 
     /*********************************************************************************************************/
     // Setters
-    function setUserAccountManager(address userAccountManager_) external onlyOwner {
+    function setUserAccountManager(address userAccountManager_) external override onlyOwner {
         tvm.rawReserve(msg.value, 2);
         userAccountManager = userAccountManager_;
         address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
-    function setTip3WalletController(address tip3WalletController_) external onlyOwner {
+    function setTip3WalletController(address tip3WalletController_) external override onlyOwner {
         tvm.rawReserve(msg.value, 2);
         tip3WalletController = tip3WalletController_;
         address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
-    function setOracleAddress(address oracle_) external onlyOwner {
+    function setOracleAddress(address oracle_) external override onlyOwner {
         tvm.rawReserve(msg.value, 2);
         oracle = oracle_;
         address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
-    function transferOwnerShip(address newOwner) external onlyOwner {
+    function transferOwnership(address newOwner) external override onlyOwner {
         tvm.rawReserve(msg.value, 2);
         owner = newOwner;
         address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
@@ -272,19 +269,19 @@ contract MarketAggregator is IMarketUAMCallbacks{
 
     /*********************************************************************************************************/
     // Getters
-    function getServiceContractAddresses() external view returns(address userAccountManager_, address tip3WalletController_, address oracle_) {
+    function getServiceContractAddresses() external override view responsible returns(address userAccountManager_, address tip3WalletController_, address oracle_) {
         return {flag: MsgFlag.REMAINING_GAS} (userAccountManager, tip3WalletController, oracle);
     }
 
-    function getMarketInformation(uint32 marketId) external view returns(MarketInfo) {
+    function getMarketInformation(uint32 marketId) external override view responsible returns(MarketInfo) {
         return {flag: MsgFlag.REMAINING_GAS} marketsInfo[marketId];
     }
 
-    function getAllMarkets(uint32 marketId) external view returns(mapping(uint32 => MarketInfo)) {
+    function getAllMarkets() external override view responsible returns(mapping(uint32 => MarketInfo)) {
         return {flag: MsgFlag.REMAINING_GAS} marketsInfo;
     }
 
-    function withdrawExtraTons(uint128 amount) external onlyOwner {
+    function withdrawExtraTons(uint128 amount) external override onlyOwner {
         tvm.accept();
         address(owner).transfer({flag: 1, value: amount});
     }
@@ -324,6 +321,21 @@ contract MarketAggregator is IMarketUAMCallbacks{
 
     modifier onlyTip3WalletController() {
         require(msg.sender == tip3WalletController);
+        _;
+    }
+
+    modifier onlyRealTokenRoot() {
+        require(realTokenRoots.exists(msg.sender));
+        _;
+    }
+
+    modifier onlyVirtualTokenRoot() {
+        require(virtualTokenRoots.exists(msg.sender));
+        _;
+    }
+
+    modifier correctContractType(uint8 contractType_) {
+        require(contractType == contractType_);
         _;
     }
 }

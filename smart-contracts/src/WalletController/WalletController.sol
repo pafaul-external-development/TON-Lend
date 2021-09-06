@@ -5,6 +5,7 @@ pragma AbiHeader time;
 
 import "./interfaces/IWalletControllerMarketInteractions.sol";
 import "./interfaces/IWalletControllerMarketManagement.sol";
+import "./interfaces/IWalletControllerGetters.sol";
 
 import "./libraries/CostConstants.sol";
 import "./libraries/WalletControllerErrorCodes.sol";
@@ -20,14 +21,7 @@ import "../utils/TIP3/interfaces/ITONTokenWallet.sol";
 
 import "../utils/libraries/MsgFlag.sol";
 
-struct MarketTokenAddresses {
-    address realToken;
-    address virtualToken;
-    address realTokenWallet;
-    address virtualTokenWallet;
-}
-
-contract WalletController is IWalletControllerMarketInteractions, IWalletControllerMarketManagement, IUpgradableContract, ITokenWalletDeployedCallback, ITokensReceivedCallback {
+contract WalletController is IWalletControllerMarketInteractions, IWalletControllerMarketManagement, IWalletControllerGetters, IUpgradableContract, ITokenWalletDeployedCallback, ITokensReceivedCallback {
     // Information for update
     address root;
     uint8 contractType;
@@ -40,7 +34,7 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
     mapping (address => MarketTokenAddresses) marketAddresses; // Будет использовано для проверки корректности операций
     mapping (address => address) wallets;
 
-    mapping (uint32 => MarketTokenAddress) marketTIP3Info;
+    mapping (uint32 => MarketTokenAddresses) marketTIP3Info;
 
     /*********************************************************************************************************/
     // Functions for deployment and upgrade
@@ -53,6 +47,9 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
             address gasTo ?
         refs:
             1. platformCode
+            2. initialData
+            bits: 
+                1. marketAddress
      */
     /**
      * @param data Data builded in upgradeContractCode
@@ -64,6 +61,8 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
         contractCodeVersion = 0;
 
         platformCode = dataSlice.loadRef();         // Loading platform code
+        TvmSlice addressInfo = dataSlice.loadRefAsSlice();
+        (marketAddress) = addressInfo.decode(address);
     }
 
     /*  Upgrade data for version 1 (from 0):
@@ -101,18 +100,21 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
         mappingStorage.store(walletStorage.toCell());
 
         builder.store(mappingStorage);
+
+        tvm.setcode(code);
+        tvm.setCurrentCode(code);
+        
         onCodeUpgrade(builder.toCell());
     }
 
     /*********************************************************************************************************/
     // Market functions
-    function addMarketAddress(address market_) external onlyRoot {
-        tvm.rawReserve(msg.value, 2);
-        market = market_;
-        address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+    function setMarketAddress(address market_) external override onlyRoot {
+        tvm.accept();
+        marketAddress = market_;
     }
 
-    function addNewRootTokensInfo(address realTokenRoot, address virtualTokenRoot, uint32 marketId) external onlyMarket {
+    function addMarket(uint32 marketId, address realTokenRoot, address virtualTokenRoot) external override onlyMarket {
         tvm.rawReserve(msg.value, 2);
         marketTIP3Info[marketId] = MarketTokenAddresses({
             realToken: realTokenRoot, 
@@ -132,11 +134,12 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
      * @param marketId Id of market to remove
      */
     function removeMarket(uint32 marketId) external override onlyRoot {
-        MarketTokenAddresses marketTokenAddresses = marketAddresses[market];
+        tvm.accept();
+        MarketTokenAddresses marketTokenAddresses = marketTIP3Info[marketId];
 
         delete wallets[marketTokenAddresses.realToken];
         delete wallets[marketTokenAddresses.virtualToken];
-        delete marketAddresses[market];
+        delete marketTIP3Info[marketId];
     }
 
     /**
@@ -192,11 +195,11 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
 
     /*********************************************************************************************************/
     // Getter functions
-    function getMarketAddresses(uint32 marketId) external view returns(MarketTokenAddresses) {
+    function getMarketAddresses(uint32 marketId) external override view responsible returns(MarketTokenAddresses) {
         return {flag: MsgFlag.REMAINING_GAS} marketTIP3Info[marketId];
     }
 
-    function getAllMarkets() external view returns(mapping(uint32 => MarketTokenAddresses)) {
+    function getAllMarkets() external override view responsible returns(mapping(uint32 => MarketTokenAddresses)) {
         return {flag: MsgFlag.REMAINING_GAS} marketTIP3Info;
     }
 
@@ -241,7 +244,7 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
     /*********************************************************************************************************/
     // Functions for payload creation
 
-    function createSupplyPayload(address userAddress) external view returns(TvmCell) {
+    function createSupplyPayload(address userAddress) external pure returns(TvmCell) {
         TvmBuilder builder;
         builder.store(MarketOperations.SUPPLY_TOKENS);
         TvmBuilder informationBuilder;
@@ -251,13 +254,13 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
         return builder.toCell();
     }
 
-    function craeteWithdrawPayload(address userAddress, uint128 amountToWithdraw) external view returns(TvmCell) {
+    function craeteWithdrawPayload(address userAddress, uint128 amountToWithdraw) external pure returns(TvmCell) {
         TvmBuilder builder;
         builder.store(MarketOperations.WITHDRAW_TOKENS);
         TvmBuilder informationBuilder;
         informationBuilder.store(userAddress);
         informationBuilder.store(amountToWithdraw);
-        builder.store(informationBuilder.toCell);
+        builder.store(informationBuilder.toCell());
         return builder.toCell();
     }
 
