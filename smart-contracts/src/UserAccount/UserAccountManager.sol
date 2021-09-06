@@ -4,6 +4,8 @@ pragma AbiHeader expire;
 pragma AbiHeader time;
 
 import "./interfaces/IUserAccountManager.sol";
+import "./interfaces/IUAMUserAccount.sol";
+import "./interfaces/IUAMMarket.sol";
 
 import "./interfaces/IUserAccount.sol";
 import "./interfaces/IUserAccountData.sol";
@@ -19,7 +21,7 @@ import "../utils/interfaces/IUpgradableContract.sol";
 import "../utils/libraries/MsgFlag.sol";
 import "../utils/Platform/Platform.sol";
 
-contract UserAccountManager is IUpgradableContract, IUserAccountManager {
+contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUserAccount, IUAMMarket {
     // Information for update
     address root;
     uint8 contractType;
@@ -52,7 +54,6 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager {
         builder.store(contractType);
         builder.store(codeVersion_);
         builder.store(platformCode);
-        // TODO: засунуть approvedMarkets
 
         tvm.setcode(code);
         tvm.setCurrentCode(code);
@@ -119,7 +120,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager {
 
     /*********************************************************************************************************/
     // Functions for user account
-    function enterMarket(address tonWallet, uint32 marketId) external responsible returns (address) {
+    function enterMarket(address tonWallet, uint32 marketId) external override view responsible returns (address) {
         tvm.rawReserve(msg.value, 2);
         if (marketIds[marketId]) {
             address userAccount = _calculateUserAccountAddress(tonWallet);
@@ -129,7 +130,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager {
         }
     }
 
-    function fetchInformationFromUserAccount(address tonWallet, TvmCell payload) external onlyMarket {
+    function fetchInformationFromUserAccount(address tonWallet, TvmCell payload) external override view onlyMarket {
         tvm.rawReserve(msg.value, 2);
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).fetchInformationFromUserAccount{
@@ -138,21 +139,27 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager {
         }(payload);
     }
 
-    function passInformationToMarket(address tonWallet, TvmCell payload) external onlyValidUserAccount(tonWallet) {
+    function passInformationToMarket(address tonWallet, TvmCell payload) external override view onlyValidUserAccount(tonWallet) {
         tvm.rawReserve(msg.value, 2);
         IMarketUAMCallbacks(market).receiveInformationFromUser{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, payload);
     }
 
-    function writeInformationToUserAccount(address tonWallet, TvmCell payload) external onlyMarket {
+    function writeInformationToUserAccount(address tonWallet, TvmCell payload) external override view onlyMarket {
         tvm.rawReserve(msg.value, 2);
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).writeInformationToUserAccount{flag: MsgFlag.REMAINING_GAS}(payload);
     }
  
     /*********************************************************************************************************/
-    // TODO: вызывать функции при деплое маркетов
+    // Market managing functions
+
+    function setMarketAddress(address market_) external override onlyRoot {
+        tvm.accept();
+        market = market_;
+    }
+
     function addMarket(uint32 marketId) external override onlyRoot {
         tvm.accept();
         marketIds[marketId] = true;
@@ -186,9 +193,4 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager {
         require(contractType == contractType_, UserAccountErrorCodes.ERROR_INVALID_CONTRACT_TYPE);
         _;
     }
-
-    // modifier approvedMarket(address market) {
-    //     require(approvedMarkets[market] == 1, UserAccountErrorCodes.ERROR_NOT_APPROVED_MARKET);
-    //     _;
-    // }
 }

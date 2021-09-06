@@ -13,6 +13,8 @@ import "./libraries/ContractControllerErrorCodes.sol";
 
 import "../WalletController/interfaces/IWalletControllerMarketManagement.sol";
 
+import "../UserAccount/interfaces/IUAMMarket.sol";
+
 import "../utils/Platform/Platform.sol";
 import "../utils/interfaces/IUpgradableContract.sol";
 
@@ -125,7 +127,7 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
      * @param initialData InitialData for deployed smart contract
      * @param params Parameters for smart contract deployment
      */
-    function createContract(uint8 contractType, TvmCell initialData, TvmCell params) override external responsible creator contractTypeExists(contractType, true)
+    function createContract(uint8 contractType, TvmCell initialData, TvmCell params) override external creator contractTypeExists(contractType, true)
     {
         require(msg.value >= contractCodes[contractType].deployCost, ContractControllerErrorCodes.ERROR_MSG_VALUE_LOW);
         address newContract;
@@ -192,14 +194,13 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
      */
     function marketDeployed(uint32 marketId, address realTokenRoot, address virtualTokenRoot) external override onlyKnownContract(PlatformCodes.MARKET) {
         tvm.accept();
-        address market = msg.sender;
 
         for (address walletController: deployedContracts[PlatformCodes.WALLET_CONTROLLER]) {
             IWalletControllerMarketManagement(walletController).addMarket(marketId, realTokenRoot, virtualTokenRoot);
         }
 
-        for (address userAccountManager: deployedContarcts[PlatformCodes.USER_ACCOUNT_MANAGER]) {
-            IUserAccountManagerMarkets(userAccountManager).addMarket(marketId);
+        for (address userAccountManager: deployedContracts[PlatformCodes.USER_ACCOUNT_MANAGER]) {
+            IUAMMarket(userAccountManager).addMarket(marketId);
         }
     }
     
