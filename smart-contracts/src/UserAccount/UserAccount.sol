@@ -100,6 +100,10 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
 
     /*********************************************************************************************************/
     // UserAccountManager interactions
+
+    /**
+     * @param payload Payload containing information fetch request
+     */
     function fetchInformationFromUserAccount(TvmCell payload) external override responsible returns(address, TvmCell) {
         tvm.rawReserve(msg.value, 2);
         TvmCell information;
@@ -107,6 +111,9 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
         return {flag: MsgFlag.REMAINING_GAS} (msigOwner, information);
     }
 
+    /**
+     * @param payload Payload containing information to write to user's account
+     */
     function writeInformationToUserAccount(TvmCell payload) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
         // TODO: write information to user account
@@ -115,6 +122,9 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     /*********************************************************************************************************/
 
     // Functon can only be called by the AccauntManaget contract
+    /**
+     * @param marketId Id of market to enter
+     */
     function enterMarket(uint32 marketId) external override onlyRoot {
         tvm.rawReserve(msg.value, 2);
         // TODO: enter market
@@ -145,6 +155,9 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
         _;
     }
 
+    /**
+     * @param contractType_ Type of contract
+     */
     modifier correctContractType(uint8 contractType_) {
         require(contractType == contractType_);
         _;

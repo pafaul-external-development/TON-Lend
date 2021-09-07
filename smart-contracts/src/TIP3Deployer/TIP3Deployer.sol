@@ -99,6 +99,7 @@ contract TIP3TokenDeployer is ITIP3Deployer, ITIP3DeployerManageCode, ITIP3Deplo
      * @param rootInfo Information required to create TIP-3 token
      * @param deployGrams Amount of tons to transfer to root contract
      * @param pubkeyToInsert Pubker used for contract
+     * @param payloadToReturn Payload to return with address of new TIP-3 token (can contain some useful information)
      */
     function deployTIP3(IRootTokenContract.IRootTokenContractDetails rootInfo, uint128 deployGrams, uint256 pubkeyToInsert, TvmCell payloadToReturn) 
         external
@@ -181,11 +182,17 @@ contract TIP3TokenDeployer is ITIP3Deployer, ITIP3DeployerManageCode, ITIP3Deplo
         _;
     }
 
+    /**
+     * @param gramsRequired Amount of grams required for deploy
+     */
     modifier checkMsgValue(uint128 gramsRequired) {
         require(msg.value > gramsRequired, TIP3DeployerErrorCodes.ERROR_MSG_VALUE_IS_TOO_LOW);
         _;
     }
 
+    /**
+     * @param contractType_ Type of contract
+     */
     modifier correctContractType(uint8 contractType_) {
         require(contractType == contractType_, TIP3DeployerErrorCodes.ERROR_INVALID_CONTRACT_TYPE);
         _;

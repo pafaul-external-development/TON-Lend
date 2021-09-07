@@ -4,7 +4,8 @@
     "description": "Package for operating TON-Lend smart contract system",
     "main": "index.js",
     "dependencies": {
-        "locklift": "^1.4.4"
+        "locklift": "^1.4.4",
+        "tondev": "^0.9.0"
     },
     "devDependencies": {},
     "scripts": {

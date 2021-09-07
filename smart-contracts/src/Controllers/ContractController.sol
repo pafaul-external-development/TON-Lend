@@ -83,6 +83,9 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
     }
 
     // From version 0 to version 1
+    /**
+     * @param data Cell aquired from upgradeContractCode
+     */
     function onCodeUpgrade(TvmCell data) private {
         // some functions for upgrade
     }
@@ -189,6 +192,7 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
     // Special functions for market deployment
     // At least one Oracle and WalletController must be deployed before deploying markets
     /**
+     * @param marketId Id of market which was created
      * @param realTokenRoot Address of market's real token (ex. wTON)
      * @param virtualTokenRoot Address of market's virtual token (ex. vTON)
      */
@@ -311,13 +315,13 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
     }
 
     /*********************************************************************************************************/
-    function createInitialDataForMarket(address tip3Deployer, address walletController, address oracle) external override returns (TvmCell) {
+    function createInitialDataForMarket() external override returns (TvmCell) {
         TvmBuilder initialData;
 
         TvmBuilder helperContracts;
-        helperContracts.store(tip3Deployer);
-        helperContracts.store(walletController);
-        helperContracts.store(oracle);
+        helperContracts.store(deployedContracts[PlatformCodes.TIP3_DEPLOYER][0]);
+        helperContracts.store(deployedContracts[PlatformCodes.WALLET_CONTROLLER][0]);
+        helperContracts.store(deployedContracts[PlatformCodes.ORACLE][0]);
         
         TvmBuilder ownerContract;
         ownerContract.store(ownerAddress);
@@ -345,9 +349,9 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
         return empty;
     }
 
-    function createInitialDataForTIP3Deployer(address ownerAddress_) external override returns (TvmCell) {
+    function createInitialDataForTIP3Deployer() external override returns (TvmCell) {
         TvmBuilder initialData;
-        initialData.store(ownerAddress_);
+        initialData.store(ownerAddress);
         return initialData.toCell();
     }
     function createParamsForTIP3Deployer() external override returns (TvmCell) {
