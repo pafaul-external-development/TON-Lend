@@ -10,7 +10,12 @@ import "./libraries/UserAccountErrorCodes.sol";
 import "../utils/interfaces/IUpgradableContract.sol";
 import "../utils/libraries/MsgFlag.sol";
 
+import "../../Market/libraries/MarketPayloads.sol";
+
 contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
+    using UFO for uint256;
+    using FPO for fraction;
+
     address msigOwner;
     
     // Used for interactions with market 
@@ -22,8 +27,8 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     uint32 contractCodeVersion;
     TvmCell platformCode;
 
-    mapping(uint32 => TvmCell) userData;
-    mapping(uint32 => TvmCell) markets;
+    mapping(uint32 => bool) knownMarkets;
+    mapping(uint32 => UserMarketInfo) markets;
 
     // Contract is deployed via platform
     constructor() public { 
@@ -106,7 +111,14 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
      */
     function fetchInformationFromUserAccount(TvmCell payload) external override responsible returns(address, TvmCell) {
         tvm.rawReserve(msg.value, 2);
-        TvmCell information;
+        (uint8 operationId, TvmCell args) = MarketToUserPayloads.getOperationType(payload);
+        if (operationId == MarketOperationCodes.INDEX_UPDATE_RESPONSE) {
+            (mapping(uint32 => fraction) newIndexes, address userTip3Wallet, uint256 toBorrow) = MarketToUserPayloads.decodeIndexUpdate(args);
+            for ((uint32 marketId, fraction index): newIndexes) {
+                _updateMarketInfo(marketId, index);
+            }
+            this._calculateTmpBorrowInfo{flag: MsgFlag.REMAINING_GAS}(userTip3Wallet, toBorrow);
+        }
         // TODO: get information
         return {flag: MsgFlag.REMAINING_GAS} (msigOwner, information);
     }
@@ -114,9 +126,62 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     /**
      * @param payload Payload containing information to write to user's account
      */
-    function writeInformationToUserAccount(TvmCell payload) external override onlyUserAccountManager {
+    function writeInformationToUserAccount(TvmCell payload) external override onlyUserAccountManager responsible returns(address, TvmCell responce) {
         tvm.rawReserve(msg.value, 2);
-        // TODO: write information to user account
+        (uint8 operationId, TvmCell args) = MarketToUserPayloads.getOperationType(payload);
+        TvmBuilder responceBuilder;
+
+        if (operationId == MarketOperations.SUPPLY_TOKENS) {
+            (uint32 marketId, uint256 suppliedTokens, address userSupplyAddress) = MarketToUserPayloads.decodeSupplyOperation(args);
+            market[marketId].suppliedTokens += suppliedTokens;
+            responceBuilder.store(responceBuilder.RESPONSE_SUPPLY_TOKENS);
+            responceBuilder.store(args);
+        }
+        return {flag: MsgFlag.REMAINING_GAS} (msigOwner, responceBuilder.toCell());
+    }
+
+    function borrow(uint32 marketId, uint256 amountToBorrow, address userTIP3) external onlyOwner {
+        tvm.rawReserve(msg.value, 2);
+        if (user[marketId]){
+            // TODO: check if user has any borrow limit left and add modifier for blocking borrow operation while current is not finished
+            address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        } else {
+            TvmCell updateIndexRequest = MarketToUserPayloads.createIndexUpdateRequest(owner, marketId, knownMarkets, userTIP3, amountToBorrow);
+        }
+    }
+
+    function _updateMarketInfo(uint32 marketId, fraction index) internal {
+        uint256 tmp;
+        fraction tmpf;
+        for ((uint8 borrowIndex, BorrowInfo bi): markets[marketId].borrowInfo) {
+            tmpf = index.fMulNum(bi.toRepay);
+            tmpf = tmpf.fDiv(bi.index);
+            bi.toRepay = tmpf.toNum();
+            bi.index = index;
+        }
+    }
+
+    function _calculateTmpBorrowInfo(address userTip3Wallet, uint256 toBorrow) external onlySelf {
+        tvm.rawReserve(msg.value, 2);
+        mapping(uint32 => uint256) borrowInfo;
+        mapping(uint32 => uint256) supplyInfo;
+        for ((uint32 marketId, UserMarketInfo umi) : markets) {
+            supplyInfo[marketId] = umi.supplyInfo
+            for ((uint8 borrowId, BorrowInfo bi): umi.borrowInfo) {
+                borrowInfo[borrowId] += bi.toRepay;
+            }
+        }
+
+        TvmCell encodeBorrow = MarketToUserPayloads.encodeBorrow(owner, userTip3Wallet, toBorrow, borrowInfo, supplyInfo);
+        UserAccountManager(userAccountManager).passInformationToMarket{flag: MsgFlag.REMAINING_GAS}(owner, encodeBorrow);
+    }
+
+    function calculateTotalSupply() internal returns (mapping(uint32 => uint256)) {
+        mapping (uint32 => uint256) ts;
+        for(UserMarketInfo umi: markets) {
+            ts[umi.marketId] = umi.suppliedTokens;
+        }
+        return ts;
     }
 
     /*********************************************************************************************************/
@@ -127,7 +192,18 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
      */
     function enterMarket(uint32 marketId) external override onlyRoot {
         tvm.rawReserve(msg.value, 2);
-        // TODO: enter market
+        if (!knownMarkets[marketId]) {
+            knownMarkets[marketId] = true;
+            BorrowInfo borrowSummary;
+            mapping(uint8 => BorrowInfo) borrowInfo;
+
+            markets[marketId] = UserMarketInfo({
+                marketId: marketId,
+                suppliedTokens: 0,
+                borrowSummary: borrowSummary,
+                borrowInfo: borrowInfo
+            });
+        }
         address(msigOwner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 

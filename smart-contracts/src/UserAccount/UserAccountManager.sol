@@ -197,7 +197,10 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     function writeInformationToUserAccount(address tonWallet, TvmCell payload) external override view onlyMarket {
         tvm.rawReserve(msg.value, 2);
         address userAccount = _calculateUserAccountAddress(tonWallet);
-        IUserAccountData(userAccount).writeInformationToUserAccount{flag: MsgFlag.REMAINING_GAS}(payload);
+        IUserAccountData(userAccount).writeInformationToUserAccount{
+            flag: MsgFlag.REMAINING_GAS,
+            callback: this.passInformationToMarket
+        }(payload);
     }
  
     /*********************************************************************************************************/
