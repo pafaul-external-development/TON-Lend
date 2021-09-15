@@ -107,23 +107,6 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     // UserAccountManager interactions
 
     /**
-     * @param payload Payload containing information fetch request
-     */
-    function fetchInformationFromUserAccount(TvmCell payload) external override responsible returns(address, TvmCell) {
-        tvm.rawReserve(msg.value, 2);
-        (uint8 operationId, TvmCell args) = MarketToUserPayloads.getOperationType(payload);
-        if (operationId == MarketOperationCodes.INDEX_UPDATE_RESPONSE) {
-            (mapping(uint32 => fraction) newIndexes, address userTip3Wallet, uint256 toBorrow) = MarketToUserPayloads.decodeIndexUpdate(args);
-            for ((uint32 marketId, fraction index): newIndexes) {
-                _updateMarketInfo(marketId, index);
-            }
-            this._calculateTmpBorrowInfo{flag: MsgFlag.REMAINING_GAS}(userTip3Wallet, toBorrow);
-        }
-        // TODO: get information
-        return {flag: MsgFlag.REMAINING_GAS} (msigOwner, information);
-    }
-
-    /**
      * @param payload Payload containing information to write to user's account
      */
     function writeInformationToUserAccount(TvmCell payload) external override onlyUserAccountManager responsible returns(address, TvmCell responce) {
@@ -142,12 +125,21 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
 
     function borrow(uint32 marketId, uint256 amountToBorrow, address userTIP3) external onlyOwner {
         tvm.rawReserve(msg.value, 2);
-        if (user[marketId]){
+        if (borrowAllowed){
             // TODO: check if user has any borrow limit left and add modifier for blocking borrow operation while current is not finished
-            address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+            IUserAccountManager(userAccountManager).requestIndexUpdate{
+                flag: MsgFlag.REMAINING_GAS
+            }(owner, marketId, knownMarkets, userTIP3, amountToBorrow);
         } else {
-            TvmCell updateIndexRequest = MarketToUserPayloads.createIndexUpdateRequest(owner, marketId, knownMarkets, userTIP3, amountToBorrow);
+            address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
         }
+    }
+
+    function updateIndexes(uint32 marketId_, mapping(uint32 => fraction) newIndexes, address userTip3Wallet, uint256 toBorrow) external override {
+        for ((uint32 marketId, fraction index): newIndexes) {
+            _updateMarketInfo(marketId, index);
+        }
+        this._calculateTmpBorrowInfo{flag: MsgFlag.REMAINING_GAS}(marketId_, userTip3Wallet, toBorrow);
     }
 
     function _updateMarketInfo(uint32 marketId, fraction index) internal {
@@ -161,7 +153,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
         }
     }
 
-    function _calculateTmpBorrowInfo(address userTip3Wallet, uint256 toBorrow) external onlySelf {
+    function _calculateTmpBorrowInfo(uint32 marketId_, address userTip3Wallet, uint256 toBorrow) external onlySelf {
         tvm.rawReserve(msg.value, 2);
         mapping(uint32 => uint256) borrowInfo;
         mapping(uint32 => uint256) supplyInfo;
@@ -172,8 +164,9 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
             }
         }
 
-        TvmCell encodeBorrow = MarketToUserPayloads.encodeBorrow(owner, userTip3Wallet, toBorrow, borrowInfo, supplyInfo);
-        UserAccountManager(userAccountManager).passInformationToMarket{flag: MsgFlag.REMAINING_GAS}(owner, encodeBorrow);
+        UserAccountManager(userAccountManager).requestBorrow{
+            flag: MsgFlag.REMAINING_GAS
+        }(owner, userTip3Wallet, toBorrow, borrowInfo, supplyInfo);
     }
 
     function calculateTotalSupply() internal returns (mapping(uint32 => uint256)) {
@@ -182,6 +175,29 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
             ts[umi.marketId] = umi.suppliedTokens;
         }
         return ts;
+    }
+
+    /*********************************************************************************************************/
+    // Write information to user account
+
+    function writeSupplyInfo(uint32 marketId_, uint256 tokensToSupply, fraction index) external onlyUserAccountManager {
+        tvm.rawReserve(msg.value, 2);
+        markets[marketId_].suppliedTokens += tokensToSupply;
+        _updateMarketInfo(marketId_, index);
+        address(msigOwner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+    }
+
+    function writeBorrowInformation(uint32 marketId_, uint256 toBorrow, address userTIP3, fraction index) external onlyUserAccountManager {
+        tvm.rawReserve(msg.value, 2);
+        BorrowInfo bi = BorrowInfo({
+            toRepay: toBorrow,
+            index: index
+        });
+        uint8 maxIndex = markets[marketId_].borrowInfo.getMaxItem() + 1;
+        markets[marketId_][maxIndex] = bi;
+        UserAccountManager(userAccountManager).requestTokenPayout{
+            flag: MsgFlag.REMAINING_GAS
+        }(owner, toBorrow, userTIP3);
     }
 
     /*********************************************************************************************************/

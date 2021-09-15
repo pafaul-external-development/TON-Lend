@@ -25,3 +25,29 @@ interface IUserAccount {
 library UserAccountConstants {
     uint8 constant MAX_BORROWS_PER_MARKET = 8;
 }
+
+library ManageMapping {
+    function removeItemFrom(mapping(uint8 => BorrowInfo) value, uint8 index) internal {
+        optional(uint8, BorrowInfo) maxItem = value.max();
+        if (!maxItem.hasValue()) {
+            return;
+        }
+        (uint8 key, BorrowInfo bi) = maxItem.get();
+        if (key == 0) {
+            delete value[0];
+            return;
+        }
+
+        value[index] = value[key];
+        delete value[key];
+    }
+
+    function getMaxItem(mapping(uint8 => BorrowInfo) value) internal {
+        optional(uint8, BorrowInfo) maxItem = value.max();
+        if (!maxItem.hasValue()) {
+            return 0;
+        }
+        (uint8 maxIndex, ) = maxItem.get();
+        return maxIndex + 1;
+    }
+}

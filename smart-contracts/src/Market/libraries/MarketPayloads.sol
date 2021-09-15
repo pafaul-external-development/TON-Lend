@@ -68,20 +68,21 @@ library MarketToUserPayloads {
         return ts.decode(address, uint32, address, uint256, mapping(uint32 => uint256), mapping(uint32 => uint256));
     }
 
-    function encodeBorrowAddition(uint256 borrowAmount, fraction index, uint32 marketId_) internal pure returns (TvmCell) {
+    function encodeBorrowAddition(uint256 borrowAmount, address tip3Wallet, fraction index, uint32 marketId_) internal pure returns (TvmCell) {
         TvmBuilder tb;
         tb.store(MarketOperationCodes.BORROW_FINALIZE);
         TvmBuilder op;
         op.store(borrowAmount);
+        op.store(tip3Wallet);
         op.store(index);
         op.store(marketId_);
         tb.store(op.toCell());
         return tb.toCell();
     }
 
-    function decodeBorrowAddition(TvmCell args) internal pure returns (uint256, fraction, uint32) {
+    function decodeBorrowAddition(TvmCell args) internal pure returns (uint256, address, fraction, uint32) {
         TvmSlice ts = args.toSlice();
-        return ts.decode(uint256, fraction, uint32);
+        return ts.decode(uint256, address, fraction, uint32);
     }
 
     function createIndexUpdateRequest(address tonWallet, uint32 marketId, mapping (uint32=>bool) upd, address tip3UserWallet, uint256 amountToBorrow) internal pure returns(TvmCell) {

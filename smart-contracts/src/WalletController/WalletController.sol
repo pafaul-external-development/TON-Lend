@@ -244,25 +244,14 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
     /*********************************************************************************************************/
     // Functions for payload creation
 
-    function createSupplyPayload(address userAddress) external pure returns(TvmCell) {
-        TvmBuilder builder;
+    function createSupplyPayload(address userAddress, address vTokenTIP3) external pure returns(TvmCell) {
+        TvmBuilder tb;
         builder.store(MarketOperations.SUPPLY_TOKENS);
-        TvmBuilder informationBuilder;
-        informationBuilder.store(userAddress);
-        builder.store(informationBuilder.toCell());
+        TvmBuilder op;
+        op.store(userAddress);
+        op.store(vTokenTIP3);
+        tb.store(op.toCell());
 
-        return builder.toCell();
+        return tb.toCell();
     }
-
-    function craeteWithdrawPayload(address userAddress, uint128 amountToWithdraw) external pure returns(TvmCell) {
-        TvmBuilder builder;
-        builder.store(MarketOperations.WITHDRAW_TOKENS);
-        TvmBuilder informationBuilder;
-        informationBuilder.store(userAddress);
-        informationBuilder.store(amountToWithdraw);
-        builder.store(informationBuilder.toCell());
-        return builder.toCell();
-    }
-
-    function decodePayload(TvmCell payload) internal returns(TvmCell) {}
 }
