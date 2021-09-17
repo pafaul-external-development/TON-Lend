@@ -178,7 +178,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
             }
         }
 
-        UserAccountManager(userAccountManager).requestBorrow{
+        UserAccountManager(userAccountManager).passBorrowInformation{
             flag: MsgFlag.REMAINING_GAS
         }(owner, userTip3Wallet, toBorrow, borrowInfo, supplyInfo);
     }
@@ -192,17 +192,39 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
 
         UserAccountMananager(userAccountManager).requestBorrowSend{
             flag: MsgFlag.REMAINING_GAS
-        }(msigOwner, userTip3Wallet, toBorrow);
+        }(msigOwner, userTip3Wallet, marketId_, toBorrow);
     }
 
     /*********************************************************************************************************/
     // repay functions
 
-    
+    function sendRepayInfo(address userTip3Address, uint32 marketId, uint8 loanId, uint256 tokensForRepay) external onlyUserAccountManager {
+        tvm.rawReserve(msg.value, 2);
+        UserAccountManager(userAccountManager).sendRepayInfo{
+            flag: MsgFlag.REMAINING_GAS
+        }(msigOwner, userTip3Address, marketId, loanId, tokensForRepay, markets[marketId].borrowInfo[loanId]);
+    }
+
+    function writeRepayInformation(address userTip3Address, uint32 marketId_, uint8 loanId, uint256 tokensToReturn, bi) external onlyUserAccountManager {
+        tvm.rawReserve(msg.value, 2);
+        if (bi.toRepay == 0) {
+            markets[marketId].borrowInfo.removeItemFrom(loanId);
+        } else {
+            markets[marketId].borrowInfo[loanId] = bi;
+        }
+
+        if (tokensToReturn != 0) { 
+            IUserAccountManager(userAccountManager).requestRepaySendExtra{
+                flag: MsgFlag.REMAINING_GAS
+            }(msigOwner, userTip3Address, marketId_, tokensToReturn);
+        } else {
+            address(msigOwner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        }
+    }
 
     /*********************************************************************************************************/
 
-    // Functon can only be called by the AccauntManaget contract
+    // Functon can only be called by the AccountManaget contract
     /**
      * @param marketId Id of market to enter
      */
