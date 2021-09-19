@@ -4,7 +4,6 @@ pragma AbiHeader expire;
 pragma AbiHeader time;
 
 import "./interfaces/IUserAccount.sol";
-import "./interfaces/IUserAccountData.sol";
 import "./libraries/UserAccountErrorCodes.sol";
 
 import "./interfaces/IUAMUserAccount.sol";
@@ -109,7 +108,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     /*********************************************************************************************************/
     // Supply functions
 
-    function writeSupplyInfo(uint32 marketId_, uint256 tokensToSupply, fraction index) external onlyUserAccountManager {
+    function writeSupplyInfo(uint32 marketId_, uint256 tokensToSupply, fraction index) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
         markets[marketId_].suppliedTokens += tokensToSupply;
         _updateMarketInfo(marketId_, index);
@@ -132,7 +131,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
         }
     }
 
-    function updateIndexes(uint32 marketId_, mapping(uint32 => fraction) newIndexes, address userTip3Wallet, uint256 toBorrow) external override {
+    function updateIndexes(uint32 marketId_, mapping(uint32 => fraction) newIndexes, address userTip3Wallet, uint256 toBorrow) external override onlyUserAccountManager {
         for ((uint32 marketId, fraction index): newIndexes) {
             _updateMarketInfo(marketId, index);
         }
@@ -165,14 +164,14 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
         }(owner, userTip3Wallet, marketId_, toBorrow, borrowInfo, supplyInfo);
     }
 
-    function writeBorrowInformation(uint32 marketId_, uint256 toBorrow, address userTip3Wallet, fraction marketIndex) external onlyUserAccountManager {
+    function writeBorrowInformation(uint32 marketId_, uint256 toBorrow, address userTip3Wallet, fraction marketIndex) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
 
         uint8 currentBorrowId = markets[marketId_].borrowInfo.getMaxItem();
         BorrowInfo bi = BorrowInfo(toBorrow, marketIndex);
         markets[marketId_].borrowInfo[currentBorrowId] = bi;
 
-        IUAMUserAccount(userAccountManager).requestBorrowSend{
+        IUAMUserAccount(userAccountManager).requestTokenPayout{
             flag: MsgFlag.REMAINING_GAS
         }(owner, userTip3Wallet, marketId_, toBorrow);
     }
@@ -180,14 +179,14 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     /*********************************************************************************************************/
     // repay functions
 
-    function sendRepayInfo(address userTip3Address, uint32 marketId, uint8 loanId, uint256 tokensForRepay) external view onlyUserAccountManager {
+    function sendRepayInfo(address userTip3Address, uint32 marketId, uint8 loanId, uint256 tokensForRepay) external override view onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
         IUAMUserAccount(userAccountManager).sendRepayInfo{
             flag: MsgFlag.REMAINING_GAS
         }(owner, userTip3Address, marketId, loanId, tokensForRepay, markets[marketId].borrowInfo[loanId]);
     }
 
-    function writeRepayInformation(address userTip3Address, uint32 marketId_, uint8 loanId, uint256 tokensToReturn, BorrowInfo bi) external onlyUserAccountManager {
+    function writeRepayInformation(address userTip3Address, uint32 marketId_, uint8 loanId, uint256 tokensToReturn, BorrowInfo bi) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
         if (bi.toRepay == 0) {
             markets[marketId_].borrowInfo.removeItemFrom(loanId);
@@ -196,7 +195,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
         }
 
         if (tokensToReturn != 0) { 
-            IUAMUserAccount(userAccountManager).requestRepaySendExtra{
+            IUAMUserAccount(userAccountManager).requestTokenPayout{
                 flag: MsgFlag.REMAINING_GAS
             }(owner, userTip3Address, marketId_, tokensToReturn);
         } else {
@@ -226,7 +225,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     /*********************************************************************************************************/
     // Functions for owner
 
-    function withdrawExtraTons() external view onlyOwner {
+    function withdrawExtraTons() external override view onlyOwner {
         address(owner).transfer({ value: 0, bounce: false, flag: MsgFlag.ALL_NOT_RESERVED });
     }
 
