@@ -10,7 +10,7 @@ library FPO {
         return fraction(a.nom*b.nom, a.denom*b.denom);
     }
 
-    function fMulNum(fraction a, uint256 b) internal pure returns (fraction) {
+    function fNumMul(fraction a, uint256 b) internal pure returns (fraction) {
         return fraction(a.nom * b, a.denom);
     }
 

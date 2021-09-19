@@ -142,7 +142,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     function _updateMarketInfo(uint32 marketId, fraction index) internal {
         fraction tmpf;
         for ((, BorrowInfo bi): markets[marketId].borrowInfo) {
-            tmpf = index.fMulNum(bi.toRepay);
+            tmpf = index.fNumMul(bi.toRepay);
             tmpf = tmpf.fDiv(bi.index);
             bi.toRepay = tmpf.toNum();
             bi.index = index;

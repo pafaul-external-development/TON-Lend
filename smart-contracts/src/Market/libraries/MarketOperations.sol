@@ -32,26 +32,26 @@ library MarketOperations {
 
     function calculateTotalReserve(uint256 totalReserve, uint256 totalBorrowed, fraction r, fraction reserveFactor, uint256 t) internal returns (fraction) {
         fraction tr;
-        tr = r.fMulNum(t);
+        tr = r.fNumMul(t);
         tr = tr.fMul(reserveFactor);
-        tr = tr.fMulNum(totalBorrowed);
+        tr = tr.fNumMul(totalBorrowed);
         tr = tr.fAddNum(totalReserve);
         return tr;
     }
 
     function calculateIndex(fraction index, fraction r, uint256 t) internal returns (fraction) {
         fraction index_;
-        index_ = r.fMulNum(t);
+        index_ = r.fNumMul(t);
         index_ = index_.fAddNum(1);
         index_ = index_.fAdd(index);
         return index_;
     }
 
-    function calculateTotalBorrowed(fraction totalBorrowed, fraction r, uint256 t) internal returns (fraction) {
+    function calculateTotalBorrowed(uint256 totalBorrowed, fraction r, uint256 t) internal returns (fraction) {
         fraction tb_;
-        tb_ = r.fMulNum(t);
+        tb_ = r.fNumMul(t);
         tb_ = tb_.fAddNum(1);
-        tb_ = tb_.fMul(totalBorrowed);
+        tb_ = tb_.fNumMul(totalBorrowed);
         return tb_;
     }
 }

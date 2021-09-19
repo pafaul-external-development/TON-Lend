@@ -13,13 +13,15 @@ import "../Controllers/interfaces/ICCMarketDeployed.sol";
 
 import "../TIP3Deployer/interfaces/ITIP3Deployer.sol";
 
+import "../WalletController/interfaces/IWalletControllerMarketInteractions.sol";
+
 import "../utils/interfaces/IUpgradableContract.sol";
 
 import "../utils/libraries/MsgFlag.sol";
 
 import "../utils/libraries/FloatingPointOperations.sol";
 
-contract MarketAggregator is IMarketUAM, IUpgradableContract, IMarketOracle, IMarketSetters, IMarketTIP3Root, IMarketOwnerFunctions, IMarketGetters {
+contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters, IMarketTIP3Root, IMarketOwnerFunctions, IMarketGetters {
     using UFO for uint256;
     using FPO for fraction;
 
@@ -210,45 +212,6 @@ contract MarketAggregator is IMarketUAM, IUpgradableContract, IMarketOracle, IMa
         }(marketId, markets[marketId].token, markets[marketId].virtualToken);
     }
 
-    /*********************************************************************************************************/
-    // Interactions with UserAccountManager
-
-    /**
-     * @param tonWallet Address of user's ton wallet
-     * @param payload Payload with information request
-     */
-    function fetchInformationFromUserAccount(address tonWallet, TvmCell payload) external override view onlySelf {
-        tvm.rawReserve(msg.value, 2);
-        IUAMUserAccount(userAccountManager).fetchInformationFromUserAccount{
-            flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, payload);
-    } 
-
-    /**
-     * @param tonWallet Address of user's ton wallet
-     * @param payload Payload with result of information request
-     */
-    function receiveInformationFromUser(address tonWallet, TvmCell payload) external override onlyUserAccountManager {
-        tvm.rawReserve(msg.value, 2);
-        (uint8 operationId, TvmCell args) = MarketToUserPayloads.getOperationType(payload);
-
-        if (operationId == MarketOperationCodes.RESUME_SUPPLY_TOKENS) {
-            this._resumeSupplyExecution{flag: MsgFlag.REMAINING_GAS}(args);
-        }
-
-        if (operationId == MarketOperationCodes.BORROW_TOKENS) {
-            this._borrowTokens{flag: MsgFlag.REMAINING_GAS}(args);
-        }
-
-        if (operationId == MarketOperationCodes.BORROW_FINALIZE_RESPONCE) {
-            this._payoutTokens{flag: MsgFlag.REMAINING_GAS}(args);
-        }
-
-        if (operationId == MarketOperationCodes.REQUEST_INDEX_UPDATE) {
-            this._updateUserIndexes{flag: MsgFlag.REMAINING_GAS}(args);
-        }
-    }
-
 
     /*********************************************************************************************************/
     // Supply operation part
@@ -271,8 +234,8 @@ contract MarketAggregator is IMarketUAM, IUpgradableContract, IMarketOracle, IMa
             fraction toPayout = tokensProvided.numFDiv(exchangeRate);
             uint256 tokensToSupply = toPayout.toNum();
 
-            mi.suppliedTokens += tokensToSupply;
             mi.currentPoolBalance += tokensToSupply;
+            mi.totalSupply += tokensToSupply;
             markets[marketId_] = mi;
             _updateMarketState(marketId_);
             IUAMUserAccount(userAccountManager).writeSupplyInfo(msigOwner, marketId_, tokensToSupply, markets[marketId_].index);
@@ -298,28 +261,28 @@ contract MarketAggregator is IMarketUAM, IUpgradableContract, IMarketOracle, IMa
         tvm.rawReserve(msg.value, 2);
         uint256 supplySum = 0;
         uint256 borrowSum = 0;
+        address realTokenRoot = markets[marketId_].token;
         fraction tmp;
         for ((uint32 marketId, uint256 s): si) {
-            tmp = tokenPrices[markets[marketId].realTokenRoot];
-            tmp = tmp.fMulNum(s);
+            tmp = tokenPrices[realTokenRoot];
+            tmp = tmp.fNumMul(s);
             tmp = tmp.fMul(markets[marketId].collateral);
             supplySum += tmp.toNum();
         }
 
         for ((uint32 marketId, uint256 b): bi) {
-            tmp = tokenPrices[markets[marketId].realTokenRoot];
-            tmp = tmp.fMulNum(b);
+            tmp = tokenPrices[realTokenRoot];
+            tmp = tmp.fNumMul(b);
             borrowSum += tmp.toNum();
         }
         if (borrowSum < supplySum) {
             uint256 tmp_ = supplySum - borrowSum;
-            tmp = tokenPrices[markets[marketId_].realTokenRoot];
+            tmp = tokenPrices[realTokenRoot];
             tmp = tmp_.numFDiv(tmp);
             tmp_ = tmp.toNum();
             if (tmp_ >= toBorrow) {
                 markets[marketId_].totalBorrowed += toBorrow;
                 markets[marketId_].currentPoolBalance -= toBorrow;
-                markets[marketId_].suppliedTokens -= toBorrow;
                 _updateMarketState(marketId_);
                 IUAMUserAccount(userAccountManager).writeBorrowInformation{
                     flag: MsgFlag.REMAINING_GAS
@@ -344,13 +307,13 @@ contract MarketAggregator is IMarketUAM, IUpgradableContract, IMarketOracle, IMa
             uint256 tokensToPayout = uint256(tokenAmount);
             IUAMUserAccount(userAccountManager).requestRepayInfo{
                 flag: MsgFlag.REMAINING_GAS
-            }(msigOwner, userTip3Waller, marketId_, loanId, tokensToPayout);
+            }(msigOwner, userTip3Wallet, marketId_, loanId, tokensToPayout);
         }
     }
 
     function receiveRepayInformation(address tonWallet, address userTip3Wallet, uint32 marketId_, uint8 loanId, uint256 tokensForRepay, BorrowInfo bi) external onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
-        fraction newRepayInfo = markets[marketId_].index.fMulNum(bi.toRepay);
+        fraction newRepayInfo = markets[marketId_].index.fNumMul(bi.toRepay);
         newRepayInfo = newRepayInfo.fDiv(bi.index);
         uint256 tokensToRepay = newRepayInfo.toNum();
         uint256 tokensToReturn;
@@ -358,12 +321,12 @@ contract MarketAggregator is IMarketUAM, IUpgradableContract, IMarketOracle, IMa
             tokensToReturn = tokensForRepay - tokensToRepay;
             bi.toRepay = 0;
             markets[marketId_].totalBorrowed -= tokensToRepay;
-            markets[marketId_].suppliedTokens += tokensToRepay;
+            markets[marketId_].currentPoolBalance += tokensToRepay;
         } else {
             tokensToReturn = 0;
             bi.toRepay = tokensToRepay - tokensForRepay;
             markets[marketId_].totalBorrowed -= tokensForRepay;
-            markets[marketId_].suppliedTokens += tokensForRepay;
+            markets[marketId_].currentPoolBalance += tokensForRepay;
         }
 
         IUAMUserAccount(userAccountManager).writeRepayInformation{
@@ -374,11 +337,11 @@ contract MarketAggregator is IMarketUAM, IUpgradableContract, IMarketOracle, IMa
     /*********************************************************************************************************/
     // Service operations
 
-    function requestTokenPayout(address tonWallet, address userTIP3, uint32 marketId, uint256 toPayout) external onlyUserAccountManager {
-        address tokenRoot = realTokenRoots[marketId];
-        WalletController(walletController).transferTokensTo{
+    function requestTokenPayout(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toPayout) external onlyUserAccountManager {
+        address tokenRoot = markets[marketId].token;
+        IWCMInteractions(walletController).transferTokensToWallet{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, tokenRoot, toPayout, userTIP3);
+        }(tonWallet, tokenRoot, userTip3Wallet, toPayout);
     }
 
     function _updateMarketState(uint32 marketId_) internal {
@@ -391,7 +354,7 @@ contract MarketAggregator is IMarketUAM, IUpgradableContract, IMarketOracle, IMa
         fraction index = MarketOperations.calculateIndex(mi.index, r, dt);
         mi.totalBorrowed = totalBorrowed.toNum();
         mi.totalReserve = totalReserve.toNum();
-        mi.index = index.toNum();
+        mi.index = index;
         markets[marketId_] = mi;
     }
 
@@ -437,7 +400,7 @@ contract MarketAggregator is IMarketUAM, IUpgradableContract, IMarketOracle, IMa
     function receiveAllUpdatedPrices(mapping(address => MarketPriceInfo) updatedPrices, TvmCell payload) external override onlyOracle {
         tvm.rawReserve(msg.value, 2);
         for((address t, MarketPriceInfo mpi): updatedPrices) {
-            tokenPrices[t] = fraction(mpi.tokens, mpi.uds);
+            tokenPrices[t] = fraction(mpi.tokens, mpi.usd);
         }
     }
 

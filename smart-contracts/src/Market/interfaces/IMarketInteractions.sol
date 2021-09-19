@@ -4,11 +4,6 @@ import "../../UserAccount/interfaces/IUAMUserAccount.sol";
 import "../../Oracle/interfaces/IOracleReturnPrices.sol";
 import "../../utils/TIP3/interfaces/IRootTokenContract.sol";
 
-interface IMarketUAM {
-    function fetchInformationFromUserAccount(address userAccount, TvmCell payload) external view;
-    function receiveInformationFromUser(address tonWallet, TvmCell payload) external;
-}
-
 interface IMarketOracle {
     function receiveUpdatedPrice(address tokenRoot, uint128 nom, uint128 denom, TvmCell payload) external;
     function receiveAllUpdatedPrices(mapping(address => MarketPriceInfo) updatedPrices, TvmCell payload) external;
