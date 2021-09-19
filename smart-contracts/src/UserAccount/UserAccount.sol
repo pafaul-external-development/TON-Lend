@@ -7,17 +7,19 @@ import "./interfaces/IUserAccount.sol";
 import "./interfaces/IUserAccountData.sol";
 import "./libraries/UserAccountErrorCodes.sol";
 
+import "./interfaces/IUAMUserAccount.sol";
+
 import "../utils/interfaces/IUpgradableContract.sol";
 import "../utils/libraries/MsgFlag.sol";
-
-import "../../Market/libraries/MarketPayloads.sol";
 
 contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     using UFO for uint256;
     using FPO for fraction;
-    using ManageMapping for mapping;
+    using ManageMapping for mapping(uint8 => BorrowInfo);
 
-    address msigOwner;
+    bool borrowingAllowed;
+
+    address owner;
     
     // Used for interactions with market 
     address userAccountManager;
@@ -45,7 +47,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
             1. platformCode
             2. initialData
                 bits:
-                    address msigOwner
+                    address owner
                     address userAccountManager
      */
     function onCodeUpgrade(TvmCell data) private {
@@ -57,7 +59,9 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
 
         platformCode = dataSlice.loadRef();         // Loading platform code
         TvmSlice ownerData = dataSlice.loadRefAsSlice();
-        (msigOwner, userAccountManager) = ownerData.decode(address, address);
+        (owner, userAccountManager) = ownerData.decode(address, address);
+
+        borrowingAllowed = true;
     }
 
     /*  Upgrade data for version 1 (from 0):
@@ -69,7 +73,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
             1. TvmCell platformCode
             2. user data:
                 bits:
-                    address msigOwner
+                    address owner
                     address userAccountManager
                 refs:
                     1. mapping(address => TvmCell) userData
@@ -84,11 +88,11 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
         builder.store(platformCode);
 
         TvmBuilder userDataBuilder;
-        userDataBuilder.store(msigOwner);
+        userDataBuilder.store(owner);
         userDataBuilder.store(userAccountManager);
 
         TvmBuilder userDataMapping;
-        userDataMapping.store(userData);
+        userDataMapping.store(markets);
         userDataBuilder.store(userDataMapping.toCell());
         builder.store(userDataBuilder.toCell());
 
@@ -99,29 +103,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     }
 
     function getOwner() external override responsible view returns(address) {
-        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } msigOwner;
-    }
-
-
-
-    /*********************************************************************************************************/
-    // UserAccountManager interactions
-
-    /**
-     * @param payload Payload containing information to write to user's account
-     */
-    function writeInformationToUserAccount(TvmCell payload) external override onlyUserAccountManager responsible returns(address, TvmCell responce) {
-        tvm.rawReserve(msg.value, 2);
-        (uint8 operationId, TvmCell args) = MarketToUserPayloads.getOperationType(payload);
-        TvmBuilder responceBuilder;
-
-        if (operationId == MarketOperations.SUPPLY_TOKENS) {
-            (uint32 marketId, uint256 suppliedTokens, address userSupplyAddress) = MarketToUserPayloads.decodeSupplyOperation(args);
-            market[marketId].suppliedTokens += suppliedTokens;
-            responceBuilder.store(responceBuilder.RESPONSE_SUPPLY_TOKENS);
-            responceBuilder.store(args);
-        }
-        return {flag: MsgFlag.REMAINING_GAS} (msigOwner, responceBuilder.toCell());
+        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } owner;
     }
 
     /*********************************************************************************************************/
@@ -131,19 +113,20 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
         tvm.rawReserve(msg.value, 2);
         markets[marketId_].suppliedTokens += tokensToSupply;
         _updateMarketInfo(marketId_, index);
-        address(msigOwner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     /*********************************************************************************************************/
     // Borrow functions
 
-    function borrow(uint32 marketId, uint256 amountToBorrow, address userTIP3) external onlyOwner {
+    function borrow(uint32 marketId, uint256 amountToBorrow, address userTIP3) external override onlyOwner {
         tvm.rawReserve(msg.value, 2);
-        if (borrowAllowed){
+        if (borrowingAllowed){
             // TODO: check if user has any borrow limit left and add modifier for blocking borrow operation while current is not finished
-            IUserAccountManager(userAccountManager).requestIndexUpdate{
+            IUAMUserAccount(userAccountManager).requestIndexUpdate{
                 flag: MsgFlag.REMAINING_GAS
             }(owner, marketId, knownMarkets, userTIP3, amountToBorrow);
+            borrowingAllowed = false;
         } else {
             address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
         }
@@ -157,9 +140,8 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     }
 
     function _updateMarketInfo(uint32 marketId, fraction index) internal {
-        uint256 tmp;
         fraction tmpf;
-        for ((uint8 borrowIndex, BorrowInfo bi): markets[marketId].borrowInfo) {
+        for ((, BorrowInfo bi): markets[marketId].borrowInfo) {
             tmpf = index.fMulNum(bi.toRepay);
             tmpf = tmpf.fDiv(bi.index);
             bi.toRepay = tmpf.toNum();
@@ -167,20 +149,20 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
         }
     }
 
-    function _calculateTmpBorrowInfo(uint32 marketId_, address userTip3Wallet, uint256 toBorrow) external onlySelf {
+    function _calculateTmpBorrowInfo(uint32 marketId_, address userTip3Wallet, uint256 toBorrow) external view onlySelf {
         tvm.rawReserve(msg.value, 2);
         mapping(uint32 => uint256) borrowInfo;
         mapping(uint32 => uint256) supplyInfo;
         for ((uint32 marketId, UserMarketInfo umi) : markets) {
-            supplyInfo[marketId] = umi.supplyInfo
+            supplyInfo[marketId] = umi.suppliedTokens;
             for ((uint8 borrowId, BorrowInfo bi): umi.borrowInfo) {
                 borrowInfo[borrowId] += bi.toRepay;
             }
         }
 
-        UserAccountManager(userAccountManager).passBorrowInformation{
+        IUAMUserAccount(userAccountManager).passBorrowInformation{
             flag: MsgFlag.REMAINING_GAS
-        }(owner, userTip3Wallet, toBorrow, borrowInfo, supplyInfo);
+        }(owner, userTip3Wallet, marketId_, toBorrow, borrowInfo, supplyInfo);
     }
 
     function writeBorrowInformation(uint32 marketId_, uint256 toBorrow, address userTip3Wallet, fraction marketIndex) external onlyUserAccountManager {
@@ -190,35 +172,35 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
         BorrowInfo bi = BorrowInfo(toBorrow, marketIndex);
         markets[marketId_].borrowInfo[currentBorrowId] = bi;
 
-        UserAccountMananager(userAccountManager).requestBorrowSend{
+        IUAMUserAccount(userAccountManager).requestBorrowSend{
             flag: MsgFlag.REMAINING_GAS
-        }(msigOwner, userTip3Wallet, marketId_, toBorrow);
+        }(owner, userTip3Wallet, marketId_, toBorrow);
     }
 
     /*********************************************************************************************************/
     // repay functions
 
-    function sendRepayInfo(address userTip3Address, uint32 marketId, uint8 loanId, uint256 tokensForRepay) external onlyUserAccountManager {
+    function sendRepayInfo(address userTip3Address, uint32 marketId, uint8 loanId, uint256 tokensForRepay) external view onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
-        UserAccountManager(userAccountManager).sendRepayInfo{
+        IUAMUserAccount(userAccountManager).sendRepayInfo{
             flag: MsgFlag.REMAINING_GAS
-        }(msigOwner, userTip3Address, marketId, loanId, tokensForRepay, markets[marketId].borrowInfo[loanId]);
+        }(owner, userTip3Address, marketId, loanId, tokensForRepay, markets[marketId].borrowInfo[loanId]);
     }
 
-    function writeRepayInformation(address userTip3Address, uint32 marketId_, uint8 loanId, uint256 tokensToReturn, bi) external onlyUserAccountManager {
+    function writeRepayInformation(address userTip3Address, uint32 marketId_, uint8 loanId, uint256 tokensToReturn, BorrowInfo bi) external onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
         if (bi.toRepay == 0) {
-            markets[marketId].borrowInfo.removeItemFrom(loanId);
+            markets[marketId_].borrowInfo.removeItemFrom(loanId);
         } else {
-            markets[marketId].borrowInfo[loanId] = bi;
+            markets[marketId_].borrowInfo[loanId] = bi;
         }
 
         if (tokensToReturn != 0) { 
-            IUserAccountManager(userAccountManager).requestRepaySendExtra{
+            IUAMUserAccount(userAccountManager).requestRepaySendExtra{
                 flag: MsgFlag.REMAINING_GAS
-            }(msigOwner, userTip3Address, marketId_, tokensToReturn);
+            }(owner, userTip3Address, marketId_, tokensToReturn);
         } else {
-            address(msigOwner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+            address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
         }
     }
 
@@ -226,30 +208,26 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
 
     // Functon can only be called by the AccountManaget contract
     /**
-     * @param marketId Id of market to enter
+     * @param marketId_ Id of market to enter
      */
-    function enterMarket(uint32 marketId) external override onlyRoot {
+    function enterMarket(uint32 marketId_) external override onlyRoot {
         tvm.rawReserve(msg.value, 2);
-        if (!knownMarkets[marketId]) {
-            knownMarkets[marketId] = true;
-            BorrowInfo borrowSummary;
-            mapping(uint8 => BorrowInfo) borrowInfo;
+        if (!knownMarkets[marketId_]) {
+            knownMarkets[marketId_] = true;
 
-            markets[marketId] = UserMarketInfo({
-                marketId: marketId,
-                suppliedTokens: 0,
-                borrowSummary: borrowSummary,
-                borrowInfo: borrowInfo
-            });
+            markets[marketId_] = UserMarketInfo(
+                marketId_,
+                0
+            );
         }
-        address(msigOwner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     /*********************************************************************************************************/
     // Functions for owner
 
     function withdrawExtraTons() external view onlyOwner {
-        address(msigOwner).transfer({ value: 0, bounce: false, flag: MsgFlag.ALL_NOT_RESERVED });
+        address(owner).transfer({ value: 0, bounce: false, flag: MsgFlag.ALL_NOT_RESERVED });
     }
 
     /*********************************************************************************************************/
@@ -260,12 +238,17 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     }
 
     modifier onlyOwner() {
-        require(msg.sender == msigOwner);
+        require(msg.sender == owner);
         _;
     }
 
     modifier onlyUserAccountManager() {
         require(msg.sender == userAccountManager);
+        _;
+    }
+
+    modifier onlySelf() {
+        require(msg.sender == address(this));
         _;
     }
 

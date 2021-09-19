@@ -10,7 +10,6 @@ struct BorrowInfo {
 struct UserMarketInfo {
     uint32 marketId;
     uint256 suppliedTokens;
-    BorrowInfo borrowSummary;
     mapping(uint8 => BorrowInfo) borrowInfo;
 }
 
@@ -20,6 +19,8 @@ interface IUserAccount {
     function enterMarket(uint32 marketId) external;
 
     function borrow(uint32 marketId, uint256 amountToBorrow, address userTIP3) external;
+
+    function updateIndexes(uint32 marketId_, mapping(uint32 => fraction) newIndexes, address userTip3Wallet, uint256 toBorrow) external;
 }
 
 library UserAccountConstants {
@@ -27,12 +28,12 @@ library UserAccountConstants {
 }
 
 library ManageMapping {
-    function removeItemFrom(mapping(uint8 => BorrowInfo) value, uint8 index) internal {
+    function removeItemFrom(mapping(uint8 => BorrowInfo) value, uint8 index) internal pure {
         optional(uint8, BorrowInfo) maxItem = value.max();
         if (!maxItem.hasValue()) {
             return;
         }
-        (uint8 key, BorrowInfo bi) = maxItem.get();
+        (uint8 key, ) = maxItem.get();
         if (key == 0) {
             delete value[0];
             return;
@@ -42,7 +43,7 @@ library ManageMapping {
         delete value[key];
     }
 
-    function getMaxItem(mapping(uint8 => BorrowInfo) value) internal {
+    function getMaxItem(mapping(uint8 => BorrowInfo) value) internal pure returns (uint8) {
         optional(uint8, BorrowInfo) maxItem = value.max();
         if (!maxItem.hasValue()) {
             return 0;
