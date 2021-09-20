@@ -182,7 +182,7 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
         address sender_address,
         address sender_wallet,
         address, // original_gas_to,
-        uint128 updated_balance,
+        uint128, // updated_balance,
         TvmCell payload
     ) external override onlyOwnWallet(token_root, token_wallet) {
         tvm.rawReserve(msg.value, 2);
@@ -201,6 +201,9 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
             }(token_root, tonWallet, sender_wallet, amount, loanId);
         } else if (operation == OperationCodes.WITHDRAW_TOKENS) {
             (address tonWallet, address userTip3Wallet) = args.decode(address, address);
+            IMarketOperations(marketAddress).withdrawVToken{
+                flag: MsgFlag.REMAINING_GAS
+            }(token_root, tonWallet, userTip3Wallet, sender_wallet, amount);
         } else {
             address(sender_address).transfer({value: 0, flag: 64});
         }
