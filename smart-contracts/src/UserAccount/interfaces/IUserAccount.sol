@@ -18,7 +18,7 @@ interface IUserAccount {
 
     function enterMarket(uint32 marketId) external;
 
-    function borrow(uint32 marketId, uint256 amountToBorrow, address userTIP3) external;
+    function borrow(uint32 marketId, uint256 amountToBorrow, address userTip3Wallet) external;
 
     function withdrawExtraTons() external view;
 }

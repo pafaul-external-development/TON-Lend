@@ -35,6 +35,6 @@ interface IMarketOperations {
     function repayBorrow(address tokenRoot, address tonWallet, address userTip3Wallet, uint128 tokenAmount, uint8 loanId) external view;
     function receiveRepayInformation(address tonWallet, address userTip3Wallet, uint32 marketId_, uint8 loanId, uint256 tokensForRepay, BorrowInfo bi) external;
     function requestTokenPayout(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toPayout) external view;
-    function receiveBorrowInformation(address tonWallet, uint32 marketId_, address userTIP3, uint256 toBorrow, mapping(uint32 => uint256) bi, mapping(uint32 => uint256) si) external;
+    function receiveBorrowInformation(address tonWallet, uint32 marketId_, address userTip3Wallet, uint256 toBorrow, mapping(uint32 => uint256) bi, mapping(uint32 => uint256) si) external;
     function requestIndexUpdate(address tonWallet, uint32 marketId, mapping (uint32=>bool) upd, address tip3UserWallet, uint256 amountToBorrow) external view;
 }

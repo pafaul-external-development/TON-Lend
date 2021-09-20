@@ -15,7 +15,9 @@ interface IUAMUserAccount {
     function writeRepayInformation(address tonWallet, address userTip3Wallet, uint32 marketId_, uint8 loanId, uint256 tokensToReturn, BorrowInfo bi) external view;
     function requestTokenPayout(address tonWallet, address userTip3Wallet, uint32 marketId_, uint256 tokensToSendBack) external view;
 
-    function requestIndexUpdate(address tonWallet, uint32 marketId, mapping(uint32 => bool) knownMarkets, address userTIP3, uint256 amountToBorrow) external view;
+    function requestIndexUpdate(address tonWallet, uint32 marketId, mapping(uint32 => bool) knownMarkets, address userTip3Wallet, uint256 amountToBorrow) external view;
     function passBorrowInformation(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toBorrow, mapping(uint32 => uint256) borrowInfo, mapping(uint32 => uint256) supplyInfo) external view;
     function sendRepayInfo(address tonWallet, address userTip3Wallet, uint32 marketId, uint8 loanId, uint256 tokensForRepay, BorrowInfo bi) external view;
+
+    function withdrawVToken(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw) external view;
 }

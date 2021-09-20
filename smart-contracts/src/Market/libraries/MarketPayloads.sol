@@ -50,12 +50,12 @@ library MarketToUserPayloads {
         return ts.decode(uint32, uint256, address);
     }
 
-    function encodeBorrow(address tonWallet, address userTIP3, uint256 toBorrow, mapping(uint32 => uint256) bi, mapping(uint32 => uint256) si) internal pure returns (TvmCell) {
+    function encodeBorrow(address tonWallet, address userTip3Wallet, uint256 toBorrow, mapping(uint32 => uint256) bi, mapping(uint32 => uint256) si) internal pure returns (TvmCell) {
         TvmBuilder tb;
         tb.store(MarketOperationCodes.BORROW_TOKENS);
         TvmBuilder op;
         op.store(tonWallet);
-        op.store(userTIP3);
+        op.store(userTip3Wallet);
         op.store(toBorrow);
         op.store(bi);
         op.store(si);

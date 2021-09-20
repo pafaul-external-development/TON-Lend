@@ -261,7 +261,9 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
             mi.totalSupply += tokensToSupply;
             markets[marketId_] = mi;
             _updateMarketState(marketId_);
-            IUAMUserAccount(userAccountManager).writeSupplyInfo(tonWallet, userTip3Wallet, marketId_, tokensToSupply, markets[marketId_].index);
+            IUAMUserAccount(userAccountManager).writeSupplyInfo{
+                flag: MsgFlag.REMAINING_GAS
+            }(tonWallet, userTip3Wallet, marketId_, tokensToSupply, markets[marketId_].index);
         }
     }
 
@@ -270,6 +272,51 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         IRootTokenContract(markets[marketId].virtualToken).mint{
             flag: MsgFlag.REMAINING_GAS
         }(uint128(toMint), userTip3Wallet);
+    }
+
+    /*********************************************************************************************************/
+    // Withdraw vTokens part
+    // Starts at WalletController
+
+    function withdrawVToken(address tokenRoot, address tonWallet, address userTip3Wallet, uint128 tokenAmount) external override onlyWalletController {
+        tvm.rawReserve(msg.value, 2);
+        uint32 marketId_ = tokensToMarkets[tokenRoot];
+        IUAMUserAccount(userAccountManager).requestWithdrawalInfo{
+            flag: MsgFlag.REMAINING_GAS
+        }(tonWallet, userTip3Wallet, marketId_, uint256(tokenAmount));
+    }
+
+    function receiveWithdrawInfo(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, mapping(uint32 => uint256) bi, mapping(uint32 => uint256) si) external override onlyUserAccountManager {
+        tvm.rawReserve(msg.value, 2);
+        fraction fTokensToSend = markets[marketId].index.fNumMul(tokensToWithdraw);
+        uint256 tokensToSend = fTokensToSend.toNum();
+
+        (uint256 supplySum, uint256 borrowSum) = _calculateBorrowSupplyDiff(si, bi);
+        mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes(bi);
+
+        if (supplySum > borrowSum) {
+            if (supplySum - borrowSum > tokensToSend) {
+                IUAMUserAccount(userAccountManager).updateWithdrawal{
+                    flag: MsgFlag.REMAINING_GAS
+                }(tonWallet, userTip3Wallet, marketId, tokensToSend, updatedIndexes);
+            } else {
+                // TODO: just udpate indexes
+            }
+        } else {
+            // TODO: mark for liquidation
+        }
+
+        IWCMInteractions(walletController).transferTokensToWallet{
+            flag: MsgFlag.REMAINING_GAS
+        }(tonWallet, tokenRoot, userTip3Wallet, tokensToSend);
+    }
+
+    function _createUpdatedIndexes(mapping(uint32 => uint256) info) internal returns(mapping(uint32 => fraction)) {
+        mapping(uint32 => fraction) updatedIndexes;
+        for ((uint32 marketId_, ): info) {
+            updatedIndexes[marketId_] = markets[marketId_].index;
+        }
+        return updatedIndexes;
     }
 
     /*********************************************************************************************************/
@@ -287,25 +334,13 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         }(tonWallet, marketId, ui, tip3UserWallet, amountToBorrow);
     }
 
-    function receiveBorrowInformation(address tonWallet, uint32 marketId_, address userTIP3, uint256 toBorrow, mapping(uint32 => uint256) bi, mapping(uint32 => uint256) si) external override onlyUserAccountManager {
+    function receiveBorrowInformation(address tonWallet, uint32 marketId_, address userTip3Wallet, uint256 toBorrow, mapping(uint32 => uint256) bi, mapping(uint32 => uint256) si) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
         uint256 supplySum = 0;
         uint256 borrowSum = 0;
         address realTokenRoot = markets[marketId_].token;
-        fraction tmp;
-        for ((uint32 marketId, uint256 s): si) {
-            tmp = tokenPrices[realTokenRoot];
-            tmp = tmp.fNumMul(s);
-            tmp = tmp.fMul(markets[marketId].collateral);
-            supplySum += tmp.toNum();
-        }
-
-        for ((uint32 marketId, uint256 b): bi) {
-            address marketTokenRoot = markets[marketId].token;
-            tmp = tokenPrices[marketTokenRoot];
-            tmp = tmp.fNumMul(b);
-            borrowSum += tmp.toNum();
-        }
+        
+        (uint256 supplySum, uint256 borrowSum) = calculateBorrowSupplyDiff(si, bi);
 
         if (borrowSum < supplySum) {
             uint256 tmp_ = supplySum - borrowSum;
@@ -318,7 +353,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
                 _updateMarketState(marketId_);
                 IUAMUserAccount(userAccountManager).writeBorrowInformation{
                     flag: MsgFlag.REMAINING_GAS
-                }(tonWallet, marketId_, toBorrow, userTIP3, markets[marketId_].index);
+                }(tonWallet, marketId_, toBorrow, userTip3Wallet, markets[marketId_].index);
             } else {
                 address(tonWallet).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
             }
@@ -326,6 +361,31 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
             // TODO: mark for liquidation ???
             address(tonWallet).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
         }
+    }
+
+    function _calculateBorrowSupplyDiff(mapping(uint32 => uint256) si, mapping(uint32 => uint256) bi) internal returns (uint256, uint256) {
+        uint256 supplySum = 0;
+        uint256 borrowSum = 0;
+
+        fraction tmp;
+        address marketTokenAddresses;
+
+        for ((uint32 marketId, uint256 s): si) {
+            marketTokenRoot = markets[marketId].token;
+            tmp = tokenPrices[marketTokenRoot];
+            tmp = tmp.fNumMul(s);
+            tmp = tmp.fMul(markets[marketId].collateral);
+            supplySum += tmp.toNum();
+        }
+
+        for ((uint32 marketId, uint256 b): bi) {
+            marketTokenRoot = markets[marketId].token;
+            tmp = tokenPrices[marketTokenRoot];
+            tmp = tmp.fNumMul(b);
+            borrowSum += tmp.toNum();
+        }
+
+        return (supplySum, borrowSum);
     }
 
     /*********************************************************************************************************/

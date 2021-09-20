@@ -120,13 +120,13 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     /*********************************************************************************************************/
     // Borrow functions
 
-    function borrow(uint32 marketId, uint256 amountToBorrow, address userTIP3) external override onlyOwner {
+    function borrow(uint32 marketId, uint256 amountToBorrow, address userTip3Wallet) external override onlyOwner {
         tvm.rawReserve(msg.value, 2);
         if (borrowingAllowed){
             // TODO: check if user has any borrow limit left and add modifier for blocking borrow operation while current is not finished
             IUAMUserAccount(userAccountManager).requestIndexUpdate{
                 flag: MsgFlag.REMAINING_GAS
-            }(owner, marketId, knownMarkets, userTIP3, amountToBorrow);
+            }(owner, marketId, knownMarkets, userTip3Wallet, amountToBorrow);
             borrowingAllowed = false;
         } else {
             address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
