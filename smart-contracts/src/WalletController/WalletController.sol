@@ -9,8 +9,9 @@ import "./interfaces/IWalletControllerGetters.sol";
 
 import "./libraries/CostConstants.sol";
 import "./libraries/WalletControllerErrorCodes.sol";
+import "./libraries/OperationCodes.sol";
 
-import "../Market/libraries/MarketOperations.sol";
+import "../Market/interfaces/IMarketInteractions.sol";
 
 import "../utils/interfaces/IUpgradableContract.sol";
 import "../utils/TIP3/interfaces/ITokenWalletDeployedCallback.sol";
@@ -21,7 +22,7 @@ import "../utils/TIP3/interfaces/ITONTokenWallet.sol";
 
 import "../utils/libraries/MsgFlag.sol";
 
-contract WalletController is IWalletControllerMarketInteractions, IWalletControllerMarketManagement, IWalletControllerGetters, IUpgradableContract, ITokenWalletDeployedCallback, ITokensReceivedCallback {
+contract WalletController is IWCMInteractions, IWalletControllerMarketManagement, IWalletControllerGetters, IUpgradableContract, ITokenWalletDeployedCallback, ITokensReceivedCallback {
     // Information for update
     address root;
     uint8 contractType;
@@ -142,17 +143,9 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
         delete marketTIP3Info[marketId];
     }
 
-    /**
-     * @param tokenRoot Address of token root
-     * @param destination Address of TIP-3 wallet to transfer tokens to
-     * @param amount Amount of TIP-3 tokens to trasfer
-     * @param payload Attached payload
-     * @param sendGasTo Where to send remaining gas
-     */
-    function transferTokensToWallet(address tokenRoot, address destination, uint128 amount, TvmCell payload, address sendGasTo) external override view onlyMarket {
-        address market = msg.sender;
-        require(marketAddresses[market].virtualToken == tokenRoot || marketAddresses[market].realToken == tokenRoot);
-        ITONTokenWallet(wallets[tokenRoot]).transfer{value: MsgFlag.REMAINING_GAS}(destination, amount, 0, sendGasTo, true, payload);
+    function transferTokensToWallet(address tonWallet, address tokenRoot, address userTip3Wallet, uint256 toPayout) external override view onlyMarket {
+        TvmCell empty;
+        ITONTokenWallet(wallets[tokenRoot]).transfer{value: MsgFlag.REMAINING_GAS}(userTip3Wallet, uint128(toPayout), 0, tonWallet, true, empty);
     }
 
     /*********************************************************************************************************/
@@ -161,7 +154,9 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
      * @param tokenRoot Address of token root to request wallet deploy
      */
     function addWallet(address tokenRoot) private pure {
-        IRootTokenContract(tokenRoot).deployEmptyWallet{value: CostConstants.WALLET_DEPLOY_COST}(
+        IRootTokenContract(tokenRoot).deployEmptyWallet{
+            value: CostConstants.WALLET_DEPLOY_COST
+        }(
             CostConstants.WALLET_DEPLOY_GRAMS,
             0,
             address(this),
@@ -183,14 +178,32 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
         address token_wallet,
         address token_root,
         uint128 amount,
-        uint256 sender_public_key,
+        uint256, // sender_public_key,
         address sender_address,
         address sender_wallet,
-        address original_gas_to,
+        address, // original_gas_to,
         uint128 updated_balance,
         TvmCell payload
     ) external override onlyOwnWallet(token_root, token_wallet) {
-        
+        tvm.rawReserve(msg.value, 2);
+        TvmSlice ts = payload.toSlice();
+        uint8 operation = ts.decode(uint8);
+        TvmSlice args = ts.loadRefAsSlice();
+        if (operation == OperationCodes.SUPPLY_TOKENS) {
+            (address tonWallet, address userTip3Wallet) = args.decode(address, address);
+            IMarketOperations(marketAddress).supplyTokensToMarket{
+                flag: MsgFlag.REMAINING_GAS
+            }(token_root, tonWallet, userTip3Wallet, amount);
+        } else if (operation == OperationCodes.REPAY_TOKENS) {
+            (address tonWallet, uint8 loanId) = args.decode(address, uint8);
+            IMarketOperations(marketAddress).repayBorrow{
+                flag: MsgFlag.REMAINING_GAS
+            }(token_root, tonWallet, sender_wallet, amount, loanId);
+        } else if (operation == OperationCodes.WITHDRAW_TOKENS) {
+            (address tonWallet, address userTip3Wallet) = args.decode(address, address);
+        } else {
+            address(sender_address).transfer({value: 0, flag: 64});
+        }
     }
 
     /*********************************************************************************************************/
@@ -244,13 +257,35 @@ contract WalletController is IWalletControllerMarketInteractions, IWalletControl
     /*********************************************************************************************************/
     // Functions for payload creation
 
-    function createSupplyPayload(address userAddress, address vTokenTIP3) external pure returns(TvmCell) {
+    function createSupplyPayload(address userAddress, address userVTokenWallet) external pure returns(TvmCell) {
         TvmBuilder tb;
-        builder.store(MarketOperations.SUPPLY_TOKENS);
+        tb.store(OperationCodes.SUPPLY_TOKENS);
         TvmBuilder op;
         op.store(userAddress);
-        op.store(vTokenTIP3);
+        op.store(userVTokenWallet);
         tb.store(op.toCell());
+
+        return tb.toCell();
+    }
+
+    function createRepayPayload(address userAddress, uint8 loanId) external pure returns(TvmCell) {
+        TvmBuilder tb;
+        tb.store(OperationCodes.REPAY_TOKENS);
+        TvmBuilder op;
+        op.store(userAddress);
+        op.store(loanId);
+        tb.store(op);
+
+        return tb.toCell();
+    }
+
+    function createWithdrawPayload(address userAddress, address userTip3Wallet) external pure returns(TvmCell) {
+        TvmBuilder tb;
+        tb.store(OperationCodes.WITHDRAW_TOKENS);
+        TvmBuilder op;
+        op.store(userAddress);
+        op.store(userTip3Wallet);
+        tb.store(op);
 
         return tb.toCell();
     }

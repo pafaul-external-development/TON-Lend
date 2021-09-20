@@ -5,7 +5,8 @@ import './IUserAccount.sol';
 interface IUAMUserAccount {
     function enterMarket(address tonWallet, uint32 marketId) external view responsible returns (address);
 
-    function writeSupplyInfo(address tonWallet, uint32 marketId_, uint256 tokensToSupply, fraction index) external view;
+    function writeSupplyInfo(address tonWallet, address userTip3Wallet, uint32 marketId_, uint256 tokensToSupply, fraction index) external view;
+    function requestVTokenMint(address tonWallet, address userTip3Wallet, uint32 marketId_, uint256 toMint) external view;
 
     function updateUserIndex(address tonWallet, uint32 marketId, mapping(uint32 => fraction) updatedIndexes, address userTip3Wallet, uint256 toBorrow) external view;
     function writeBorrowInformation(address tonWallet, uint32 marketId_, uint256 toBorrow, address userTip3Wallet, fraction marketIndex) external view;

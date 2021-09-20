@@ -240,7 +240,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     // Supply operation part
     // Starts at wallet controller
 
-    function supplyTokensToMarket(address tokenRoot, address msigOwner, uint128 tokenAmount) external override onlyWalletController {
+    function supplyTokensToMarket(address tokenRoot, address tonWallet, address userTip3Wallet, uint128 tokenAmount) external override onlyWalletController {
         tvm.rawReserve(msg.value, 2);
         if (realTokenRoots.exists(tokenRoot)) {
             uint256 tokensProvided = uint256(tokenAmount);
@@ -261,8 +261,15 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
             mi.totalSupply += tokensToSupply;
             markets[marketId_] = mi;
             _updateMarketState(marketId_);
-            IUAMUserAccount(userAccountManager).writeSupplyInfo(msigOwner, marketId_, tokensToSupply, markets[marketId_].index);
+            IUAMUserAccount(userAccountManager).writeSupplyInfo(tonWallet, userTip3Wallet, marketId_, tokensToSupply, markets[marketId_].index);
         }
+    }
+
+    function mintVTokens(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toMint) external view override onlyUserAccountManager {
+        tvm.rawReserve(msg.value, 2);
+        IRootTokenContract(markets[marketId].virtualToken).mint{
+            flag: MsgFlag.REMAINING_GAS
+        }(uint128(toMint), userTip3Wallet);
     }
 
     /*********************************************************************************************************/
@@ -325,14 +332,14 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     // Repay operation part
     // Starts at wallet controller
 
-    function repayBorrow(address tokenRoot, address userTip3Wallet, address msigOwner, uint128 tokenAmount, uint8 loanId) external view override onlyWalletController {
+    function repayBorrow(address tokenRoot, address tonWallet, address userTip3Wallet, uint128 tokenAmount, uint8 loanId) external view override onlyWalletController {
         tvm.rawReserve(msg.value, 2);
         if (realTokenRoots.exists(tokenRoot)) {
             uint32 marketId_ = tokensToMarkets[tokenRoot];
             uint256 tokensToPayout = uint256(tokenAmount);
             IUAMUserAccount(userAccountManager).requestRepayInfo{
                 flag: MsgFlag.REMAINING_GAS
-            }(msigOwner, userTip3Wallet, marketId_, loanId, tokensToPayout);
+            }(tonWallet, userTip3Wallet, marketId_, loanId, tokensToPayout);
         }
     }
 

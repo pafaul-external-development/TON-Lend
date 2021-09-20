@@ -30,8 +30,9 @@ interface IMarketTIP3Root {
 }
 
 interface IMarketOperations {
-    function supplyTokensToMarket(address tokenRoot, address msigOwner, uint128 tokenAmount) external;
-    function repayBorrow(address tokenRoot, address userTip3Wallet, address msigOwner, uint128 tokenAmount, uint8 loanId) external view;
+    function supplyTokensToMarket(address tokenRoot, address tonWallet, address userTip3Wallet, uint128 tokenAmount) external;
+    function mintVTokens(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toMint) external view;
+    function repayBorrow(address tokenRoot, address tonWallet, address userTip3Wallet, uint128 tokenAmount, uint8 loanId) external view;
     function receiveRepayInformation(address tonWallet, address userTip3Wallet, uint32 marketId_, uint8 loanId, uint256 tokensForRepay, BorrowInfo bi) external;
     function requestTokenPayout(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toPayout) external view;
     function receiveBorrowInformation(address tonWallet, uint32 marketId_, address userTIP3, uint256 toBorrow, mapping(uint32 => uint256) bi, mapping(uint32 => uint256) si) external;

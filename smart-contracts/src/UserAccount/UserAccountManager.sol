@@ -165,12 +165,19 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     /*********************************************************************************************************/
     // Supply operations
 
-    function writeSupplyInfo(address tonWallet, uint32 marketId, uint256 tokensToSupply, fraction index) external override view onlyMarket {
+    function writeSupplyInfo(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToSupply, fraction index) external override view onlyMarket {
         tvm.rawReserve(msg.value, 2);
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).writeSupplyInfo{
             flag: MsgFlag.REMAINING_GAS
-        }(marketId, tokensToSupply, index);
+        }(userTip3Wallet, marketId, tokensToSupply, index);
+    }
+
+    function requestVTokenMint(address tonWallet, address userTip3Wallet, uint32 marketId_, uint256 toMint) external override view onlyValidUserAccount(tonWallet) {
+        tvm.rawReserve(msg.value, 2);
+        IMarketOperations(marketAddress).mintVTokens{
+            flag: MsgFlag.REMAINING_GAS
+        }(tonWallet, userTip3Wallet, marketId_, toMint);
     }
 
     /*********************************************************************************************************/
