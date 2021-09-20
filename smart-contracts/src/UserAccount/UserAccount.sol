@@ -109,12 +109,29 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     // Supply functions
 
     function writeSupplyInfo(address userTip3Wallet, uint32 marketId_, uint256 tokensToSupply, fraction index) external override onlyUserAccountManager {
-        tvm.rawReserve(msg.value, 2);
         markets[marketId_].suppliedTokens += tokensToSupply;
         _updateMarketInfo(marketId_, index);
         IUAMUserAccount(userAccountManager).requestVTokenMint{
             flag: MsgFlag.REMAINING_GAS
         }(owner, userTip3Wallet, marketId_, tokensToSupply);
+    }
+
+    /*********************************************************************************************************/
+    // Withdraw functions
+
+    function requestWithdrawalInfo(address tonWallet, address userTip3Wallet, address originalTip3Wallet, uint32 marketId_, uint256 tokenAmount) external override onlyMarket {
+        address userAccount = _calculateUserAccountAddress(tonWallet);
+        IUAMUserAccount(userAccount).requestWithdrawalInfo{
+            flag: MsgFlag.REMAINING_GAS
+        }(userTip3Wallet, originalTip3Wallet, marketId_, tokenAmount);
+    }
+
+    function writeWithdrawInfo(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, uint256 tokensToSend, mapping(uint32 => fraction) updatedIndexes) external override onlyUserAccountManager{
+        
+    }
+
+    function updateIndexesAndReturnTokens(address originalTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, mapping(uint32 => fraction) updatedIndexes) external override onlyUserAccountManager {
+
     }
 
     /*********************************************************************************************************/
@@ -151,7 +168,6 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     }
 
     function _calculateTmpBorrowInfo(uint32 marketId_, address userTip3Wallet, uint256 toBorrow) external view onlySelf {
-        tvm.rawReserve(msg.value, 2);
         mapping(uint32 => uint256) borrowInfo;
         mapping(uint32 => uint256) supplyInfo;
         for ((uint32 marketId, UserMarketInfo umi) : markets) {
@@ -167,8 +183,6 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     }
 
     function writeBorrowInformation(uint32 marketId_, uint256 toBorrow, address userTip3Wallet, fraction marketIndex) external override onlyUserAccountManager {
-        tvm.rawReserve(msg.value, 2);
-
         uint8 currentBorrowId = markets[marketId_].borrowInfo.getMaxItem();
         BorrowInfo bi = BorrowInfo(toBorrow, marketIndex);
         markets[marketId_].borrowInfo[currentBorrowId] = bi;
@@ -182,14 +196,12 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     // repay functions
 
     function sendRepayInfo(address userTip3Wallet, uint32 marketId, uint8 loanId, uint256 tokensForRepay) external override view onlyUserAccountManager {
-        tvm.rawReserve(msg.value, 2);
         IUAMUserAccount(userAccountManager).sendRepayInfo{
             flag: MsgFlag.REMAINING_GAS
         }(owner, userTip3Wallet, marketId, loanId, tokensForRepay, markets[marketId].borrowInfo[loanId]);
     }
 
     function writeRepayInformation(address userTip3Wallet, uint32 marketId_, uint8 loanId, uint256 tokensToReturn, BorrowInfo bi) external override onlyUserAccountManager {
-        tvm.rawReserve(msg.value, 2);
         if (bi.toRepay == 0) {
             markets[marketId_].borrowInfo.removeItemFrom(loanId);
         } else {
@@ -212,7 +224,6 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
      * @param marketId_ Id of market to enter
      */
     function enterMarket(uint32 marketId_) external override onlyRoot {
-        tvm.rawReserve(msg.value, 2);
         if (!knownMarkets[marketId_]) {
             knownMarkets[marketId_] = true;
 
@@ -245,6 +256,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
 
     modifier onlyUserAccountManager() {
         require(msg.sender == userAccountManager);
+        tvm.rawReserve(msg.value, 2);
         _;
     }
 

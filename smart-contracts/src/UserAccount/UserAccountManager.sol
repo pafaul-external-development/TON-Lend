@@ -153,7 +153,6 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
      * @param marketId Id of market to enter
      */
     function enterMarket(address tonWallet, uint32 marketId) external override view responsible returns (address) {
-        tvm.rawReserve(msg.value, 2);
         if (marketIds[marketId]) {
             address userAccount = _calculateUserAccountAddress(tonWallet);
             IUserAccount(userAccount).enterMarket{flag: MsgFlag.REMAINING_GAS}(marketId);
@@ -166,7 +165,6 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     // Supply operations
 
     function writeSupplyInfo(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToSupply, fraction index) external override view onlyMarket {
-        tvm.rawReserve(msg.value, 2);
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).writeSupplyInfo{
             flag: MsgFlag.REMAINING_GAS
@@ -174,7 +172,6 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     }
 
     function requestVTokenMint(address tonWallet, address userTip3Wallet, uint32 marketId_, uint256 toMint) external override view onlyValidUserAccount(tonWallet) {
-        tvm.rawReserve(msg.value, 2);
         IMarketOperations(marketAddress).mintVTokens{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, userTip3Wallet, marketId_, toMint);
@@ -183,25 +180,41 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     /*********************************************************************************************************/
     // Withdraw operations
 
-    function withdrawVToken(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw) external view onlyMarket {
-        tvm.rawReserve(msg.value, 2);
+    function withdrawVToken(address tonWallet, address userTip3Wallet, address originalTip3Wallet, uint32 marketId, uint256 tokensToWithdraw) external view onlyMarket {
         IUserAccountData(userAccount).requestMarketInfo{
+            flag: MsgFlag.REMAINING_GAS
+        }(userTip3Wallet, originalTip3Wallet, marketId, tokensToWithdraw);
+    }
 
-        }();
+    function receiveWithdrawInfo(address tonWallet, address userTip3Wallet, address originalTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, mapping(uint32 => uint256) si, mapping(uint32 => uint256) bi) external view onlyValidUserAccount(tonWallet) {
+        IMarketOperations(marketAddress).receiveWithdrawInfo{
+            flag: MsgFlag.REMAINING_GAS
+        }(tonWallet, userTip3Wallet, originalTip3Wallet, marketId, tokensToWithdraw, bi, si);
+    }
+
+    function writeWithdrawInfo(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, uint256 tokensToSend, mapping(uint32 => fraction) updatedIndexes) external view onlyMarket {
+        address userAccount = _calculateUserAccountAddress(tonWallet); 
+        IUserAccountData(userAccount).writeWithdrawInfo{
+            flag: MsgFlag.REMAINING_GAS
+        }(userTip3Wallet, marketId, tokensToWithdraw, tokensToSend, updatedIndexes);
+    }
+    function updateIndexesAndReturnTokens(address tonWallet, address originalTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, mapping(uint32 => fraction) updatedIndexes) external view onlyMarket {
+        address userAccount = _calculateUserAccountAddress(tonWallet);
+        IUserAccountData(userAccount).updateIndexesAndReturnTokens{
+            flag: MsgFlag.REMAINING_GAS
+        }(originalTip3Wallet, marketId, tokensToWithdraw, updatedIndexes);
     }
 
     /*********************************************************************************************************/
     // Borrow operations
 
     function requestIndexUpdate(address tonWallet, uint32 marketId, mapping(uint32 => bool) knownMarkets, address userTip3Wallet, uint256 amountToBorrow) external override view onlyValidUserAccount(tonWallet) {
-        tvm.rawReserve(msg.value, 2);
         IMarketOperations(marketAddress).requestIndexUpdate{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, marketId, knownMarkets, userTip3Wallet, amountToBorrow);
     }
 
     function updateUserIndex(address tonWallet, uint32 marketId, mapping(uint32 => fraction) updatedIndexes, address userTip3Wallet, uint256 toBorrow) external override view onlyMarket {
-        tvm.rawReserve(msg.value, 2);
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).updateIndexes{
             flag: MsgFlag.REMAINING_GAS
@@ -209,14 +222,12 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     }
 
     function passBorrowInformation(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toBorrow, mapping(uint32 => uint256) borrowInfo, mapping(uint32 => uint256) supplyInfo) external override view onlyValidUserAccount(tonWallet) {
-        tvm.rawReserve(msg.value, 2);
         IMarketOperations(marketAddress).receiveBorrowInformation{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, marketId, userTip3Wallet, toBorrow, borrowInfo, supplyInfo);
     }
 
     function writeBorrowInformation(address tonWallet, uint32 marketId_, uint256 toBorrow, address userTip3Wallet, fraction index) external override view onlyMarket {
-        tvm.rawReserve(msg.value, 2);
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).writeBorrowInformation{
             flag: MsgFlag.REMAINING_GAS
@@ -227,7 +238,6 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     // Repay operations
 
     function requestRepayInfo(address tonWallet, address userTip3Wallet, uint32 marketId_, uint8 loanId, uint256 tokensToPayout) external override view onlyMarket {
-        tvm.rawReserve(msg.value, 2);
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).sendRepayInfo{
             flag: MsgFlag.REMAINING_GAS
@@ -235,14 +245,12 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     }
 
     function sendRepayInfo(address tonWallet, address userTip3Wallet, uint32 marketId, uint8 loanId, uint256 tokensForRepay, BorrowInfo bi) external override view onlyValidUserAccount(tonWallet) {
-        tvm.rawReserve(msg.value, 2);
         IMarketOperations(marketAddress).receiveRepayInformation{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, userTip3Wallet, marketId, loanId, tokensForRepay, bi);
     }
 
     function writeRepayInformation(address tonWallet, address userTip3Wallet, uint32 marketId_, uint8 loanId, uint256 tokensToReturn, BorrowInfo bi) external override view onlyMarket {
-        tvm.rawReserve(msg.value, 2);
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).writeRepayInformation{
             flag: MsgFlag.REMAINING_GAS
@@ -253,7 +261,6 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     // Requests from user account to market
 
     function requestTokenPayout(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toPayout) external override view onlyValidUserAccount(tonWallet) {
-        tvm.rawReserve(msg.value, 2);
         IMarketOperations(marketAddress).requestTokenPayout{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, userTip3Wallet, marketId, toPayout);
@@ -297,6 +304,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
 
     modifier onlyMarket() {
         require(msg.sender == marketAddress);
+        tvm.rawReserve(msg.value, 2);
         _;
     }
 
@@ -305,6 +313,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
      */
     modifier onlyValidUserAccount(address tonWallet) {
         require(msg.sender == _calculateUserAccountAddress(tonWallet));
+        tvm.rawReserve(msg.value, 2);
         _;
     }
 

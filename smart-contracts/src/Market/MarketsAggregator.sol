@@ -241,7 +241,6 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     // Starts at wallet controller
 
     function supplyTokensToMarket(address tokenRoot, address tonWallet, address userTip3Wallet, uint128 tokenAmount) external override onlyWalletController {
-        tvm.rawReserve(msg.value, 2);
         if (realTokenRoots.exists(tokenRoot)) {
             uint256 tokensProvided = uint256(tokenAmount);
             uint32 marketId_ = tokensToMarkets[tokenRoot];
@@ -278,16 +277,22 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     // Withdraw vTokens part
     // Starts at WalletController
 
-    function withdrawVToken(address tokenRoot, address tonWallet, address userTip3Wallet, uint128 tokenAmount) external override onlyWalletController {
-        tvm.rawReserve(msg.value, 2);
+    function withdrawVToken(address tokenRoot, address tonWallet, address userTip3Wallet, address originalTip3Wallet, uint128 tokenAmount) external override onlyWalletController {
         uint32 marketId_ = tokensToMarkets[tokenRoot];
         IUAMUserAccount(userAccountManager).requestWithdrawalInfo{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, userTip3Wallet, marketId_, uint256(tokenAmount));
+        }(tonWallet, userTip3Wallet, originalTip3Wallet, marketId_, uint256(tokenAmount));
     }
 
-    function receiveWithdrawInfo(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, mapping(uint32 => uint256) bi, mapping(uint32 => uint256) si) external override onlyUserAccountManager {
-        tvm.rawReserve(msg.value, 2);
+    function receiveWithdrawInfo(
+        address tonWallet, 
+        address userTip3Wallet, 
+        address originalTip3Wallet, 
+        uint32 marketId, 
+        uint256 tokensToWithdraw, 
+        mapping(uint32 => uint256) bi, 
+        mapping(uint32 => uint256) si
+    ) external override onlyUserAccountManager {
         fraction fTokensToSend = markets[marketId].index.fNumMul(tokensToWithdraw);
         uint256 tokensToSend = fTokensToSend.toNum();
 
@@ -296,19 +301,17 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
 
         if (supplySum > borrowSum) {
             if (supplySum - borrowSum > tokensToSend) {
-                IUAMUserAccount(userAccountManager).updateWithdrawal{
+                IUAMUserAccount(userAccountManager).writeWithdrawInfo{
                     flag: MsgFlag.REMAINING_GAS
-                }(tonWallet, userTip3Wallet, marketId, tokensToSend, updatedIndexes);
+                }(tonWallet, userTip3Wallet, marketId, tokensToWithdraw, tokensToSend, updatedIndexes);
             } else {
-                // TODO: just udpate indexes
+                IUAMUserAccount(userAccountManager).updateIndexesAndReturnTokens{
+                    flag: MsgFlag.REMAINING_GAS
+                }(tonWallet, originalTip3Wallet, marketId, tokensToWithdraw, updatedIndexes);
             }
         } else {
-            // TODO: mark for liquidation
+            // TODO: liquidation
         }
-
-        IWCMInteractions(walletController).transferTokensToWallet{
-            flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, tokenRoot, userTip3Wallet, tokensToSend);
     }
 
     function _createUpdatedIndexes(mapping(uint32 => uint256) info) internal returns(mapping(uint32 => fraction)) {
@@ -319,12 +322,17 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         return updatedIndexes;
     }
 
+    function transferVTokensBack(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToReturn) external view onlyUserAccountManager {
+        IWCMInteractions(walletController).transferTokensToWallet{
+            flag: MsgFlag.REMAINING_GAS
+        }(tonWallet, markets[marketId].virtualToken, userTip3Wallet, tokensToReturn);
+    }
+
     /*********************************************************************************************************/
     // Borrow operation part
     // Starts at UserAccount
 
     function requestIndexUpdate(address tonWallet, uint32 marketId, mapping (uint32=>bool) upd, address tip3UserWallet, uint256 amountToBorrow) external view override onlyUserAccountManager {
-        tvm.rawReserve(msg.value, 2);
         mapping(uint32 => fraction) ui;
         for ((uint32 marketId_, ): upd) {
             ui[marketId_] = markets[marketId_].index;
@@ -335,7 +343,6 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     }
 
     function receiveBorrowInformation(address tonWallet, uint32 marketId_, address userTip3Wallet, uint256 toBorrow, mapping(uint32 => uint256) bi, mapping(uint32 => uint256) si) external override onlyUserAccountManager {
-        tvm.rawReserve(msg.value, 2);
         uint256 supplySum = 0;
         uint256 borrowSum = 0;
         address realTokenRoot = markets[marketId_].token;
@@ -393,7 +400,6 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     // Starts at wallet controller
 
     function repayBorrow(address tokenRoot, address tonWallet, address userTip3Wallet, uint128 tokenAmount, uint8 loanId) external view override onlyWalletController {
-        tvm.rawReserve(msg.value, 2);
         if (realTokenRoots.exists(tokenRoot)) {
             uint32 marketId_ = tokensToMarkets[tokenRoot];
             uint256 tokensToPayout = uint256(tokenAmount);
@@ -404,7 +410,6 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     }
 
     function receiveRepayInformation(address tonWallet, address userTip3Wallet, uint32 marketId_, uint8 loanId, uint256 tokensForRepay, BorrowInfo bi) external override onlyUserAccountManager {
-        tvm.rawReserve(msg.value, 2);
         fraction newRepayInfo = markets[marketId_].index.fNumMul(bi.toRepay);
         newRepayInfo = newRepayInfo.fDiv(bi.index);
         uint256 tokensToRepay = newRepayInfo.toNum();
@@ -605,11 +610,13 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
 
     modifier onlyUserAccountManager() {
         require(msg.sender == userAccountManager, MarketErrorCodes.ERROR_MSG_SENDER_IS_NOT_USER_ACCOUNT_MANAGER);
+        tvm.rawReserve(msg.value, 2);
         _;
     }
 
     modifier onlyWalletController() {
         require(msg.sender == walletController, MarketErrorCodes.ERROR_MSG_SENDER_IS_NOT_TIP3_WALLET_CONTROLLER);
+        tvm.rawReserve(msg.value, 2);
         _;
     }
 
