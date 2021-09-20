@@ -19,7 +19,9 @@ interface IUAMUserAccount {
     function passBorrowInformation(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toBorrow, mapping(uint32 => uint256) borrowInfo, mapping(uint32 => uint256) supplyInfo) external view;
     function sendRepayInfo(address tonWallet, address userTip3Wallet, uint32 marketId, uint8 loanId, uint256 tokensForRepay, BorrowInfo bi) external view;
 
-    function requestWithdrawalInfo(address tonWallet, address userTip3Wallet, address originalTip3Wallet, uint32 marketId, uint256 tokensToWithdraw) external view;
-    function updateWithdrawal(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensWithdraw, uint256 tokensToSend, mapping(uint32 => fraction) updatedIndexes) external view;
+    function requestWithdrawInfo(address tonWallet, address userTip3Wallet, address originalTip3Wallet, uint32 marketId, uint256 tokensToWithdraw) external view;
+    function passWithdrawInfo(address tonWallet, address userTip3Wallet, address originalTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, mapping(uint32 => uint256) si, mapping(uint32 => uint256) bi) external view;
+    function writeWithdrawInfo(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, uint256 tokensToSend, mapping(uint32 => fraction) updatedIndexes) external view;
     function updateIndexesAndReturnTokens(address tonWallet, address originalTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, mapping(uint32 => fraction) updatedIndexes) external view;
+    function transferVTokensBack(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToReturn) external view;
 }

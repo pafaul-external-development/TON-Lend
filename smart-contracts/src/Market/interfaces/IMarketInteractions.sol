@@ -37,4 +37,15 @@ interface IMarketOperations {
     function requestTokenPayout(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toPayout) external view;
     function receiveBorrowInformation(address tonWallet, uint32 marketId_, address userTip3Wallet, uint256 toBorrow, mapping(uint32 => uint256) bi, mapping(uint32 => uint256) si) external;
     function requestIndexUpdate(address tonWallet, uint32 marketId, mapping (uint32=>bool) upd, address tip3UserWallet, uint256 amountToBorrow) external view;
+    function withdrawVToken(address tokenRoot, address tonWallet, address userTip3Wallet, address originalTip3Wallet, uint128 tokenAmount) external;
+    function receiveWithdrawInfo(
+        address tonWallet, 
+        address userTip3Wallet, 
+        address originalTip3Wallet, 
+        uint32 marketId, 
+        uint256 tokensToWithdraw, 
+        mapping(uint32 => uint256) bi, 
+        mapping(uint32 => uint256) si
+    ) external;
+    function transferVTokensBack(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToReturn) external view;
 }

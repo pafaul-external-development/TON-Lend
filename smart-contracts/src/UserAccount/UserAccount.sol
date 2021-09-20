@@ -119,19 +119,37 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     /*********************************************************************************************************/
     // Withdraw functions
 
-    function requestWithdrawalInfo(address tonWallet, address userTip3Wallet, address originalTip3Wallet, uint32 marketId_, uint256 tokenAmount) external override onlyMarket {
-        address userAccount = _calculateUserAccountAddress(tonWallet);
-        IUAMUserAccount(userAccount).requestWithdrawalInfo{
+    function requestWithdrawInfo(address userTip3Wallet, address originalTip3Wallet, uint32 marketId, uint256 tokensToWithdraw) external override onlyUserAccountManager {
+        mapping(uint32 => uint256) borrowInfo;
+        mapping(uint32 => uint256) supplyInfo;
+
+        (borrowInfo, supplyInfo) = _calculateTmpBorrowInfo();
+
+        IUAMUserAccount(userAccountManager).passWithdrawInfo{
             flag: MsgFlag.REMAINING_GAS
-        }(userTip3Wallet, originalTip3Wallet, marketId_, tokenAmount);
+        }(owner, userTip3Wallet, originalTip3Wallet, marketId, tokensToWithdraw, supplyInfo, borrowInfo);
     }
 
     function writeWithdrawInfo(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, uint256 tokensToSend, mapping(uint32 => fraction) updatedIndexes) external override onlyUserAccountManager{
-        
+        for ((uint32 marketId_, fraction index): updatedIndexes) {
+            _updateMarketInfo(marketId_, index);
+        }
+
+        markets[marketId].suppliedTokens -= tokensToWithdraw;
+
+        IUAMUserAccount(userAccountManager).requestTokenPayout{
+            flag: MsgFlag.REMAINING_GAS
+        }(owner, userTip3Wallet, marketId, tokensToSend);
     }
 
     function updateIndexesAndReturnTokens(address originalTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, mapping(uint32 => fraction) updatedIndexes) external override onlyUserAccountManager {
+        for ((uint32 marketId_, fraction index): updatedIndexes) {
+            _updateMarketInfo(marketId_, index);
+        }
 
+        IUAMUserAccount(userAccountManager).transferVTokensBack{
+            flag: MsgFlag.REMAINING_GAS
+        }(owner, originalTip3Wallet, marketId, tokensToWithdraw);
     }
 
     /*********************************************************************************************************/
@@ -154,7 +172,15 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
         for ((uint32 marketId, fraction index): newIndexes) {
             _updateMarketInfo(marketId, index);
         }
-        this._calculateTmpBorrowInfo{flag: MsgFlag.REMAINING_GAS}(marketId_, userTip3Wallet, toBorrow);
+
+        mapping(uint32 => uint256) borrowInfo;
+        mapping(uint32 => uint256) supplyInfo;
+
+        (borrowInfo, supplyInfo) = _calculateTmpBorrowInfo();
+
+        IUAMUserAccount(userAccountManager).passBorrowInformation{
+            flag: MsgFlag.REMAINING_GAS
+        }(owner, userTip3Wallet, marketId_, toBorrow, borrowInfo, supplyInfo);
     }
 
     function _updateMarketInfo(uint32 marketId, fraction index) internal {
@@ -167,7 +193,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
         }
     }
 
-    function _calculateTmpBorrowInfo(uint32 marketId_, address userTip3Wallet, uint256 toBorrow) external view onlySelf {
+    function _calculateTmpBorrowInfo() internal view returns(mapping(uint32 => uint256), mapping(uint32 => uint256)) {
         mapping(uint32 => uint256) borrowInfo;
         mapping(uint32 => uint256) supplyInfo;
         for ((uint32 marketId, UserMarketInfo umi) : markets) {
@@ -177,9 +203,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
             }
         }
 
-        IUAMUserAccount(userAccountManager).passBorrowInformation{
-            flag: MsgFlag.REMAINING_GAS
-        }(owner, userTip3Wallet, marketId_, toBorrow, borrowInfo, supplyInfo);
+        return (borrowInfo, supplyInfo);
     }
 
     function writeBorrowInformation(uint32 marketId_, uint256 toBorrow, address userTip3Wallet, fraction marketIndex) external override onlyUserAccountManager {

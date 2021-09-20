@@ -266,7 +266,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         }
     }
 
-    function mintVTokens(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toMint) external view override onlyUserAccountManager {
+    function mintVTokens(address, address userTip3Wallet, uint32 marketId, uint256 toMint) external view override onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
         IRootTokenContract(markets[marketId].virtualToken).mint{
             flag: MsgFlag.REMAINING_GAS
@@ -279,7 +279,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
 
     function withdrawVToken(address tokenRoot, address tonWallet, address userTip3Wallet, address originalTip3Wallet, uint128 tokenAmount) external override onlyWalletController {
         uint32 marketId_ = tokensToMarkets[tokenRoot];
-        IUAMUserAccount(userAccountManager).requestWithdrawalInfo{
+        IUAMUserAccount(userAccountManager).requestWithdrawInfo{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, userTip3Wallet, originalTip3Wallet, marketId_, uint256(tokenAmount));
     }
@@ -314,7 +314,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         }
     }
 
-    function _createUpdatedIndexes(mapping(uint32 => uint256) info) internal returns(mapping(uint32 => fraction)) {
+    function _createUpdatedIndexes(mapping(uint32 => uint256) info) internal view returns(mapping(uint32 => fraction)) {
         mapping(uint32 => fraction) updatedIndexes;
         for ((uint32 marketId_, ): info) {
             updatedIndexes[marketId_] = markets[marketId_].index;
@@ -322,7 +322,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         return updatedIndexes;
     }
 
-    function transferVTokensBack(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToReturn) external view onlyUserAccountManager {
+    function transferVTokensBack(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToReturn) external override view onlyUserAccountManager {
         IWCMInteractions(walletController).transferTokensToWallet{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, markets[marketId].virtualToken, userTip3Wallet, tokensToReturn);
@@ -347,11 +347,11 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         uint256 borrowSum = 0;
         address realTokenRoot = markets[marketId_].token;
         
-        (uint256 supplySum, uint256 borrowSum) = calculateBorrowSupplyDiff(si, bi);
+        (supplySum, borrowSum) = _calculateBorrowSupplyDiff(si, bi);
 
         if (borrowSum < supplySum) {
             uint256 tmp_ = supplySum - borrowSum;
-            tmp = tokenPrices[realTokenRoot];
+            fraction tmp = tokenPrices[realTokenRoot];
             tmp = tmp_.numFDiv(tmp);
             tmp_ = tmp.toNum();
             if (tmp_ >= toBorrow) {
@@ -373,9 +373,8 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     function _calculateBorrowSupplyDiff(mapping(uint32 => uint256) si, mapping(uint32 => uint256) bi) internal returns (uint256, uint256) {
         uint256 supplySum = 0;
         uint256 borrowSum = 0;
-
+        address marketTokenRoot;
         fraction tmp;
-        address marketTokenAddresses;
 
         for ((uint32 marketId, uint256 s): si) {
             marketTokenRoot = markets[marketId].token;
