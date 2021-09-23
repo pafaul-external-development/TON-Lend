@@ -16,7 +16,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     using FPO for fraction;
     using ManageMapping for mapping(uint8 => BorrowInfo);
 
-    bool borrowingAllowed;
+    bool borrowLock;
 
     address owner;
     
@@ -157,12 +157,12 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
 
     function borrow(uint32 marketId, uint256 amountToBorrow, address userTip3Wallet) external override onlyOwner {
         tvm.rawReserve(msg.value, 2);
-        if (borrowingAllowed){
+        if (!borrowLock) {
             // TODO: check if user has any borrow limit left and add modifier for blocking borrow operation while current is not finished
             IUAMUserAccount(userAccountManager).requestIndexUpdate{
                 flag: MsgFlag.REMAINING_GAS
             }(owner, marketId, knownMarkets, userTip3Wallet, amountToBorrow);
-            borrowingAllowed = false;
+            borrowLock = false;
         } else {
             address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
         }
@@ -210,6 +210,8 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
         uint8 currentBorrowId = markets[marketId_].borrowInfo.getMaxItem();
         BorrowInfo bi = BorrowInfo(toBorrow, marketIndex);
         markets[marketId_].borrowInfo[currentBorrowId] = bi;
+
+        borrowLock = false;
 
         IUAMUserAccount(userAccountManager).requestTokenPayout{
             flag: MsgFlag.REMAINING_GAS

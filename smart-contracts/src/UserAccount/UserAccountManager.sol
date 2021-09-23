@@ -9,7 +9,7 @@ import "./interfaces/IUAMMarket.sol";
 
 import "./libraries/UserAccountErrorCodes.sol";
 
-import "../Market/interfaces/IMarketInteractions.sol";
+import "../Market/interfaces/IMarketInterfaces.sol";
 
 import "../Controllers/interfaces/ICCCodeManager.sol";
 import "../Controllers/libraries/PlatformCodes.sol";

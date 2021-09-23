@@ -11,7 +11,7 @@ import "./libraries/CostConstants.sol";
 import "./libraries/WalletControllerErrorCodes.sol";
 import "./libraries/OperationCodes.sol";
 
-import "../Market/interfaces/IMarketInteractions.sol";
+import "../Market/interfaces/IMarketInterfaces.sol";
 
 import "../utils/interfaces/IUpgradableContract.sol";
 import "../utils/TIP3/interfaces/ITokenWalletDeployedCallback.sol";
@@ -32,8 +32,9 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
     address marketAddress;
 
     // Root TIP-3 to market address mapping
-    mapping (address => MarketTokenAddresses) marketAddresses; // Будет использовано для проверки корректности операций
     mapping (address => address) wallets;
+    mapping (address => bool) realTokenRoots;
+    mapping (address => bool) vTokenRoots;
 
     mapping (uint32 => MarketTokenAddresses) marketTIP3Info;
 
@@ -124,6 +125,9 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
             virtualTokenWallet: address.makeAddrStd(0, 0)
         });
 
+        realTokenRoots[realTokenRoot] = true;
+        vTokenRoots[virtualTokenRoot] = true;
+
         wallets[realTokenRoot] = address.makeAddrStd(0, 0);
         wallets[virtualTokenRoot] = address.makeAddrStd(0, 0);
 
@@ -181,7 +185,7 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
         uint256, // sender_public_key,
         address sender_address,
         address sender_wallet,
-        address, // original_gas_to,
+        address original_gas_to,
         uint128, // updated_balance,
         TvmCell payload
     ) external override onlyOwnWallet(token_root, token_wallet) {
@@ -189,28 +193,42 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
         TvmSlice ts = payload.toSlice();
         uint8 operation = ts.decode(uint8);
         TvmSlice args = ts.loadRefAsSlice();
-        if (operation == OperationCodes.SUPPLY_TOKENS) {
+        if ((operation == OperationCodes.SUPPLY_TOKENS) && realTokenRoots.exists(token_root)) {
             (address tonWallet, address userTip3Wallet) = args.decode(address, address);
             IMarketOperations(marketAddress).supplyTokensToMarket{
                 flag: MsgFlag.REMAINING_GAS
             }(token_root, tonWallet, userTip3Wallet, amount);
-        } else if (operation == OperationCodes.REPAY_TOKENS) {
+        } else if ((operation == OperationCodes.REPAY_TOKENS) && realTokenRoots.exists(token_root)) {
             (address tonWallet, uint8 loanId) = args.decode(address, uint8);
             IMarketOperations(marketAddress).repayBorrow{
                 flag: MsgFlag.REMAINING_GAS
             }(token_root, tonWallet, sender_wallet, amount, loanId);
-        } else if (operation == OperationCodes.WITHDRAW_TOKENS) {
+        } else if ((operation == OperationCodes.WITHDRAW_TOKENS) && vTokenRoots.exists(token_root)) {
             (address tonWallet, address userTip3Wallet) = args.decode(address, address);
             IMarketOperations(marketAddress).withdrawVToken{
                 flag: MsgFlag.REMAINING_GAS
             }(token_root, tonWallet, userTip3Wallet, sender_wallet, amount);
         } else {
-            address(sender_address).transfer({value: 0, flag: 64});
+            ITONTokenWallet(msg.sender).transfer{
+                flag: MsgFlags.REMAINING_GAS
+            }(sender_wallet, amount, 0, original_gas_to, true, args);
         }
     }
-
+    
     /*********************************************************************************************************/
     // Getter functions
+    function getRealTokenRoots() external override view responsible returns(mapping(address => bool)) {
+        return {flag: MsgFlag.REMAINING_GAS} realTokenRoots;
+    }
+
+    function getVirtualTokenRoots() external override view responsible returns(mapping(address => bool)) {
+        return {flag: MsgFlag.REMAINING_GAS} vTokenRoots;
+    }
+
+    function getWallets() external override view responsible returns(mapping(address => address)) {
+        return {flag: MsgFlag.REMAINING_GAS} wallets;
+    }
+
     function getMarketAddresses(uint32 marketId) external override view responsible returns(MarketTokenAddresses) {
         return {flag: MsgFlag.REMAINING_GAS} marketTIP3Info[marketId];
     }
@@ -228,7 +246,7 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
     }
 
     modifier onlyMarket() {
-        require(marketAddresses.exists(msg.sender), WalletControllerErrorCodes.ERROR_MSG_SENDER_IS_NOT_MARKET);
+        require(msg.sender == marketAddress, WalletControllerErrorCodes.ERROR_MSG_SENDER_IS_NOT_MARKET);
         _;
     }
 

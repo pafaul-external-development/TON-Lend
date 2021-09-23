@@ -24,4 +24,13 @@ interface IUAMUserAccount {
     function writeWithdrawInfo(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, uint256 tokensToSend, mapping(uint32 => fraction) updatedIndexes) external view;
     function updateIndexesAndReturnTokens(address tonWallet, address originalTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, mapping(uint32 => fraction) updatedIndexes) external view;
     function transferVTokensBack(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToReturn) external view;
+
+    function writeSupplyInfoSync(address tonWallet, uint32 marketId_, uint256 tokensToSupply, fraction index) external view responsible returns(bool);
+    function requestWithdrawInfoSync(address tonWallet) external view responsible returns(mapping(uint32 => uint256), mapping(uint32 => uint256));
+    function requestIndexUpdateSync(address tonWallet) external view responsible returns(mapping(uint32 => uint256), mapping(uint32 => uint256));
+    function writeBorrowInformationSync(address tonWallet, uint32 marketId_, uint256 toBorrow, address userTip3Wallet, fraction marketIndex) external view responsible returns(bool);
+    function writeWithdrawInfoSync(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, uint256 tokensToSend, mapping(uint32 => fraction) updatedIndexes) external view responsible returns(bool);
+    function updateIndexesAndReturnTokensSync(address tonWallet, address originalTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, mapping(uint32 => fraction) updatedIndexes) external view responsible returns(bool);
+    function updateUserIndexSync(address tonWallet, uint32 marketId, mapping(uint32 => fraction) updatedIndexes, address userTip3Wallet, uint256 toBorrow) external view responsible returns(mapping(uint32 => uint256), mapping(uint32 => uint256));
+    function requestRepayInfoSync(address tonWallet, address userTip3Wallet, uint32 marketId_, uint8 loanId, uint256 tokensToPayout) external view responsible returns(BorrowInfo bi);
 }
