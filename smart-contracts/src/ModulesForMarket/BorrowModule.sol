@@ -2,15 +2,24 @@ pragma ton-solidity 0.47.0;
 
 import './interfaces/IModule.sol';
 
-contract BorrowModule {
+contract BorrowModule is IMarketStateCache {
     using FPO for fraction;
     using UFO for uint256;
 
     address marketAddress;
     address userAccountManager;
 
+    mapping (uint32 => MarketInfo) marketInfo;
+    mapping (address => fraction) tokenPrices;
+
     constructor() public {
         tvm.accept();
+    }
+
+    function updateCache(address tonWallet, mapping (uint32 => MarketInfo) marketInfo_, mapping (address => uint256) tokenPrices_) external onlyMarket {
+        marketInfo = marketInfo_;
+        tokenPrices = tokenPrices_;
+        tonWallet.transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     function borrowTokensFromMarket(
@@ -18,10 +27,8 @@ contract BorrowModule {
         address userTip3Wallet,
         uint256 tokensToBorrow,
         uint32 marketId,
-        mapping (uint32 => MarketInfo) marketInfo,
-        mapping (uint32 => uint256) bi,
         mapping (uint32 => uint256) si,
-        mapping (address => fraction) tokenPrices
+        mapping (uint32 => uint256) bi
     ) external view onlyMarket {
         MarketInfo marketDelta;
         (uint256 supplySum, uint256 borrowSum) = Utilities.calculateSupplyBorrow(si, bi, marketInfo, tokenPrices);
@@ -31,6 +38,10 @@ contract BorrowModule {
             fraction tmp = tmp_.numFDiv(tokenPrices[marketInfo[marketId].token]);
             if (tmp_ >= tokensToBorrow) {
                 marketDelta.totalBorrowed = tokensToBorrow;
+
+                IBorrowMarket(marketAddress).uploadDelta{
+                    value: 1 ton
+                }(tonWallet, marketDelta);
 
                 IUAMUserAccount(userAccountManager).writeBorrowInformation{
                     flag: MsgFlag.REMAINING_GAS

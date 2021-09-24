@@ -17,7 +17,24 @@ contract WithdrawModule {
             totalSupply: marketInfo.totalSupply
         });
 
-        fraction toPayout = fraction (0, 0);
+        (uint256 supplySum, uint256 borrowSum) = _calculateBorrowSupplyDiff(si, bi);
+        mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes(bi);
+
+        if (supplySum > borrowSum) {
+            if (supplySum - borrowSum > tokensToSend) {
+                emit TokensWithdrawn(tonWallet, marketId, tokensToSend, markets[marketId]);
+
+                IUAMUserAccount(userAccountManager).writeWithdrawInfo{
+                    flag: MsgFlag.REMAINING_GAS
+                }(tonWallet, userTip3Wallet, marketId, tokensToWithdraw, tokensToSend, updatedIndexes);
+            } else {
+                IUAMUserAccount(userAccountManager).updateIndexesAndReturnTokens{
+                    flag: MsgFlag.REMAINING_GAS
+                }(tonWallet, originalTip3Wallet, marketId, tokensToWithdraw, updatedIndexes);
+            }
+        } else {
+            // TODO: mark for liquidation and transfer tokens back
+        }
     }
 
     modifier onlyMarket() {

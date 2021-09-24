@@ -14,7 +14,7 @@ interface IModule {
 }
 
 interface IContractStateCache {
-    function updateCache(mapping(uint32 => MarketInfo) marketState, mapping(address => fraction) tokenPrices) external;
+    function updateCache(address tonWallet, mapping(uint32 => MarketInfo) marketState, mapping(address => fraction) tokenPrices) external;
     function uploadDelta(uint32 marketId, MarketInfo delta) external;
 }
 
