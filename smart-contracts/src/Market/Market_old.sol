@@ -3,7 +3,7 @@ pragma ton-solidity >= 0.39.0;
 import "./libraries/CostConstants.sol";
 import "./libraries/MarketErrorCodes.sol";
 
-import "./Structures.sol";
+import "./MarketInfo.sol";
 
 import "../Controllers/interfaces/ICCMarketDeployed.sol";
 import "../TIP3Deployer/interfaces/ITIP3Deployer.sol";

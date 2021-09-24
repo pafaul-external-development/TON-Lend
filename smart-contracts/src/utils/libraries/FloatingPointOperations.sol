@@ -48,6 +48,10 @@ library UFO {
         return a*b.nom/b.denom;
     }
 
+    function numFMul(uint256 a, fraction b) internal pure returns (fraction) {
+        return fraction(a * b.nom, b.denom);
+    }
+
     function numFDiv(uint256 a, fraction b) internal pure returns (fraction) {
         return fraction(a * b.denom, b.nom);
     }

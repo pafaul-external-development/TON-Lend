@@ -9,6 +9,6 @@ contract Giver {
 
     function sendGrams(address dest, uint64 amount) external pure {
         tvm.accept();
-        address(dest).transfer({value: amount});
+        address(dest).transfer({value: amount, bounce: false});
     }
 }

@@ -1,0 +1,1954 @@
+.version sol 0.47.0
+
+.macro constructor
+DROP
+GETGLOB 2
+ISNULL
+IFREF {
+	CALL $c4_to_c7_with_init_storage$
+}
+;; constructor protection
+GETGLOB 6
+THROWIF 51
+TRUE
+SETGLOB 6
+;; end constructor protection
+ENDS
+; constructor WalletController
+; end constructor WalletController
+THROW 100
+
+.internal-alias :onCodeUpgrade, 2
+.internal :onCodeUpgrade
+;; param: data
+; function onCodeUpgrade
+;; set default state vars
+PUSHSLICE x8000000000000000000000000000000000000000000000000000000000000000001_
+SETGLOB 10
+PUSHINT 0
+SETGLOB 11
+PUSHINT 0
+SETGLOB 12
+PUSHREF {
+}
+SETGLOB 13
+PUSHSLICE x8000000000000000000000000000000000000000000000000000000000000000001_
+SETGLOB 14
+NEWDICT
+SETGLOB 15
+NEWDICT
+SETGLOB 16
+NEWDICT
+SETGLOB 17
+;; end set default state vars
+;; push identifier data
+DUP
+CTOS
+;; decl: dataSlice
+; expValue
+DUP
+; end expValue
+LDMSGADDR
+LDU 8
+; colValue
+POP S3
+; end colValue
+SWAP
+; expValue
+; end expValue
+; colValue
+SETGLOB 10
+; end colValue
+; expValue
+; end expValue
+; colValue
+SETGLOB 11
+; end colValue
+; expValue
+; end expValue
+PUSHINT 0
+; colValue
+SETGLOB 12
+; end colValue
+; expValue
+DUP
+; end expValue
+LDREF
+; colValue
+POP S2
+; end colValue
+; expValue
+; end expValue
+; colValue
+SETGLOB 13
+; end colValue
+; expValue
+DUP
+; end expValue
+LDREFRTOS
+SWAP
+; colValue
+POP S2
+; end colValue
+;; decl: addressInfo
+; expValue
+DUP
+; end expValue
+LDMSGADDR
+; colValue
+POP S2
+; end colValue
+; expValue
+; end expValue
+; colValue
+SETGLOB 14
+; end colValue
+; end function onCodeUpgrade
+BLKDROP 3
+CALLREF {
+	CALL $c7_to_c4$
+}
+COMMIT
+THROW 0
+
+.macro upgradeContractCode
+DROP
+GETGLOB 2
+ISNULL
+IFREF {
+	CALL $c4_to_c7$
+}
+;; decode TvmCell
+LDREF
+;; decode TvmCell
+LDREF
+LDU 32
+LDU 8
+ENDS
+;; param: code
+;; param: updateParams
+;; param: codeVersion_
+;; param: contractType_
+; modifier onlyRoot
+;; get member sender
+GETGLOB 9
+;; push identifier root
+GETGLOB 10
+SDEQ
+THROWIFNOT 100
+; modifier correctContractType
+;; push identifier contractType_
+DUP
+;; push identifier contractType
+GETGLOB 11
+;; ==
+;; push identifier contractType_
+PUSH S1
+EQUAL
+THROWIFNOT 200
+; function upgradeContractCode
+; expValue
+; end expValue
+;; push identifier codeVersion_
+PUSH S2
+; colValue
+SETGLOB 12
+; end colValue
+;; decl: builder
+; expValue
+; end expValue
+;; push identifier root
+; colValue
+GETGLOB 10
+NEWC
+STSLICE
+; end colValue
+; expValue
+; end expValue
+;; push identifier contractType
+GETGLOB 11
+; colValue
+SWAP
+STU 8
+; end colValue
+; expValue
+; end expValue
+;; push identifier platformCode
+GETGLOB 13
+PUSH S1
+STREF
+; colValue
+NIP
+; end colValue
+NEWC
+;; decl: mappingStorage
+NEWC
+;; decl: marketStorage
+; expValue
+; end expValue
+;; push identifier marketAddresses
+GETGLOB 15
+PUSH S1
+STDICT
+; colValue
+NIP
+; end colValue
+NEWC
+;; decl: walletStorage
+; expValue
+; end expValue
+;; push identifier wallets
+GETGLOB 16
+PUSH S1
+STDICT
+; colValue
+NIP
+; end colValue
+; expValue
+; end expValue
+;; push identifier marketStorage
+BLKPUSH 2, 2
+ENDC
+SWAP
+STREF
+; colValue
+POP S3
+; end colValue
+; expValue
+; end expValue
+;; push identifier walletStorage
+PUSH2 S2, S0
+ENDC
+SWAP
+STREF
+; colValue
+POP S3
+; end colValue
+; expValue
+; end expValue
+;; push identifier mappingStorage
+PUSH2 S2, S3
+STB
+; colValue
+POP S4
+; end colValue
+;; push identifier code
+PUSH S8
+SETCODE
+;; push identifier code
+PUSH S8
+CTOS
+DUP
+PUSHSLICE x8adb35
+SDEQ
+PUSHCONT {
+	PLDREFIDX 1
+	CTOS
+}
+IF
+PLDREF
+CTOS
+BLESS
+POP c3
+;; push identifier builder
+PUSH S3
+ENDC
+CALLREF {
+	CALL $:onCodeUpgrade$
+}
+; end function upgradeContractCode
+; end modifier correctContractType
+; end modifier onlyRoot
+BLKDROP 9
+CALLREF {
+	CALL $c7_to_c4$
+}
+TRUE
+SETGLOB 7
+
+.macro setMarketAddress
+DROP
+GETGLOB 2
+ISNULL
+IFREF {
+	CALL $c4_to_c7$
+}
+LDMSGADDRQ
+PUSHCONT {
+	;; load next cell
+	LDREF
+	ENDS
+	CTOS
+	LDMSGADDR
+}
+IFNOT
+ENDS
+;; param: market_
+; modifier onlyRoot
+;; get member sender
+GETGLOB 9
+;; push identifier root
+GETGLOB 10
+SDEQ
+THROWIFNOT 100
+; function setMarketAddress
+ACCEPT
+; expValue
+; end expValue
+;; push identifier market_
+; colValue
+; end colValue
+; end function setMarketAddress
+; end modifier onlyRoot
+SETGLOB 14
+CALLREF {
+	CALL $c7_to_c4$
+}
+TRUE
+SETGLOB 7
+
+.macro addMarket
+DROP
+GETGLOB 2
+ISNULL
+IFREF {
+	CALL $c4_to_c7$
+}
+LDU 32
+LDMSGADDRQ
+PUSHCONT {
+	;; load next cell
+	LDREF
+	ENDS
+	CTOS
+	LDMSGADDR
+}
+IFNOT
+LDMSGADDRQ
+PUSHCONT {
+	;; load next cell
+	LDREF
+	ENDS
+	CTOS
+	LDMSGADDR
+}
+IFNOT
+ENDS
+;; param: marketId
+;; param: realTokenRoot
+;; param: virtualTokenRoot
+; modifier onlyMarket
+;; map.exists
+;; get member sender
+GETGLOB 9
+;; push identifier marketAddresses
+GETGLOB 15
+PUSHINT 267
+DICTGET
+DUP
+PUSHCONT {
+	NIP
+}
+IF
+THROWIFNOT 101
+; function addMarket
+;; get member value
+DEPTH
+ADDCONST -2
+PICK
+PUSHINT 2
+RAWRESERVE
+;; push identifier realTokenRoot
+;; push identifier virtualTokenRoot
+DUP2
+;; address.makeAddrStd()
+PUSHSLICE x8000000000000000000000000000000000000000000000000000000000000000001_
+;; address.makeAddrStd()
+PUSHSLICE x8000000000000000000000000000000000000000000000000000000000000000001_
+TUPLE 4
+; expValue
+;; fetch marketTIP3Info
+;; push identifier marketId
+PUSH S3
+GETGLOB 17
+; end expValue
+ROT
+; colValue
+CALLREF {
+	UNTUPLE 4
+	REVERSE 4, 0
+	NEWC
+	STSLICE
+	BLKSWAP 3, 1
+	NEWC
+	STSLICE
+	ROTREV
+	NEWC
+	STSLICE
+	SWAP
+	NEWC
+	STSLICE
+	STBREFR
+	STBREFR
+	STBREFR
+}
+ENDC
+ROTREV
+PUSHINT 32
+DICTUSETREF
+SETGLOB 17
+; end colValue
+;; address.makeAddrStd()
+PUSHSLICE x8000000000000000000000000000000000000000000000000000000000000000001_
+; expValue
+;; fetch wallets
+;; push identifier realTokenRoot
+PUSH S2
+GETGLOB 16
+; end expValue
+; colValue
+PUSHINT 267
+DICTSET
+SETGLOB 16
+; end colValue
+;; address.makeAddrStd()
+PUSHSLICE x8000000000000000000000000000000000000000000000000000000000000000001_
+; expValue
+;; fetch wallets
+;; push identifier virtualTokenRoot
+PUSH S1
+GETGLOB 16
+; end expValue
+; colValue
+PUSHINT 267
+DICTSET
+SETGLOB 16
+; end colValue
+;; push identifier realTokenRoot
+PUSH S1
+CALLREF {
+	CALL $addWallet_internal_macro$
+}
+;; push identifier virtualTokenRoot
+DUP
+CALLREF {
+	CALL $addWallet_internal_macro$
+}
+; end function addMarket
+; end modifier onlyMarket
+BLKDROP 3
+CALLREF {
+	CALL $c7_to_c4$
+}
+TRUE
+SETGLOB 7
+
+.macro removeMarket
+DROP
+GETGLOB 2
+ISNULL
+IFREF {
+	CALL $c4_to_c7$
+}
+LDU 32
+ENDS
+;; param: marketId
+; modifier onlyRoot
+;; get member sender
+GETGLOB 9
+;; push identifier root
+GETGLOB 10
+SDEQ
+THROWIFNOT 100
+; function removeMarket
+ACCEPT
+;; index
+;; push identifier marketId
+DUP
+;; push identifier marketTIP3Info
+GETGLOB 17
+PUSHINT 32
+DICTUGETREF
+PUSHCONT {
+	CTOS
+	CALLREF {
+		LDMSGADDR
+		LDMSGADDRQ
+		PUSHCONT {
+			;; load next cell
+			LDREF
+			ENDS
+			CTOS
+			LDMSGADDR
+		}
+		IFNOT
+		LDMSGADDRQ
+		PUSHCONT {
+			;; load next cell
+			LDREF
+			ENDS
+			CTOS
+			LDMSGADDR
+		}
+		IFNOT
+		LDMSGADDRQ
+		PUSHCONT {
+			;; load next cell
+			LDREF
+			ENDS
+			CTOS
+			LDMSGADDR
+		}
+		IFNOT
+		ENDS
+		TUPLE 4
+	}
+}
+PUSHCONT {
+	PUSHSLICE x8000000000000000000000000000000000000000000000000000000000000000001_
+	PUSHSLICE x8000000000000000000000000000000000000000000000000000000000000000001_
+	PUSHSLICE x8000000000000000000000000000000000000000000000000000000000000000001_
+	PUSHSLICE x8000000000000000000000000000000000000000000000000000000000000000001_
+	TUPLE 4
+}
+IFELSE
+;; decl: marketTokenAddresses
+;; delete
+; expValue
+;; fetch wallets
+GETGLOB 16
+;; get member realToken
+;; push identifier marketTokenAddresses
+PUSH S1
+INDEX 0
+; end expValue
+; colValue
+SWAP
+PUSHINT 267
+DICTDEL
+DROP
+; end colValue
+;; delete
+; expValue
+;; fetch wallets
+DUP
+SETGLOB 16
+;; get member virtualToken
+;; push identifier marketTokenAddresses
+; end expValue
+; colValue
+; end colValue
+;; delete
+; expValue
+;; fetch marketTIP3Info
+;; push identifier marketId
+; end expValue
+; colValue
+; end colValue
+SWAP
+INDEX 1
+SWAP
+PUSHINT 267
+DICTDEL
+DROP
+SETGLOB 16
+; end function removeMarket
+; end modifier onlyRoot
+GETGLOB 17
+PUSHINT 32
+DICTUDEL
+DROP
+SETGLOB 17
+CALLREF {
+	CALL $c7_to_c4$
+}
+TRUE
+SETGLOB 7
+
+.macro transferTokensToWallet
+DROP
+GETGLOB 2
+ISNULL
+IFREF {
+	CALL $c4_to_c7$
+}
+LDMSGADDRQ
+PUSHCONT {
+	;; load next cell
+	LDREF
+	ENDS
+	CTOS
+	LDMSGADDR
+}
+IFNOT
+LDMSGADDRQ
+PUSHCONT {
+	;; load next cell
+	LDREF
+	ENDS
+	CTOS
+	LDMSGADDR
+}
+IFNOT
+LDMSGADDRQ
+PUSHCONT {
+	;; load next cell
+	LDREF
+	ENDS
+	CTOS
+	LDMSGADDR
+}
+IFNOT
+LDUQ 256
+PUSHCONT {
+	;; load next cell
+	LDREF
+	ENDS
+	CTOS
+	LDU 256
+}
+IFNOT
+ENDS
+;; param: tonWallet
+;; param: tokenRoot
+;; param: userTip3Wallet
+;; param: toPayout
+; modifier onlyMarket
+;; map.exists
+;; get member sender
+GETGLOB 9
+;; push identifier marketAddresses
+GETGLOB 15
+PUSHINT 267
+DICTGET
+DUP
+PUSHCONT {
+	NIP
+}
+IF
+THROWIFNOT 101
+; function transferTokensToWallet
+PUSHREF {
+}
+;; decl: empty
+;; Remote call ITONTokenWallet.transfer
+;; push identifier empty
+DUP
+TRUE
+;; push identifier tonWallet
+PUSH S6
+PUSHINT 0
+;; push identifier toPayout
+PUSH S5
+;; uint128
+UFITS 128
+;; push identifier userTip3Wallet
+;; index
+;; push identifier tokenRoot
+PUSH2 S7, S8
+;; push identifier wallets
+GETGLOB 16
+PUSHINT 267
+DICTGET
+PUSHCONT {
+	PUSHSLICE x8000000000000000000000000000000000000000000000000000000000000000001_
+}
+IFNOT
+NEWC
+STSLICECONST x62_
+STSLICE
+PUSHSLICE x140000000000000000000000000003_
+STSLICER
+BLKSWAP 6, 1
+NEWC
+STSLICECONST x4bf160e2
+STSLICE
+STU 128
+STU 128
+BLKSWAP 3, 1
+NEWC
+STSLICE
+STI 1
+STREF
+STBREFR
+STBREFR
+ENDC
+PUSHINT 0
+SENDRAWMSG
+; end function transferTokensToWallet
+; end modifier onlyMarket
+BLKDROP 5
+IFREF {
+	CALL $c7_to_c4$
+}
+TRUE
+SETGLOB 7
+
+.globl	addWallet_internal
+.type	addWallet_internal, @function
+CALL $addWallet_internal_macro$
+
+.macro addWallet_internal_macro
+;; param: tokenRoot
+; function addWallet
+;; Remote call IRootTokenContract.deployEmptyWallet
+MYADDR
+MYADDR
+PUSHINT 0
+PUSHINT 1500000000
+;; push identifier tokenRoot
+PUSH S4
+NEWC
+STSLICECONST x62_
+STSLICE
+PUSHSLICE x477359400000000000000000000000000003_
+STSLICER
+BLKSWAP 4, 1
+NEWC
+STSLICECONST x542b1672
+STU 128
+STU 256
+STSLICE
+SWAP
+NEWC
+STSLICE
+STBREFR
+STBREFR
+ENDC
+PUSHINT 0
+SENDRAWMSG
+; end function addWallet
+DROP
+
+.macro notifyWalletDeployed
+DROP
+GETGLOB 2
+ISNULL
+IFREF {
+	CALL $c4_to_c7$
+}
+LDMSGADDRQ
+PUSHCONT {
+	;; load next cell
+	LDREF
+	ENDS
+	CTOS
+	LDMSGADDR
+}
+IFNOT
+ENDS
+;; param: root_
+; modifier onlyExisingTIP3Root
+;; push identifier root_
+;; map.exists
+;; push identifier rootAddress
+BLKPUSH 2, 0
+;; push identifier wallets
+GETGLOB 16
+PUSHINT 267
+DICTGET
+DUP
+PUSHCONT {
+	NIP
+}
+IF
+THROWIFNOT 103
+; function notifyWalletDeployed
+ACCEPT
+;; if
+;; get member value
+;; index
+;; push identifier root_
+PUSH S1
+;; push identifier wallets
+GETGLOB 16
+PUSHINT 267
+DICTGET
+PUSHCONT {
+	PUSHSLICE x8000000000000000000000000000000000000000000000000000000000000000001_
+}
+IFNOT
+PARSEMSGADDR
+INDEX 3
+PLDU 256
+PUSHCONT {
+	; expValue
+	;; fetch wallets
+	;; push identifier root_
+	PUSH S1
+	GETGLOB 16
+	; end expValue
+	;; get member sender
+	GETGLOB 9
+	; colValue
+	ROTREV
+	PUSHINT 267
+	DICTSET
+	SETGLOB 16
+	; end colValue
+}
+IFNOT
+;; end if
+; end function notifyWalletDeployed
+; end modifier onlyExisingTIP3Root
+DROP2
+CALLREF {
+	CALL $c7_to_c4$
+}
+TRUE
+SETGLOB 7
+
+.macro tokensReceivedCallback
+DROP
+GETGLOB 2
+ISNULL
+IFREF {
+	CALL $c4_to_c7$
+}
+LDMSGADDRQ
+PUSHCONT {
+	;; load next cell
+	LDREF
+	ENDS
+	CTOS
+	LDMSGADDR
+}
+IFNOT
+LDMSGADDRQ
+PUSHCONT {
+	;; load next cell
+	LDREF
+	ENDS
+	CTOS
+	LDMSGADDR
+}
+IFNOT
+LDUQ 128
+PUSHCONT {
+	;; load next cell
+	LDREF
+	ENDS
+	CTOS
+	LDU 128
+}
+IFNOT
+LDUQ 256
+PUSHCONT {
+	;; load next cell
+	LDREF
+	ENDS
+	CTOS
+	LDU 256
+}
+IFNOT
+LDMSGADDRQ
+PUSHCONT {
+	;; load next cell
+	LDREF
+	ENDS
+	CTOS
+	LDMSGADDR
+}
+IFNOT
+LDMSGADDRQ
+PUSHCONT {
+	;; load next cell
+	LDREF
+	ENDS
+	CTOS
+	LDMSGADDR
+}
+IFNOT
+LDMSGADDRQ
+PUSHCONT {
+	;; load next cell
+	LDREF
+	ENDS
+	CTOS
+	LDMSGADDR
+}
+IFNOT
+LDUQ 128
+PUSHCONT {
+	;; load next cell
+	LDREF
+	ENDS
+	CTOS
+	LDU 128
+}
+IFNOT
+;; decode TvmCell
+LDREF
+ENDS
+;; param: token_wallet
+;; param: token_root
+;; param: amount
+;; param: 
+;; param: sender_address
+;; param: sender_wallet
+;; param: 
+;; param: 
+;; param: payload
+; modifier onlyOwnWallet
+;; push identifier token_root
+;; push identifier token_wallet
+;; index
+;; push identifier tokenRoot
+PUSH3 S7, S8, S7
+;; push identifier wallets
+GETGLOB 16
+PUSHINT 267
+DICTGET
+PUSHCONT {
+	PUSHSLICE x8000000000000000000000000000000000000000000000000000000000000000001_
+}
+IFNOT
+;; push identifier tokenWallet
+PUSH S1
+SDEQ
+THROWIFNOT 102
+; function tokensReceivedCallback
+;; get member value
+DEPTH
+ADDCONST -2
+PICK
+PUSHINT 2
+RAWRESERVE
+;; push identifier payload
+PUSH S2
+CTOS
+;; decl: ts
+; expValue
+DUP
+; end expValue
+LDU 8
+; colValue
+POP S2
+; end colValue
+;; decl: operation
+; expValue
+PUSH S1
+; end expValue
+LDREFRTOS
+SWAP
+; colValue
+POP S3
+; end colValue
+;; decl: args
+;; if
+;; push identifier operation
+PUSH S1
+EQINT 0
+PUSHCONT {
+	; expValue
+	DUP
+	; end expValue
+	LDMSGADDR
+	LDMSGADDR
+	; colValue
+	POP S3
+	; end colValue
+	;; decl: tonWallet
+	;; decl: userTip3Wallet
+	;; Remote call IMarketOperations.supplyTokensToMarket
+	;; push identifier amount
+	;; push identifier userTip3Wallet
+	;; push identifier tonWallet
+	PUSH3 S13, S0, S1
+	;; push identifier token_root
+	PUSH S17
+	;; push identifier marketAddress
+	GETGLOB 14
+	NEWC
+	STSLICECONST x62_
+	STSLICE
+	PUSHSLICE x3989680000000000000000000000000003_
+	STSLICER
+	BLKSWAP 4, 1
+	NEWC
+	STSLICECONST x2c35cb16
+	STSLICE
+	BLKSWAP 3, 1
+	NEWC
+	STSLICE
+	ROTREV
+	NEWC
+	STSLICE
+	STU 128
+	STBREFR
+	STBREFR
+	STBREFR
+	ENDC
+	PUSHINT 64
+	SENDRAWMSG
+	DROP2
+}
+PUSHCONT {
+	;; if
+	;; push identifier operation
+	PUSH S1
+	EQINT 1
+	PUSHCONT {
+		; expValue
+		DUP
+		; end expValue
+		LDMSGADDR
+		LDU 8
+		; colValue
+		POP S3
+		; end colValue
+		;; decl: tonWallet
+		;; decl: loanId
+		;; Remote call IMarketOperations.repayBorrow
+		;; push identifier loanId
+		;; push identifier amount
+		;; push identifier sender_wallet
+		PUSH3 S0, S13, S10
+		;; push identifier tonWallet
+		PUSH S4
+		;; push identifier token_root
+		PUSH S18
+		;; push identifier marketAddress
+		GETGLOB 14
+		NEWC
+		STSLICECONST x62_
+		STSLICE
+		PUSHSLICE x3989680000000000000000000000000003_
+		STSLICER
+		BLKSWAP 5, 1
+		NEWC
+		STSLICECONST x423c632c
+		STSLICE
+		BLKSWAP 4, 1
+		NEWC
+		STSLICE
+		BLKSWAP 3, 1
+		NEWC
+		STSLICE
+		STU 128
+		STU 8
+		STBREFR
+		STBREFR
+		STBREFR
+		ENDC
+		PUSHINT 64
+		SENDRAWMSG
+		DROP2
+	}
+	PUSHCONT {
+		;; if
+		;; push identifier operation
+		PUSH S1
+		EQINT 2
+		PUSHCONT {
+			; expValue
+			DUP
+			; end expValue
+			LDMSGADDR
+			LDMSGADDR
+			; colValue
+			POP S3
+			; end colValue
+			;; decl: tonWallet
+			;; decl: userTip3Wallet
+			;; Remote call IMarketOperations.withdrawVToken
+			;; push identifier amount
+			;; push identifier sender_wallet
+			;; push identifier userTip3Wallet
+			PUSH3 S13, S10, S0
+			;; push identifier tonWallet
+			PUSH S4
+			;; push identifier token_root
+			PUSH S18
+			;; push identifier marketAddress
+			GETGLOB 14
+			NEWC
+			STSLICECONST x62_
+			STSLICE
+			PUSHSLICE x3989680000000000000000000000000003_
+			STSLICER
+			BLKSWAP 5, 1
+			NEWC
+			STSLICECONST x6794e9ba
+			STSLICE
+			BLKSWAP 4, 1
+			NEWC
+			STSLICE
+			BLKSWAP 3, 1
+			NEWC
+			STSLICE
+			ROTREV
+			NEWC
+			STSLICE
+			STU 128
+			STBREFR
+			STBREFR
+			STBREFR
+			STBREFR
+			ENDC
+			PUSHINT 64
+			SENDRAWMSG
+			DROP2
+		}
+		PUSHCONT {
+			;; transfer()
+			;; push identifier sender_address
+			PUSH S9
+			NEWC
+			STSLICECONST x62_
+			STSLICE
+			PUSHINT 111
+			STZEROES
+			ENDC
+			PUSHINT 64
+			SENDRAWMSG
+		}
+		IFELSE
+		;; end if
+	}
+	IFELSE
+	;; end if
+}
+IFELSE
+;; end if
+; end function tokensReceivedCallback
+; end modifier onlyOwnWallet
+BLKDROP 14
+CALLREF {
+	CALL $c7_to_c4$
+}
+TRUE
+SETGLOB 7
+
+.macro getMarketAddresses
+DROP
+GETGLOB 2
+ISNULL
+IFREF {
+	CALL $c4_to_c7$
+}
+LDU 32
+GETGLOB 4
+ROT
+SETINDEXQ 5
+SETGLOB 4
+LDU 32
+ENDS
+;; param: marketId
+; function getMarketAddresses
+;; return
+GETGLOB 4
+PUSHINT 64
+SETINDEXQ 4
+SETGLOB 4
+;; index
+;; push identifier marketId
+DUP
+;; push identifier marketTIP3Info
+GETGLOB 17
+PUSHINT 32
+DICTUGETREF
+PUSHCONT {
+	CTOS
+	CALLREF {
+		LDMSGADDR
+		LDMSGADDRQ
+		PUSHCONT {
+			;; load next cell
+			LDREF
+			ENDS
+			CTOS
+			LDMSGADDR
+		}
+		IFNOT
+		LDMSGADDRQ
+		PUSHCONT {
+			;; load next cell
+			LDREF
+			ENDS
+			CTOS
+			LDMSGADDR
+		}
+		IFNOT
+		LDMSGADDRQ
+		PUSHCONT {
+			;; load next cell
+			LDREF
+			ENDS
+			CTOS
+			LDMSGADDR
+		}
+		IFNOT
+		ENDS
+		TUPLE 4
+	}
+}
+PUSHCONT {
+	PUSHSLICE x8000000000000000000000000000000000000000000000000000000000000000001_
+	PUSHSLICE x8000000000000000000000000000000000000000000000000000000000000000001_
+	PUSHSLICE x8000000000000000000000000000000000000000000000000000000000000000001_
+	PUSHSLICE x8000000000000000000000000000000000000000000000000000000000000000001_
+	TUPLE 4
+}
+IFELSE
+; end function getMarketAddresses
+NIP
+;; emitting 1 value(s)
+PUSH S1
+PUSHCONT {
+	PUSH S3
+	CTOS
+	LDU 2
+	LDMSGADDR
+	DROP
+	NIP
+	NEWC
+	STSLICECONST xc
+	STSLICE
+	PUSHINT 1
+	STUR 98
+	SWAP
+	NEWC
+	STSLICECONST x8aa9c708
+	SWAP
+	UNTUPLE 4
+	REVERSE 5, 0
+	STSLICE
+	BLKSWAP 3, 1
+	NEWC
+	STSLICE
+	ROTREV
+	NEWC
+	STSLICE
+	SWAP
+	NEWC
+	STSLICE
+	STBREFR
+	STBREFR
+	STBREFR
+	STBREFR
+	ENDC
+	PUSHINT 0
+	SENDRAWMSG
+}
+PUSHCONT {
+	GETGLOB 4
+	DUP
+	INDEX 3
+	PUSH S1
+	INDEX 2
+	GETGLOB 9
+	BLKSWAP 1, 3
+	INDEX 1
+	NEWC
+	PUSHINT 2
+	STZEROES
+	STI 1
+	PUSHINT 3
+	STZEROES
+	STSLICE
+	SWAP
+	STGRAMS
+	STDICT
+	PUSHINT 1
+	STUR 106
+	SWAP
+	NEWC
+	GETGLOB 4
+	INDEX 5
+	STUR 32
+	SWAP
+	UNTUPLE 4
+	REVERSE 5, 0
+	STSLICE
+	BLKSWAP 3, 1
+	NEWC
+	STSLICE
+	ROTREV
+	NEWC
+	STSLICE
+	SWAP
+	NEWC
+	STSLICE
+	STBREFR
+	STBREFR
+	STBREFR
+	STBREFR
+	ENDC
+	GETGLOB 4
+	INDEX 4
+	SENDRAWMSG
+}
+IFELSE
+IFREF {
+	CALL $c7_to_c4$
+}
+TRUE
+SETGLOB 7
+
+.macro getAllMarkets
+DROP
+GETGLOB 2
+ISNULL
+IFREF {
+	CALL $c4_to_c7$
+}
+LDU 32
+GETGLOB 4
+ROT
+SETINDEXQ 5
+SETGLOB 4
+ENDS
+; function getAllMarkets
+;; return
+GETGLOB 4
+PUSHINT 64
+SETINDEXQ 4
+SETGLOB 4
+;; push identifier marketTIP3Info
+GETGLOB 17
+; end function getAllMarkets
+;; emitting 1 value(s)
+PUSH S1
+PUSHCONT {
+	PUSH S3
+	CTOS
+	LDU 2
+	LDMSGADDR
+	DROP
+	NIP
+	NEWC
+	STSLICECONST xc
+	STSLICE
+	PUSHSLICE x0000000000000000000000003630d683a_
+	STSLICER
+	STDICT
+	ENDC
+	PUSHINT 0
+	SENDRAWMSG
+}
+PUSHCONT {
+	GETGLOB 4
+	DUP
+	INDEX 3
+	PUSH S1
+	INDEX 2
+	GETGLOB 9
+	BLKSWAP 1, 3
+	INDEX 1
+	NEWC
+	PUSHINT 2
+	STZEROES
+	STI 1
+	PUSHINT 3
+	STZEROES
+	STSLICE
+	SWAP
+	STGRAMS
+	STDICT
+	PUSHINT 106
+	STZEROES
+	GETGLOB 4
+	INDEX 5
+	STUR 32
+	STDICT
+	ENDC
+	GETGLOB 4
+	INDEX 4
+	SENDRAWMSG
+}
+IFELSE
+IFREF {
+	CALL $c7_to_c4$
+}
+TRUE
+SETGLOB 7
+
+.macro createSupplyPayload
+DROP
+LDMSGADDRQ
+PUSHCONT {
+	;; load next cell
+	LDREF
+	ENDS
+	CTOS
+	LDMSGADDR
+}
+IFNOT
+LDMSGADDRQ
+PUSHCONT {
+	;; load next cell
+	LDREF
+	ENDS
+	CTOS
+	LDMSGADDR
+}
+IFNOT
+ENDS
+;; param: userAddress
+;; param: userVTokenWallet
+; function createSupplyPayload
+;; decl: tb
+; expValue
+; end expValue
+; colValue
+PUSHINT 0
+NEWC
+STU 8
+; end colValue
+;; decl: op
+; expValue
+; end expValue
+;; push identifier userAddress
+; colValue
+PUSH S2
+NEWC
+STSLICE
+; end colValue
+; expValue
+; end expValue
+;; push identifier userVTokenWallet
+PUSH S2
+; colValue
+SWAP
+STSLICE
+; end colValue
+; expValue
+; end expValue
+;; push identifier op
+DUP2
+ENDC
+SWAP
+STREF
+; colValue
+POP S2
+; end colValue
+;; return
+;; push identifier tb
+PUSH S1
+ENDC
+; end function createSupplyPayload
+BLKDROP2 4, 1
+;; emitting 1 value(s)
+PUSH S1
+PUSHCONT {
+	PUSH S3
+	CTOS
+	LDU 2
+	LDMSGADDR
+	DROP
+	NIP
+	NEWC
+	STSLICECONST xc
+	STSLICE
+	PUSHSLICE x0000000000000000000000003ba589d22_
+	STSLICER
+	STREF
+	ENDC
+	PUSHINT 0
+	SENDRAWMSG
+}
+PUSHCONT {
+	DROP
+}
+IFELSE
+IFREF {
+	CALL $c7_to_c4$
+}
+TRUE
+SETGLOB 7
+
+.macro createRepayPayload
+DROP
+LDMSGADDRQ
+PUSHCONT {
+	;; load next cell
+	LDREF
+	ENDS
+	CTOS
+	LDMSGADDR
+}
+IFNOT
+LDUQ 8
+PUSHCONT {
+	;; load next cell
+	LDREF
+	ENDS
+	CTOS
+	LDU 8
+}
+IFNOT
+ENDS
+;; param: userAddress
+;; param: loanId
+; function createRepayPayload
+;; decl: tb
+; expValue
+; end expValue
+; colValue
+PUSHINT 1
+NEWC
+STU 8
+; end colValue
+;; decl: op
+; expValue
+; end expValue
+;; push identifier userAddress
+; colValue
+PUSH S2
+NEWC
+STSLICE
+; end colValue
+; expValue
+; end expValue
+;; push identifier loanId
+PUSH S2
+; colValue
+SWAP
+STU 8
+; end colValue
+; expValue
+; end expValue
+;; push identifier op
+PUSH2 S0, S1
+STB
+; colValue
+POP S2
+; end colValue
+;; return
+;; push identifier tb
+PUSH S1
+ENDC
+; end function createRepayPayload
+BLKDROP2 4, 1
+;; emitting 1 value(s)
+PUSH S1
+PUSHCONT {
+	PUSH S3
+	CTOS
+	LDU 2
+	LDMSGADDR
+	DROP
+	NIP
+	NEWC
+	STSLICECONST xc
+	STSLICE
+	PUSHSLICE x00000000000000000000000022f425eca_
+	STSLICER
+	STREF
+	ENDC
+	PUSHINT 0
+	SENDRAWMSG
+}
+PUSHCONT {
+	DROP
+}
+IFELSE
+IFREF {
+	CALL $c7_to_c4$
+}
+TRUE
+SETGLOB 7
+
+.macro createWithdrawPayload
+DROP
+LDMSGADDRQ
+PUSHCONT {
+	;; load next cell
+	LDREF
+	ENDS
+	CTOS
+	LDMSGADDR
+}
+IFNOT
+LDMSGADDRQ
+PUSHCONT {
+	;; load next cell
+	LDREF
+	ENDS
+	CTOS
+	LDMSGADDR
+}
+IFNOT
+ENDS
+;; param: userAddress
+;; param: userTip3Wallet
+; function createWithdrawPayload
+;; decl: tb
+; expValue
+; end expValue
+; colValue
+PUSHINT 2
+NEWC
+STU 8
+; end colValue
+;; decl: op
+; expValue
+; end expValue
+;; push identifier userAddress
+; colValue
+PUSH S2
+NEWC
+STSLICE
+; end colValue
+; expValue
+; end expValue
+;; push identifier userTip3Wallet
+PUSH S2
+; colValue
+SWAP
+STSLICE
+; end colValue
+; expValue
+; end expValue
+;; push identifier op
+PUSH2 S0, S1
+STB
+; colValue
+POP S2
+; end colValue
+;; return
+;; push identifier tb
+PUSH S1
+ENDC
+; end function createWithdrawPayload
+BLKDROP2 4, 1
+;; emitting 1 value(s)
+PUSH S1
+PUSHCONT {
+	PUSH S3
+	CTOS
+	LDU 2
+	LDMSGADDR
+	DROP
+	NIP
+	NEWC
+	STSLICECONST xc
+	STSLICE
+	PUSHSLICE x0000000000000000000000002d39b582e_
+	STSLICER
+	STREF
+	ENDC
+	PUSHINT 0
+	SENDRAWMSG
+}
+PUSHCONT {
+	DROP
+}
+IFELSE
+IFREF {
+	CALL $c7_to_c4$
+}
+TRUE
+SETGLOB 7
+
+.macro c7_to_c4
+GETGLOB 17
+GETGLOB 16
+GETGLOB 15
+GETGLOB 14
+GETGLOB 13
+GETGLOB 12
+GETGLOB 11
+GETGLOB 10
+GETGLOB 6
+GETGLOB 3
+GETGLOB 2
+NEWC
+STU 256
+STU 64
+STI 1
+STSLICE
+STU 8
+STU 32
+STREF
+BLKSWAP 4, 1
+NEWC
+STSLICE
+STDICT
+STDICT
+STDICT
+STBREFR
+ENDC
+POP C4
+
+.macro c4_to_c7
+PUSHROOT
+CTOS
+LDU 256      ; pubkey c4
+LDU 64      ; pubkey timestamp c4
+LDI 1       ; pubkey [timestamp] constructor_flag memory
+LDMSGADDR
+LDU 8
+LDU 32
+;; decode TvmCell
+LDREF
+;; load next cell
+LDREF
+ENDS
+CTOS
+LDMSGADDR
+LDDICT
+LDDICT
+LDDICT
+ENDS
+SETGLOB 17
+SETGLOB 16
+SETGLOB 15
+SETGLOB 14
+SETGLOB 13
+SETGLOB 12
+SETGLOB 11
+SETGLOB 10
+; pubkey [timestamp] constructor_flag
+SETGLOB 6   ; pubkey [timestamp]
+SETGLOB 3   ; pubkey
+SETGLOB 2
+
+.macro c4_to_c7_with_init_storage
+PUSHROOT
+CTOS
+SBITS
+GTINT 1
+PUSHREFCONT {
+	CALL $c4_to_c7$
+}
+PUSHCONT {
+	PUSHINT 0
+	PUSHROOT
+	CTOS
+	PLDDICT   ; D
+	; init root
+	PUSHSLICE x8000000000000000000000000000000000000000000000000000000000000000001_
+	SETGLOB 10
+	; init contractType
+	PUSHINT 0
+	SETGLOB 11
+	; init contractCodeVersion
+	PUSHINT 0
+	SETGLOB 12
+	; init platformCode
+	PUSHREF {
+	}
+	SETGLOB 13
+	; init marketAddress
+	PUSHSLICE x8000000000000000000000000000000000000000000000000000000000000000001_
+	SETGLOB 14
+	; init marketAddresses
+	NEWDICT
+	SETGLOB 15
+	; init wallets
+	NEWDICT
+	SETGLOB 16
+	; init marketTIP3Info
+	NEWDICT
+	SETGLOB 17
+	PUSHINT 64
+	DICTUGET
+	THROWIFNOT 61
+	PLDU 256
+	SETGLOB 2
+	PUSHINT 0 ; timestamp
+	SETGLOB 3
+	PUSHINT 0 ; constructor_flag
+	SETGLOB 6
+}
+IFELSE
+
+.internal-alias :main_internal, 0
+.internal :main_internal
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Function: main_internal
+;; param: contract_balance
+;; param: msg_balance
+;; param: int_msg_info
+;; param: msg_body_slice
+;; param: transaction_type
+PUSH S2
+CTOS
+LDU 4       ; bounced tail
+LDMSGADDR   ; bounced src tail
+DROP
+SETGLOB 9
+MODPOW2 1
+; beg set default params for responsible func
+GETGLOB 4
+; bounce
+TRUE
+SETINDEXQ 1
+; tons
+PUSHINT 10000000
+SETINDEXQ 2
+; currency
+NULL
+SETINDEXQ 3
+; flag
+PUSHINT 0
+SETINDEXQ 4
+SETGLOB 4
+; end set default params for responsible func
+IFRET
+PUSH S1    ; body
+SEMPTY     ; isEmpty
+IFRET
+PUSH S1 ; body
+LDUQ 32  ; [funcId] body' ok
+THROWIFNOT 60 ; funcId body'
+PUSH S1 ; funcId body' funcId
+IFNOTRET
+SWAP
+CALLREF {
+	CALL $public_function_selector$
+}
+GETGLOB 7
+ISNULL
+THROWIF 60
+
+.internal-alias :main_external, -1
+.internal :main_external
+PUSHSLICE x8000000000000000000000000000000000000000000000000000000000000000001_
+SETGLOB 9
+PUSH S1
+CALLREF {
+	CALL $c4_to_c7_with_init_storage$
+}
+LDU 1 ; haveSign msgSlice
+SWAP
+PUSHCONT {
+	PUSHINT 512
+	LDSLICEX ; signatureSlice msgSlice
+	DUP      ; signatureSlice msgSlice msgSlice
+	HASHSU   ; signatureSlice msgSlice hashMsgSlice
+	SWAP  ; signatureSlice hashMsgSlice msgSlice
+	LDU 1 ; signatureSlice hashMsgSlice havePubkey msgSlice
+	SWAP  ; signatureSlice hashMsgSlice msgSlice havePubkey
+	PUSHCONT {
+		LDU 256       ; signatureSlice hashMsgSlice pubkey msgSlice
+		XCHG s3
+		SWAP
+	}
+	PUSHCONT {
+		XCHG s2
+		GETGLOB 2
+	}
+	IFELSE
+	CHKSIGNU      ; msgSlice isSigned
+	THROWIFNOT 40 ; msgSlice
+}
+PUSHCONT {
+	LDU 1      ; havePubkey msgSlice
+	SWAP       ; msgSlice havePubkey
+	THROWIF 58 ; msgSlice
+}
+IFELSE
+LDU 64                         ; timestamp msgSlice
+SWAP                           ; msgSlice timestamp
+CALL $replay_protection_macro$ ; msgSlice
+LDU 32  ; expireAt msgSlice
+SWAP    ; msgSlice expireAt
+NOW     ; msgSlice expireAt now
+GREATER ; msgSlice expireAt>now
+THROWIFNOT 57
+LDU  32 ; funcId body
+SWAP    ; body funcId
+CALLREF {
+	CALL $public_function_selector$
+}
+GETGLOB 7
+ISNULL
+THROWIF 60
+
+.macro public_function_selector
+DUP
+PUSHINT 1082639874
+LEQ
+IFJMPREF {
+	DUP
+	PUSHINT 178898696
+	EQUAL
+	IFJMPREF {
+		CALL $getMarketAddresses$
+	}
+	DUP
+	PUSHINT 198219698
+	EQUAL
+	IFJMPREF {
+		CALL $createRepayPayload$
+	}
+	DUP
+	PUSHINT 887543307
+	EQUAL
+	IFJMPREF {
+		CALL $createWithdrawPayload$
+	}
+	DUP
+	PUSHINT 1082639874
+	EQUAL
+	IFJMPREF {
+		CALL $addMarket$
+	}
+}
+DUP
+PUSHINT 1489197582
+LEQ
+IFJMPREF {
+	DUP
+	PUSHINT 1213446967
+	EQUAL
+	IFJMPREF {
+		CALL $notifyWalletDeployed$
+	}
+	DUP
+	PUSHINT 1254603927
+	EQUAL
+	IFJMPREF {
+		CALL $setMarketAddress$
+	}
+	DUP
+	PUSHINT 1340611856
+	EQUAL
+	IFJMPREF {
+		CALL $transferTokensToWallet$
+	}
+	DUP
+	PUSHINT 1489197582
+	EQUAL
+	IFJMPREF {
+		CALL $getAllMarkets$
+	}
+}
+DUP
+PUSHINT 1855334216
+LEQ
+IFJMPREF {
+	DUP
+	PUSHINT 1497440185
+	EQUAL
+	IFJMPREF {
+		CALL $tokensReceivedCallback$
+	}
+	DUP
+	PUSHINT 1522631703
+	EQUAL
+	IFJMPREF {
+		CALL $upgradeContractCode$
+	}
+	DUP
+	PUSHINT 1756716863
+	EQUAL
+	IFJMPREF {
+		CALL $constructor$
+	}
+	DUP
+	PUSHINT 1855334216
+	EQUAL
+	IFJMPREF {
+		CALL $createSupplyPayload$
+	}
+}
+DUP
+PUSHINT 2112968404
+EQUAL
+IFJMPREF {
+	CALL $removeMarket$
+}
