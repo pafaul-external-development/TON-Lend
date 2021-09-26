@@ -5,20 +5,17 @@ import '../../Market/libraries/MarketOperations.sol';
 
 import '../../UserAccount/interfaces/IUAMUserAccount.sol';
 
-import '../../utils/libraries/MsgFlag.sol';
-
 interface IModule {
     function performAction(uint32 marketId, TvmCell args) external;
-    function sendActionResult() external returns(TvmCell result);
-    function sendActionId() external view returns(uint8);
+    function sendActionId() external view responsible returns(uint8);
 }
 
 interface IContractStateCache {
-    function updateCache(address tonWallet, mapping(uint32 => MarketInfo) marketState, mapping(address => fraction) tokenPrices) external;
+    function updateCache(address tonWallet, mapping (uint32 => MarketInfo) marketInfo_, mapping (address => fraction) tokenPrices_) external;
 }
 
 interface IContractStateCacheRoot {
-    function receiveCacheDelta(MarketDelta marketDelta) external;
+    function receiveCacheDelta(address tonWallet, MarketDelta marketDelta) external;
 }
 
 
@@ -26,7 +23,7 @@ library SupplyTokensLib {
     using UFO for uint256;
     using FPO for fraction;
 
-    function calculateSupply(uint128 tokenAmount, MarketInfo marketInfo) internal pure returns(uint256, MarketInfo) {
+    function calculateSupply(uint128 tokenAmount, MarketInfo marketInfo) internal returns(uint256) {
         uint256 tokensProvided = uint256(tokenAmount);
         fraction exchangeRate = MarketOperations.calculateExchangeRate({
             currentPoolBalance: marketInfo.currentPoolBalance,
@@ -38,10 +35,7 @@ library SupplyTokensLib {
         fraction fTokensToSupply = tokensProvided.numFDiv(exchangeRate);
         uint256 tokensToSupply = fTokensToSupply.toNum();
 
-        marketInfo.currentPoolBalance = tokenAmount;
-        marketInfo.totalSupply = tokenAmount;
-
-        return (tokensToSupply, marketInfo);
+        return (tokensToSupply);
     }
 }
 
@@ -54,7 +48,7 @@ library Utilities {
         mapping(uint32 => uint256) bi, 
         mapping(uint32 => MarketInfo) marketInfo, 
         mapping(address => fraction) tokenPrices
-    ) internal pure returns (uint256, uint256) {
+    ) internal returns (uint256, uint256) {
         uint256 supplySum = 0;
         uint256 borrowSum = 0;
         fraction tmp;

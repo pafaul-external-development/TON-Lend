@@ -2,7 +2,12 @@ pragma ton-solidity >= 0.47.0;
 
 import './interfaces/IModule.sol';
 
+import '../utils/libraries/MsgFlag.sol';
+
 contract WithdrawModule {
+    using UFO for uint256;
+    using FPO for fraction;
+
     address marketAddress;
     address userAccountManager;
     address owner;
@@ -20,16 +25,16 @@ contract WithdrawModule {
         tonWallet.transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
-    function performAction(uint32 marketId, TvmCell args) external view onlyMarket {
+    function performAction(uint32 marketId, TvmCell args) external onlyMarket {
         TvmSlice ts = args.toSlice();
-        (address tonWallet, address userTip3Wallet, address originalTip3Wallet, uint128 tokensToWithdraw, uint32 marketId) = ts.decode(address, address, address, uint128, uint32);
+        (address tonWallet, address userTip3Wallet, address originalTip3Wallet, uint128 tokensToWithdraw) = ts.decode(address, address, address, uint128);
         mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
         IUAMUserAccount(userAccountManager).requestWithdrawInfo{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, userTip3Wallet, originalTip3Wallet, uint256(tokensToWithdraw), marketId, updatedIndexes);
     }
 
-    function _createUpdatedIndexes() internal returns(mapping(uint32 => fraction) updatedIndexes) {
+    function _createUpdatedIndexes() internal view returns(mapping(uint32 => fraction) updatedIndexes) {
         for ((uint32 marketId, MarketInfo mi): marketInfo) {
             updatedIndexes[marketId] = mi.index;
         }
@@ -43,30 +48,31 @@ contract WithdrawModule {
         uint32 marketId, 
         mapping(uint32 => uint256) si,
         mapping(uint32 => uint256) bi
-    ) external view onlyMarket {
+    ) external onlyMarket {
         MarketDelta marketDelta;
 
+        MarketInfo mi = marketInfo[marketId];
+
         fraction exchangeRate = MarketOperations.calculateExchangeRate({
-            currentPoolBalance: marketInfo.currentPoolBalance,
-            totalBorrowed: marketInfo.totalBorrowed,
-            totalReserve: marketInfo.totalReserve,
-            totalSupply: marketInfo.totalSupply
+            currentPoolBalance: mi.currentPoolBalance,
+            totalBorrowed: mi.totalBorrowed,
+            totalReserve: mi.totalReserve,
+            totalSupply: mi.totalSupply
         });
 
-        (uint256 supplySum, uint256 borrowSum) = _calculateBorrowSupplyDiff(si, bi);
+        (uint256 supplySum, uint256 borrowSum) = Utilities.calculateSupplyBorrow(si, bi, marketInfo, tokenPrices);
 
-        fraction fTokensToSend = tokensToWithdraw.fNumDiv(tokensToWithdraw);
+        fraction fTokensToSend = tokensToWithdraw.numFDiv(exchangeRate);
         uint256 tokensToSend = fTokensToSend.toNum();
         if (supplySum > borrowSum) {
             if (supplySum - borrowSum > tokensToSend) {
-                emit TokensWithdrawn(tonWallet, marketId, tokensToSend, markets[marketId]);
 
                 marketDelta.currentPoolBalance.delta = tokensToSend;
                 marketDelta.currentPoolBalance.positive = false;
                 marketDelta.totalSupply.delta = tokensToSend;
                 marketDelta.totalSupply.positive = false;
 
-                IContractStateCacheRoot(marketAddress).uploadDelta{
+                IContractStateCacheRoot(marketAddress).receiveCacheDelta{
                     value: 1 ton
                 }(tonWallet, marketDelta);
 

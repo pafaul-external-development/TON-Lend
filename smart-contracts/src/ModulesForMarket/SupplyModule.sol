@@ -2,20 +2,12 @@ pragma ton-solidity >= 0.47.0;
 
 import './interfaces/IModule.sol';
 
-interface IUAMUserAccount {
-    function writeSupplyInfo(address tonWallet, address userTip3Wallet, uint32 marketid, uint256 tokensToSupply, uint256 tokenAmount) external view;
-
-    function requestRepayInfo(address tonWallet, address userTip3Wallet, address originalTip3Wallet, uint256 tokensToWithdraw, uint32 marketId, mapping(uint32 => fraction)) external view;
-    function receiveRepayInfo(address tonWallet, address tip3UserWallet, uint256 tokensReceived, uint32 marketId, uint8 loanId, mapping(uint32 => fraction) updatedIndexes) external view;
-    function writeRepayInformation(address tonWallet, address userTip3Wallet, uint32 marketId, uint8 loanId, uint256 tokensToReturn, BorrowInfo borrowInfo) external view;
-
-    function requestWithdrawInfo(address tonWallet, address userTip3Wallet, address originalTip3Wallet, uint256 tokensToWithdraw, uint32 marketid) external view;
-    function receiveWithdrawInfo(address tonWallet, address userTip3Wallet, address originalTip3Wallet, uint256 tokensToWithdraw, uint32 marketid, mapping(uint32 => uint256) si, mapping(uint32 => uint256) bi) external view;
-    function writeWithdrawInfo(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, uint256 tokensToSend) external view;
-    function updateIndexesAndReturnTokens(address tonWallet, address originalTip3Wallet, uint32 marketId, uint256 tokensToWithdraw) external view;
-}
+import '../utils/libraries/MsgFlag.sol';
 
 contract SupplyModule is IModule, IContractStateCache {
+
+    using UFO for uint256;
+    using FPO for fraction;
 
     address marketAddress;
     address userAccountManager;
@@ -31,26 +23,30 @@ contract SupplyModule is IModule, IContractStateCache {
         userAccountManager = _userAccountManager;
     }
 
-    function updateCache(address tonWallet, mapping (uint32 => MarketInfo) marketInfo_, mapping (address => uint256) tokenPrices_) external onlyMarket {
+    function sendActionId() external override view responsible returns(uint8) {
+        return {flag: MsgFlag.REMAINING_GAS} 0;
+    }
+
+    function updateCache(address tonWallet, mapping (uint32 => MarketInfo) marketInfo_, mapping (address => fraction) tokenPrices_) external override onlyMarket {
         marketInfo = marketInfo_;
         tokenPrices = tokenPrices_;
         tonWallet.transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
-    function performAction(uint32 marketId, TvmCell args) external view onlyMarket {
+    function performAction(uint32 marketId, TvmCell args) external override onlyMarket {
         TvmSlice ts = args.toSlice();
-        (address tonWallet, address userTip3Wallet, uint128 tokenAmount) = args.decode(address, address, uint128);
-        (uint256 tokensToSupply, MarketInfo marketDelta) = SupplyTokensLib.calculateSupply(tokenAmount, marketInfo);
+        (address tonWallet, address userTip3Wallet, uint128 tokenAmount) = ts.decode(address, address, uint128);
+        uint256 tokensToSupply = SupplyTokensLib.calculateSupply(tokenAmount, marketInfo[marketId]);
 
         MarketDelta marketDelta;
-        delta.currentPoolBalance.delta = tokenAmount;
-        delta.currentPoolBalance.positive = true;
-        delta.totalSupply.delta = tokenAmount;
-        delta.totalSupply.positive = true;
+        marketDelta.currentPoolBalance.delta = tokenAmount;
+        marketDelta.currentPoolBalance.positive = true;
+        marketDelta.totalSupply.delta = tokenAmount;
+        marketDelta.totalSupply.positive = true;
 
         IContractStateCacheRoot(marketAddress).receiveCacheDelta{
             value: msg.value/4
-        }(marketDelta);
+        }(tonWallet, marketDelta);
 
         IUAMUserAccount(userAccountManager).writeSupplyInfo{
             flag: MsgFlag.REMAINING_GAS
@@ -61,7 +57,7 @@ contract SupplyModule is IModule, IContractStateCache {
         marketAddress = _marketAddress;
     }
     
-    function getMarketAddress() external view returns(address) {
+    function getMarketAddress() external view responsible returns(address) {
         return {flag: MsgFlag.REMAINING_GAS} marketAddress;
     }
 
@@ -69,7 +65,7 @@ contract SupplyModule is IModule, IContractStateCache {
         userAccountManager = _userAccountManager;
     }
 
-    function getUserAccountManagerAddress() external view returns(address) {
+    function getUserAccountManagerAddress() external view responsible returns(address) {
         return {flag: MsgFlag.REMAINING_GAS} marketAddress;
     }
 
@@ -81,6 +77,12 @@ contract SupplyModule is IModule, IContractStateCache {
 
     modifier onlyUserAccountManager() {
         require(msg.sender == userAccountManager);
+        tvm.rawReserve(msg.value, 2);
+        _;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner);
         tvm.rawReserve(msg.value, 2);
         _;
     }

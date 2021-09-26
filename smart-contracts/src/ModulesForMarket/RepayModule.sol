@@ -2,7 +2,12 @@ pragma ton-solidity >= 0.47.0;
 
 import './interfaces/IModule.sol';
 
+import '../utils/libraries/MsgFlag.sol';
+
 contract RepayModule is IModule {
+    using UFO for uint256;
+    using FPO for fraction;
+
     address userAccountManager;
     address marketAddress;
     address owner;
@@ -18,14 +23,19 @@ contract RepayModule is IModule {
         owner = _owner;
     }
 
+    function sendActionId() external override view responsible returns(uint8) {
+        return 0;
+    }
+
     function updateCache(address tonWallet, mapping(uint32 => MarketInfo) _marketInfo, mapping(address => fraction) _tokenPrices) external onlyMarket {
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;
         tonWallet.transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
-    function performAction(uint32 marketId, TvmCell args) external onlyMarket {
-        (address tonWallet, address tip3UserWallet, uint256 tokensReceived, uint32 marketId, uint8 loanId) = args.decode(address, address, uint256, uint32, uint8);
+    function performAction(uint32 marketId, TvmCell args) external override onlyMarket {
+        TvmSlice ts = args.toSlice();
+        (address tonWallet, address tip3UserWallet, uint256 tokensReceived, uint8 loanId) = ts.decode(address, address, uint256, uint8);
         mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
 
         IUAMUserAccount(userAccountManager).receiveRepayInfo{
@@ -33,7 +43,7 @@ contract RepayModule is IModule {
         }(tonWallet, tip3UserWallet, tokensReceived, marketId, loanId, updatedIndexes);
     }
 
-    function _createUpdatedIndexes() internal returns(mapping(uint32 => fraction) updatedIndexes) {
+    function _createUpdatedIndexes() internal view returns(mapping(uint32 => fraction) updatedIndexes) {
         for ((uint32 marketId, MarketInfo mi): marketInfo) {
             updatedIndexes[marketId] = mi.index;
         }
@@ -63,12 +73,10 @@ contract RepayModule is IModule {
                 tokensToReturn = tokensForRepay - tokensToRepay;
                 borrowInfo.toRepay = 0;
                 tokenDelta = tokensToRepay;
-                emit TokensRepayed(tonWallet, marketId, tokensToRepay, tokensToRepay, marketInfo[marketId]);
             } else {
                 tokensToReturn = 0;
                 borrowInfo.toRepay = tokensToRepay - tokensForRepay;
                 borrowInfo.index = marketInfo[marketId].index;
-                emit TokensRepayed(tonWallet, marketId, tokensToRepay, tokensForRepay, marketInfo[marketId]);
             } 
 
             marketDelta.totalBorrowed.delta = tokenDelta;
@@ -76,13 +84,13 @@ contract RepayModule is IModule {
             marketDelta.currentPoolBalance.delta = tokenDelta;
             marketDelta.currentPoolBalance.positive = true;
 
-            IContractStateCacheRoot(marketAddress).uploadDelta{
+            IContractStateCacheRoot(marketAddress).receiveCacheDelta{
                 value: 1 ton
             }(tonWallet, marketDelta);
 
             IUAMUserAccount(userAccountManager).writeRepayInformation{
                 flag: MsgFlag.REMAINING_GAS
-            }(tonWallet, userTip3Wallet, marketId, loanId, tokensToReturn, borrowInfo);
+            }(tonWallet, tip3UserWallet, marketId, loanId, tokensToReturn, borrowInfo);
         } else {
             IUAMUserAccount(userAccountManager).markForLiquidation{
                 flag: MsgFlag.REMAINING_GAS
