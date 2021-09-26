@@ -61,8 +61,10 @@ contract WithdrawModule {
             if (supplySum - borrowSum > tokensToSend) {
                 emit TokensWithdrawn(tonWallet, marketId, tokensToSend, markets[marketId]);
 
-                marketDelta.currentPoolBalance = -tokensToSend;
-                marketDelta.totalSupply = -tokensToSend;
+                marketDelta.currentPoolBalance.delta = tokensToSend;
+                marketDelta.currentPoolBalance.positive = false;
+                marketDelta.totalSupply.delta = tokensToSend;
+                marketDelta.totalSupply.positive = false;
 
                 IContractStateCacheRoot(marketAddress).uploadDelta{
                     value: 1 ton
@@ -77,7 +79,9 @@ contract WithdrawModule {
                 }(tonWallet, originalTip3Wallet, marketId, tokensToWithdraw);
             }
         } else {
-            // TODO: mark for liquidation and transfer tokens back
+            IUAMUserAccount(userAccountManager).markForLiquidation{
+                flag: MsgFlag.REMAINING_GAS
+            }(tonWallet);
         }
     }
 

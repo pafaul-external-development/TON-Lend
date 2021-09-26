@@ -42,7 +42,7 @@ contract RepayModule is IModule {
     function repayLoan(
         address tonWallet,
         address tip3UserWallet,
-        uint256 tokensReceived,
+        uint256 tokensForRepay,
         uint32 marketId,
         uint8 loanId,
         BorrowInfo borrowInfo,
@@ -57,20 +57,24 @@ contract RepayModule is IModule {
             newRepayInfo = newRepayInfo.fDiv(borrowInfo.index);
             uint256 tokensToRepay = newRepayInfo.toNum();
             uint256 tokensToReturn;
+
+            uint256 tokenDelta;
             if (tokensToRepay <= tokensForRepay) {
                 tokensToReturn = tokensForRepay - tokensToRepay;
                 borrowInfo.toRepay = 0;
-                marketDelta.totalBorrowed = -tokensToRepay;
-                marketDelta.currentPoolBalance = tokensToRepay;
+                tokenDelta = tokensToRepay;
                 emit TokensRepayed(tonWallet, marketId, tokensToRepay, tokensToRepay, marketInfo[marketId]);
             } else {
                 tokensToReturn = 0;
                 borrowInfo.toRepay = tokensToRepay - tokensForRepay;
                 borrowInfo.index = marketInfo[marketId].index;
-                marketDelta.totalBorrowed = -tokensForRepay;
-                marketDelta.currentPoolBalance = tokensForRepay;
                 emit TokensRepayed(tonWallet, marketId, tokensToRepay, tokensForRepay, marketInfo[marketId]);
             } 
+
+            marketDelta.totalBorrowed.delta = tokenDelta;
+            marketDelta.totalBorrowed.positive = false;
+            marketDelta.currentPoolBalance.delta = tokenDelta;
+            marketDelta.currentPoolBalance.positive = true;
 
             IContractStateCacheRoot(marketAddress).uploadDelta{
                 value: 1 ton

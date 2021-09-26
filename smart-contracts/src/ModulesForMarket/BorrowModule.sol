@@ -51,7 +51,10 @@ contract BorrowModule is IMarketStateCache {
             uint256 tmp_ = supplySum - borrowSum;
             fraction tmp = tmp_.numFDiv(tokenPrices[marketInfo[marketId].token]);
             if (tmp_ >= tokensToBorrow) {
-                marketDelta.totalBorrowed = tokensToBorrow;
+                marketDelta.totalBorrowed.delta = tokensToBorrow;
+                marketDelta.totalBorrowed.positive = true;
+                marketDelta.currentPoolBalance.delta = tokensToBorrow;
+                marketDelta.currentPoolBalance.positive = false;
 
                 IContractStateCacheRoot(marketAddress).uploadDelta{
                     value: 1 ton

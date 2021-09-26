@@ -41,12 +41,16 @@ contract SupplyModule is IModule, IContractStateCache {
         TvmSlice ts = args.toSlice();
         (address tonWallet, address userTip3Wallet, uint128 tokenAmount) = args.decode(address, address, uint128);
         (uint256 tokensToSupply, MarketInfo marketDelta) = SupplyTokensLib.calculateSupply(tokenAmount, marketInfo);
-        MarketDelta delta;
-        delta.currentPoolBalance = tokenAmount;
-        delta.totalSupply = tokenAmount;
+
+        MarketDelta marketDelta;
+        delta.currentPoolBalance.delta = tokenAmount;
+        delta.currentPoolBalance.positive = true;
+        delta.totalSupply.delta = tokenAmount;
+        delta.totalSupply.positive = true;
+
         IContractStateCacheRoot(marketAddress).receiveCacheDelta{
             value: msg.value/4
-        }(delta);
+        }(marketDelta);
 
         IUAMUserAccount(userAccountManager).writeSupplyInfo{
             flag: MsgFlag.REMAINING_GAS

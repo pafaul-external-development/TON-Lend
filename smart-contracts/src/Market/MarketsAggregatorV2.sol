@@ -42,15 +42,49 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     mapping(address => bool) realTokenRoots;
     mapping(address => bool) virtualTokenRoots;
 
+    mapping(uint8 => address) modules;
+
     /*********************************************************************************************************/
     // Cache update functions
 
     function receiveMarketDelta(address sendGasTo, MarketDelta marketDelta, uint32 marketId) external onlyModules {
         tvm.rawReserve(msg.value, 2);
-        markets[marketId].currentPoolBalance += marketDelta.currentPoolBalance;
-        markets[marketId].totalBorrowed += marketDelta.totalBorrowed;
-        markets[marketId].totalReserve += marketDelta.totalReserve;
-        markets[marketId].totalSupply += marketDelta.totalSupply;
+        if (
+            marketDelta.currentPoolBalance.positive &&
+            marketDelta.currentPoolBalance.delta != 0
+        ) {
+            markets[marketId].currentPoolBalance += marketDelta.currentPoolBalance.delta;
+        } else {
+            markets[marketId].currentPoolBalance -= marketDelta.currentPoolBalance.delta;
+        }
+
+        if (
+            marketDelta.totalBorrowed.positive &&
+            marketDelta.totalBorrowed.delta != 0
+        ) {
+            markets[marketId].totalBorrowed += marketDelta.totalBorrowed.delta;
+        } else {
+            markets[marketId].totalBorrowed -= marketDelta.totalBorrowed.delta;
+        }
+
+        if (
+            marketDelta.totalReserve.positive &&
+            marketDelta.totalReserve.delta != 0
+        ) {
+            markets[marketId].totalReserve += marketDelta.totalReserve.delta;
+        } else {
+            markets[marketId].totalReserve -= marketDelta.totalReserve.delta;
+        }
+
+        if (
+            marketDelta.totalSupply.positive &&
+            marketDelta.totalSupply.delta != 0
+        ) {
+            markets[marketId].totalSupply += marketDelta.totalSupply.delta;
+        } else {
+            markets[marketId].totalSupply -= marketDelta.totalSupply.delta;
+        }
+
         _updateMarketState(marketId);
 
         uint128 valueToTransfer = msg.value / (modules.length + 1);
@@ -290,6 +324,10 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     /*********************************************************************************************************/
     // Operations with modules
 
+    function addModule(uint8 operationId, address module) external onlyOwner {
+        modules[operationId] = module;
+    }
+
     function performOperationWalletController(uint8 operationId, address tokenRoot, TvmCell args) external view onlyWalletController {
         uint32 marketId = tokensToMarket[tokenRoot];
         address module = modules[operationId];
@@ -309,32 +347,6 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     /*********************************************************************************************************/
     // Supply operation part
     // Starts at wallet controller
-
-    function supplyTokensToMarket(address tokenRoot, address tonWallet, address userTip3Wallet, uint128 tokenAmount) external override onlyWalletController {
-        if (realTokenRoots.exists(tokenRoot)) {
-            uint256 tokensProvided = uint256(tokenAmount);
-            uint32 marketId_ = tokensToMarkets[tokenRoot];
-            MarketInfo mi = markets[marketId_];
-
-            fraction exchangeRate = MarketOperations.calculateExchangeRate({
-                currentPoolBalance: mi.currentPoolBalance,
-                totalBorrowed: mi.totalBorrowed,
-                totalReserve: mi.totalReserve,
-                totalSupply: mi.totalSupply
-            });
-
-            fraction toPayout = tokensProvided.numFDiv(exchangeRate);
-            uint256 tokensToSupply = toPayout.toNum();
-
-            mi.currentPoolBalance += tokensToSupply;
-            mi.totalSupply += tokensToSupply;
-            markets[marketId_] = mi;
-            _updateMarketState(marketId_);
-            IUAMUserAccount(userAccountManager).writeSupplyInfo{
-                flag: MsgFlag.REMAINING_GAS
-            }(tonWallet, userTip3Wallet, marketId_, tokensToSupply, markets[marketId_].index);
-        }
-    }
 
     function mintVTokens(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toMint) external view override onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
@@ -357,46 +369,6 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         }(tonWallet, userTip3Wallet, originalTip3Wallet, marketId_, uint256(tokenAmount));
     }
 
-    function receiveWithdrawInfo(
-        address tonWallet, 
-        address userTip3Wallet, 
-        address originalTip3Wallet, 
-        uint32 marketId, 
-        uint256 tokensToWithdraw, 
-        mapping(uint32 => uint256) bi, 
-        mapping(uint32 => uint256) si
-    ) external override onlyUserAccountManager {
-        fraction fTokensToSend = markets[marketId].index.fNumMul(tokensToWithdraw);
-        uint256 tokensToSend = fTokensToSend.toNum();
-
-        (uint256 supplySum, uint256 borrowSum) = _calculateBorrowSupplyDiff(si, bi);
-        mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes(bi);
-
-        if (supplySum > borrowSum) {
-            if (supplySum - borrowSum > tokensToSend) {
-                emit TokensWithdrawn(tonWallet, marketId, tokensToSend, markets[marketId]);
-
-                IUAMUserAccount(userAccountManager).writeWithdrawInfo{
-                    flag: MsgFlag.REMAINING_GAS
-                }(tonWallet, userTip3Wallet, marketId, tokensToWithdraw, tokensToSend, updatedIndexes);
-            } else {
-                IUAMUserAccount(userAccountManager).updateIndexesAndReturnTokens{
-                    flag: MsgFlag.REMAINING_GAS
-                }(tonWallet, originalTip3Wallet, marketId, tokensToWithdraw, updatedIndexes);
-            }
-        } else {
-            // TODO: mark for liquidation and transfer tokens back
-        }
-    }
-
-    function _createUpdatedIndexes(mapping(uint32 => uint256) info) internal view returns(mapping(uint32 => fraction)) {
-        mapping(uint32 => fraction) updatedIndexes;
-        for ((uint32 marketId_, ): info) {
-            updatedIndexes[marketId_] = markets[marketId_].index;
-        }
-        return updatedIndexes;
-    }
-
     function transferVTokensBack(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToReturn) external override view onlyUserAccountManager {
         IWCMInteractions(walletController).transferTokensToWallet{
             flag: MsgFlag.REMAINING_GAS
@@ -415,34 +387,6 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         IUAMUserAccount(userAccountManager).updateUserIndex{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, marketId, ui, tip3UserWallet, amountToBorrow);
-    }
-
-    function receiveBorrowInformation(address tonWallet, uint32 marketId_, address userTip3Wallet, uint256 toBorrow, mapping(uint32 => uint256) bi, mapping(uint32 => uint256) si) external override onlyUserAccountManager {
-        address realTokenRoot = markets[marketId_].token;
-        
-        (uint256 supplySum, uint256 borrowSum) = _calculateBorrowSupplyDiff(si, bi);
-
-        if (borrowSum < supplySum) {
-            uint256 tmp_ = supplySum - borrowSum;
-            fraction tmp = tmp_.numFDiv(tokenPrices[realTokenRoot]);
-            tmp_ = tmp.toNum();
-            if (tmp_ >= toBorrow) {
-                markets[marketId_].totalBorrowed += toBorrow;
-                markets[marketId_].currentPoolBalance -= toBorrow;
-                _updateMarketState(marketId_);
-
-                emit TokensBorrowed(tonWallet, marketId_, toBorrow, markets[marketId_]);
-
-                IUAMUserAccount(userAccountManager).writeBorrowInformation{
-                    flag: MsgFlag.REMAINING_GAS
-                }(tonWallet, marketId_, toBorrow, userTip3Wallet, markets[marketId_].index);
-            } else {
-                address(tonWallet).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
-            }
-        } else {
-            // TODO: mark for liquidation ???
-            address(tonWallet).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
-        }
     }
 
     function _calculateBorrowSupplyDiff(mapping(uint32 => uint256) si, mapping(uint32 => uint256) bi) internal returns (uint256, uint256) {
@@ -473,39 +417,6 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     // Repay operation part
     // Starts at wallet controller
 
-    function repayBorrow(address tokenRoot, address tonWallet, address userTip3Wallet, uint128 tokenAmount, uint8 loanId) external view override onlyWalletController {
-        if (realTokenRoots.exists(tokenRoot)) {
-            uint32 marketId_ = tokensToMarkets[tokenRoot];
-            uint256 tokensToPayout = uint256(tokenAmount);
-            IUAMUserAccount(userAccountManager).requestRepayInfo{
-                flag: MsgFlag.REMAINING_GAS
-            }(tonWallet, userTip3Wallet, marketId_, loanId, tokensToPayout);
-        }
-    }
-
-    function receiveRepayInformation(address tonWallet, address userTip3Wallet, uint32 marketId_, uint8 loanId, uint256 tokensForRepay, BorrowInfo bi) external override onlyUserAccountManager {
-        fraction newRepayInfo = markets[marketId_].index.fNumMul(bi.toRepay);
-        newRepayInfo = newRepayInfo.fDiv(bi.index);
-        uint256 tokensToRepay = newRepayInfo.toNum();
-        uint256 tokensToReturn;
-        if (tokensToRepay <= tokensForRepay) {
-            tokensToReturn = tokensForRepay - tokensToRepay;
-            bi.toRepay = 0;
-            markets[marketId_].totalBorrowed -= tokensToRepay;
-            markets[marketId_].currentPoolBalance += tokensToRepay;
-            emit TokensRepayed(tonWallet, marketId_, tokensToRepay, tokensToRepay, markets[marketId_]);
-        } else {
-            tokensToReturn = 0;
-            bi.toRepay = tokensToRepay - tokensForRepay;
-            markets[marketId_].totalBorrowed -= tokensForRepay;
-            markets[marketId_].currentPoolBalance += tokensForRepay;
-            emit TokensRepayed(tonWallet, marketId_, tokensToRepay, tokensForRepay, markets[marketId_]);
-        }
-
-        IUAMUserAccount(userAccountManager).writeRepayInformation{
-            flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, userTip3Wallet, marketId_, loanId, tokensToReturn, bi);
-    }
 
     /*********************************************************************************************************/
     // Service operations

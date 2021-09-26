@@ -21,9 +21,14 @@ struct MarketInfo {
     uint256 lastUpdateTime;
 }
 
+struct DeltaInfo {
+    bool positive;
+    uint256 delta;
+}
+
 struct MarketDelta {
-    int256 currentPoolBalance;
-    int256 totalBorrowed;
-    int256 totalReserve;
-    int256 totalSupply;
+    DeltaInfo currentPoolBalance;
+    DeltaInfo totalBorrowed;
+    DeltaInfo totalReserve;
+    DeltaInfo totalSupply;
 }
