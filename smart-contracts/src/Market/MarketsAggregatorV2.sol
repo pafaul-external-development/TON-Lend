@@ -287,6 +287,24 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         }(marketId, markets[marketId].token, markets[marketId].virtualToken);
     }
 
+    /*********************************************************************************************************/
+    // Operations with modules
+
+    function performOperationWalletController(uint8 operationId, address tokenRoot, TvmCell args) external view onlyWalletController {
+        uint32 marketId = tokensToMarket[tokenRoot];
+        address module = modules[operationId];
+        IModule(module).performOperation{
+            flag: MsgFlag.REMAINING_GAS
+        }(marketId, args);
+    }
+
+    function performOperationUserAccountManager(uint8 operationId, uint32 marketId, TvmCell args) external view onlyUserAccountManager {
+        address module = modules[operationId];
+        IModule(module).performOperation{
+            flag: MsgFlag.REMAINING_GAS
+        }(marketId, args);
+    }
+
 
     /*********************************************************************************************************/
     // Supply operation part
@@ -610,7 +628,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
 
     /*********************************************************************************************************/
     // Modificators
-    // TODO: Add error codes
+
     modifier onlySelf() {
         require(msg.sender == address(this), MarketErrorCodes.ERROR_MSG_SENDER_IS_NOT_SELF);
         _;
@@ -647,16 +665,6 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     modifier onlyWalletController() {
         require(msg.sender == walletController, MarketErrorCodes.ERROR_MSG_SENDER_IS_NOT_TIP3_WALLET_CONTROLLER);
         tvm.rawReserve(msg.value, 2);
-        _;
-    }
-
-    modifier onlyRealTokenRoot() {
-        require(realTokenRoots.exists(msg.sender), MarketErrorCodes.ERROR_MSG_SENDER_IS_NOT_REAL_TOKEN);
-        _;
-    }
-
-    modifier onlyVirtualTokenRoot() {
-        require(virtualTokenRoots.exists(msg.sender), MarketErrorCodes.ERROR_MSG_SENDER_IS_NOT_VIRTUAL_TOKEN);
         _;
     }
 

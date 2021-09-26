@@ -22,6 +22,20 @@ contract BorrowModule is IMarketStateCache {
         tonWallet.transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
+    function performAction(uint32 marketId, TvmCell args) external onlyMarket {
+        (address tonWallet, address userTip3Wallet, uint256 tokensToBorrow) = args.decode(address, address, uint256);
+        mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
+        IUAMUserAccount(userAccountManager).updateUserIndexes{
+            flag: MsgFlag.REMAINING_GAS
+        }(tonWallet, userTip3Wallet, tokensToBorrow, updatedIndexes);
+    }
+
+    function _createUpdatedIndexes() internal returns(mapping(uint32 => fraction) updatedIndexes) {
+        for ((uint32 marketId, MarketInfo mi): marketInfo) {
+            updatedIndexes[marketId] = mi.index;
+        }
+    }
+
     function borrowTokensFromMarket(
         address tonWallet,
         address userTip3Wallet,
@@ -39,7 +53,7 @@ contract BorrowModule is IMarketStateCache {
             if (tmp_ >= tokensToBorrow) {
                 marketDelta.totalBorrowed = tokensToBorrow;
 
-                IBorrowMarket(marketAddress).uploadDelta{
+                IContractStateCacheRoot(marketAddress).uploadDelta{
                     value: 1 ton
                 }(tonWallet, marketDelta);
 
@@ -55,6 +69,10 @@ contract BorrowModule is IMarketStateCache {
         } else {
             // TODO: notify market to mark account for liquidation
         }
+    }
+
+    function setTonForUpdate(uint128 tonAmount) external onlyOwner {
+        tonForUpdate
     }
 
     modifier onlyMarket() {

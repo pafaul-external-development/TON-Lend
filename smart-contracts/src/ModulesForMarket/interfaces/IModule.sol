@@ -8,14 +8,17 @@ import '../../UserAccount/interfaces/IUAMUserAccount.sol';
 import '../../utils/libraries/MsgFlag.sol';
 
 interface IModule {
-    function performAction(TvmCell args, MarketInfo marketInfo) external view;
-    function sendActionResult(TvmCell args, MarketInfo marketDelta) external view;
-    function sendActionId() external view;
+    function performAction(uint32 marketId, TvmCell args) external;
+    function sendActionResult() external returns(TvmCell result);
+    function sendActionId() external view returns(uint8);
 }
 
 interface IContractStateCache {
     function updateCache(address tonWallet, mapping(uint32 => MarketInfo) marketState, mapping(address => fraction) tokenPrices) external;
-    function uploadDelta(uint32 marketId, MarketInfo delta) external;
+}
+
+interface IContractStateCacheRoot {
+    function receiveCacheDelta(MarketDelta marketDelta) external;
 }
 
 
