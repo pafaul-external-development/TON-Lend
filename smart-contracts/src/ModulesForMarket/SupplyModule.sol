@@ -26,7 +26,7 @@ contract SupplyModule is IModule, IContractStateCache {
         delta.currentPoolBalance = tokenAmount;
         delta.totalSupply = tokenAmount;
         IMarketUpdateCache(marketAddress).updateCache{
-            value: 1 ton
+            value: msg.value/4
         }(delta);
 
         IUAMUserAccount(userAccountManager).writeSupplyInfo{
