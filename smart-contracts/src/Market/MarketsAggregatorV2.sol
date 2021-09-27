@@ -1,22 +1,6 @@
 pragma ton-solidity >= 0.39.0;
 
-import "./interfaces/IMarketInterfaces.sol";
-
-import "./libraries/CostConstants.sol";
-import "./libraries/MarketErrorCodes.sol";
-import "./libraries/MarketOperations.sol";
-
-import "../Controllers/interfaces/ICCMarketDeployed.sol";
-
-import "../TIP3Deployer/interfaces/ITIP3Deployer.sol";
-
-import "../WalletController/interfaces/IWalletControllerMarketInteractions.sol";
-
-import "../utils/interfaces/IUpgradableContract.sol";
-
-import "../utils/libraries/MsgFlag.sol";
-
-import "../utils/libraries/FloatingPointOperations.sol";
+import './interfaces/IMarketInterfaces.sol';
 
 contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters, IMarketTIP3Root, IMarketOwnerFunctions, IMarketGetters, IMarketOperations {
     using UFO for uint256;
@@ -43,11 +27,13 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     mapping(address => bool) virtualTokenRoots;
 
     mapping(uint8 => address) modules;
+    uint128 moduleAmount;
+    mapping(address => bool) isModule;
 
     /*********************************************************************************************************/
     // Cache update functions
 
-    function receiveMarketDelta(address sendGasTo, MarketDelta marketDelta, uint32 marketId) external onlyModules {
+    function receiveMarketDelta(address sendGasTo, MarketDelta marketDelta, uint32 marketId) external onlyModule {
         tvm.rawReserve(msg.value, 2);
         if (
             marketDelta.currentPoolBalance.positive &&
@@ -87,9 +73,9 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
 
         _updateMarketState(marketId);
 
-        uint128 valueToTransfer = msg.value / (modules.length + 1);
-        for ((address module) : modules) {
-            IMarketStateCache(module).updateCache{
+        uint128 valueToTransfer = msg.value / (moduleAmount + 1);
+        for ((, address module) : modules) {
+            IContractStateCache(module).updateCache{
                 value: valueToTransfer
             }(sendGasTo, markets, tokenPrices);
         }
@@ -329,16 +315,16 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     }
 
     function performOperationWalletController(uint8 operationId, address tokenRoot, TvmCell args) external view onlyWalletController {
-        uint32 marketId = tokensToMarket[tokenRoot];
+        uint32 marketId = tokensToMarkets[tokenRoot];
         address module = modules[operationId];
-        IModule(module).performOperation{
+        IModule(module).performAction{
             flag: MsgFlag.REMAINING_GAS
         }(marketId, args);
     }
 
     function performOperationUserAccountManager(uint8 operationId, uint32 marketId, TvmCell args) external view onlyUserAccountManager {
         address module = modules[operationId];
-        IModule(module).performOperation{
+        IModule(module).performAction{
             flag: MsgFlag.REMAINING_GAS
         }(marketId, args);
     }
@@ -362,13 +348,6 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     // Withdraw vTokens part
     // Starts at WalletController
 
-    function withdrawVToken(address tokenRoot, address tonWallet, address userTip3Wallet, address originalTip3Wallet, uint128 tokenAmount) external override onlyWalletController {
-        uint32 marketId_ = tokensToMarkets[tokenRoot];
-        IUAMUserAccount(userAccountManager).requestWithdrawInfo{
-            flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, userTip3Wallet, originalTip3Wallet, marketId_, uint256(tokenAmount));
-    }
-
     function transferVTokensBack(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToReturn) external override view onlyUserAccountManager {
         IWCMInteractions(walletController).transferTokensToWallet{
             flag: MsgFlag.REMAINING_GAS
@@ -378,40 +357,6 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     /*********************************************************************************************************/
     // Borrow operation part
     // Starts at UserAccount
-
-    function requestIndexUpdate(address tonWallet, uint32 marketId, mapping (uint32=>bool) upd, address tip3UserWallet, uint256 amountToBorrow) external view override onlyUserAccountManager {
-        mapping(uint32 => fraction) ui;
-        for ((uint32 marketId_, ): upd) {
-            ui[marketId_] = markets[marketId_].index;
-        }
-        IUAMUserAccount(userAccountManager).updateUserIndex{
-            flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, marketId, ui, tip3UserWallet, amountToBorrow);
-    }
-
-    function _calculateBorrowSupplyDiff(mapping(uint32 => uint256) si, mapping(uint32 => uint256) bi) internal returns (uint256, uint256) {
-        uint256 supplySum = 0;
-        uint256 borrowSum = 0;
-        address marketTokenRoot;
-        fraction tmp;
-
-        for ((uint32 marketId, uint256 s): si) {
-            marketTokenRoot = markets[marketId].token;
-            tmp = tokenPrices[marketTokenRoot];
-            tmp = tmp.fNumMul(s);
-            tmp = tmp.fMul(markets[marketId].collateral);
-            supplySum += tmp.toNum();
-        }
-
-        for ((uint32 marketId, uint256 b): bi) {
-            marketTokenRoot = markets[marketId].token;
-            tmp = tokenPrices[marketTokenRoot];
-            tmp = tmp.fNumMul(b);
-            borrowSum += tmp.toNum();
-        }
-
-        return (supplySum, borrowSum);
-    }
 
     /*********************************************************************************************************/
     // Repay operation part
@@ -576,6 +521,16 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     modifier onlyWalletController() {
         require(msg.sender == walletController, MarketErrorCodes.ERROR_MSG_SENDER_IS_NOT_TIP3_WALLET_CONTROLLER);
         tvm.rawReserve(msg.value, 2);
+        _;
+    }
+
+    modifier onlyRealTokenRoot() {
+        require(realTokenRoots.exists(msg.sender));
+        _;
+    }
+
+    modifier onlyModule() {
+        require(isModule.exists(msg.sender));
         _;
     }
 
