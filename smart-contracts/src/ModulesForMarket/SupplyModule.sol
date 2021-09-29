@@ -50,7 +50,7 @@ contract SupplyModule is IModule, IContractStateCache {
 
         IUAMUserAccount(userAccountManager).writeSupplyInfo{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, userTip3Wallet, marketId, tokensToSupply, tokenAmount);
+        }(tonWallet, userTip3Wallet, marketId, tokensToSupply, marketInfo[marketId].index);
     }
 
     function setMarketAddress(address _marketAddress) external onlyOwner {

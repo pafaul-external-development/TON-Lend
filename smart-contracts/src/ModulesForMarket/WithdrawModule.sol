@@ -62,10 +62,13 @@ contract WithdrawModule {
 
         (uint256 supplySum, uint256 borrowSum) = Utilities.calculateSupplyBorrow(si, bi, marketInfo, tokenPrices);
 
-        fraction fTokensToSend = tokensToWithdraw.numFDiv(exchangeRate);
+        fraction fTokensToSend = tokensToWithdraw.numFMul(exchangeRate);
+        fTokensToSend = fTokensToSend.fMul(tokenPrices[marketInfo[marketId].token]);
         uint256 tokensToSend = fTokensToSend.toNum();
         if (supplySum > borrowSum) {
             if (supplySum - borrowSum > tokensToSend) {
+                fTokensToSend = tokensToWithdraw.numFMul(exchangeRate);
+                tokensToSend = fTokensToSend.toNum();
 
                 marketDelta.currentPoolBalance.delta = tokensToSend;
                 marketDelta.currentPoolBalance.positive = false;
@@ -80,7 +83,7 @@ contract WithdrawModule {
                     flag: MsgFlag.REMAINING_GAS
                 }(tonWallet, userTip3Wallet, marketId, tokensToWithdraw, tokensToSend);
             } else {
-                IUAMUserAccount(userAccountManager).updateIndexesAndReturnTokens{
+                IMarketOperations(marketAddress).returnVTokens{
                     flag: MsgFlag.REMAINING_GAS
                 }(tonWallet, originalTip3Wallet, marketId, tokensToWithdraw);
             }

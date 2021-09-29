@@ -193,25 +193,45 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
         TvmSlice ts = payload.toSlice();
         uint8 operation = ts.decode(uint8);
         TvmSlice args = ts.loadRefAsSlice();
-        if ((operation == OperationCodes.SUPPLY_TOKENS) && realTokenRoots.exists(token_root)) {
-            (address tonWallet, address userTip3Wallet) = args.decode(address, address);
-            IMarketOperations(marketAddress).supplyTokensToMarket{
+        // if ((operation == OperationCodes.SUPPLY_TOKENS) && realTokenRoots.exists(token_root)) {
+        //     (address tonWallet, address userTip3Wallet) = args.decode(address, address);
+        //     IMarketOperations(marketAddress).supplyTokensToMarket{
+        //         flag: MsgFlag.REMAINING_GAS
+        //     }(token_root, tonWallet, userTip3Wallet, amount);
+        // } else if ((operation == OperationCodes.REPAY_TOKENS) && realTokenRoots.exists(token_root)) {
+        //     (address tonWallet, uint8 loanId) = args.decode(address, uint8);
+        //     IMarketOperations(marketAddress).repayBorrow{
+        //         flag: MsgFlag.REMAINING_GAS
+        //     }(token_root, tonWallet, sender_wallet, amount, loanId);
+        // } else if ((operation == OperationCodes.WITHDRAW_TOKENS) && vTokenRoots.exists(token_root)) {
+        //     (address tonWallet, address userTip3Wallet) = args.decode(address, address);
+        //     IMarketOperations(marketAddress).withdrawVToken{
+        //         flag: MsgFlag.REMAINING_GAS
+        //     }(token_root, tonWallet, userTip3Wallet, sender_wallet, amount);
+        // } else {
+        //     ITONTokenWallet(msg.sender).transfer{
+        //         flag: MsgFlags.REMAINING_GAS
+        //     }(sender_wallet, amount, 0, original_gas_to, true, args);
+        // }
+        if (operation == OperationCodes.SUPPLY_TOKENS) {
+            (address userTip3Wallet) = ts.decode(address);
+            TvmBuilder tb;
+            tb.store(sender_address);
+            tb.store(userTip3Wallet);
+            tb.store(amount);
+            IMarketOperations(marketAddress).performOperationWalletController{
                 flag: MsgFlag.REMAINING_GAS
-            }(token_root, tonWallet, userTip3Wallet, amount);
-        } else if ((operation == OperationCodes.REPAY_TOKENS) && realTokenRoots.exists(token_root)) {
-            (address tonWallet, uint8 loanId) = args.decode(address, uint8);
-            IMarketOperations(marketAddress).repayBorrow{
+            }(operation, token_root, tb.toCell());
+        } else if (operation == OperationCodes.WITHDRAW_TOKENS) {
+            (address userTip3Wallet) = ts.decode(address);
+            TvmBuilder tb;
+            tb.store(sender_address);
+            tb.store(userTip3Wallet);
+            tb.store(sender_wallet);
+            tb.store(amount);
+            IMarketOperations(marketAddress).performOperationWalletController{
                 flag: MsgFlag.REMAINING_GAS
-            }(token_root, tonWallet, sender_wallet, amount, loanId);
-        } else if ((operation == OperationCodes.WITHDRAW_TOKENS) && vTokenRoots.exists(token_root)) {
-            (address tonWallet, address userTip3Wallet) = args.decode(address, address);
-            IMarketOperations(marketAddress).withdrawVToken{
-                flag: MsgFlag.REMAINING_GAS
-            }(token_root, tonWallet, userTip3Wallet, sender_wallet, amount);
-        } else {
-            ITONTokenWallet(msg.sender).transfer{
-                flag: MsgFlags.REMAINING_GAS
-            }(sender_wallet, amount, 0, original_gas_to, true, args);
+            }(operation, token_root, tb.toCell());
         }
     }
     

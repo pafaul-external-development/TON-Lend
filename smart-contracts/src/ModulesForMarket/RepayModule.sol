@@ -38,7 +38,7 @@ contract RepayModule is IModule {
         (address tonWallet, address tip3UserWallet, uint256 tokensReceived, uint8 loanId) = ts.decode(address, address, uint256, uint8);
         mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
 
-        IUAMUserAccount(userAccountManager).receiveRepayInfo{
+        IUAMUserAccount(userAccountManager).requestRepayInfo{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, tip3UserWallet, tokensReceived, marketId, loanId, updatedIndexes);
     }
@@ -55,47 +55,38 @@ contract RepayModule is IModule {
         uint256 tokensForRepay,
         uint32 marketId,
         uint8 loanId,
-        BorrowInfo borrowInfo,
-        mapping(uint32 => uint256) si,
-        mapping(uint32 => uint256) bi
+        BorrowInfo borrowInfo
     ) external onlyUserAccountManager {
-        (uint256 supplySum, uint256 borrowSum) = Utilities.calculateSupplyBorrow(si, bi, marketInfo, tokenPrices);
-        if (supplySum > borrowSum) {
-            MarketDelta marketDelta;
+        MarketDelta marketDelta;
 
-            fraction newRepayInfo = marketInfo[marketId].index.fNumMul(borrowInfo.toRepay);
-            newRepayInfo = newRepayInfo.fDiv(borrowInfo.index);
-            uint256 tokensToRepay = newRepayInfo.toNum();
-            uint256 tokensToReturn;
+        fraction newRepayInfo = marketInfo[marketId].index.fNumMul(borrowInfo.toRepay);
+        newRepayInfo = newRepayInfo.fDiv(borrowInfo.index);
+        uint256 tokensToRepay = newRepayInfo.toNum();
+        uint256 tokensToReturn;
 
-            uint256 tokenDelta;
-            if (tokensToRepay <= tokensForRepay) {
-                tokensToReturn = tokensForRepay - tokensToRepay;
-                borrowInfo.toRepay = 0;
-                tokenDelta = tokensToRepay;
-            } else {
-                tokensToReturn = 0;
-                borrowInfo.toRepay = tokensToRepay - tokensForRepay;
-                borrowInfo.index = marketInfo[marketId].index;
-            } 
-
-            marketDelta.totalBorrowed.delta = tokenDelta;
-            marketDelta.totalBorrowed.positive = false;
-            marketDelta.currentPoolBalance.delta = tokenDelta;
-            marketDelta.currentPoolBalance.positive = true;
-
-            IContractStateCacheRoot(marketAddress).receiveCacheDelta{
-                value: 1 ton
-            }(tonWallet, marketDelta);
-
-            IUAMUserAccount(userAccountManager).writeRepayInformation{
-                flag: MsgFlag.REMAINING_GAS
-            }(tonWallet, tip3UserWallet, marketId, loanId, tokensToReturn, borrowInfo);
+        uint256 tokenDelta;
+        if (tokensToRepay <= tokensForRepay) {
+            tokensToReturn = tokensForRepay - tokensToRepay;
+            borrowInfo.toRepay = 0;
+            tokenDelta = tokensToRepay;
         } else {
-            IUAMUserAccount(userAccountManager).markForLiquidation{
-                flag: MsgFlag.REMAINING_GAS
-            }(tonWallet);
-        }
+            tokensToReturn = 0;
+            borrowInfo.toRepay = tokensToRepay - tokensForRepay;
+            borrowInfo.index = marketInfo[marketId].index;
+        } 
+
+        marketDelta.totalBorrowed.delta = tokenDelta;
+        marketDelta.totalBorrowed.positive = false;
+        marketDelta.currentPoolBalance.delta = tokenDelta;
+        marketDelta.currentPoolBalance.positive = true;
+
+        IContractStateCacheRoot(marketAddress).receiveCacheDelta{
+            value: 1 ton
+        }(tonWallet, marketDelta);
+
+        IUAMUserAccount(userAccountManager).writeRepayInformation{
+            flag: MsgFlag.REMAINING_GAS
+        }(tonWallet, tip3UserWallet, marketId, loanId, tokensToReturn, borrowInfo);
     }
 
     modifier onlyMarket() {

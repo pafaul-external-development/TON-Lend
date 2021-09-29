@@ -18,7 +18,6 @@ import "../../utils/TIP3/interfaces/IRootTokenContract.sol";
 import "../../utils/interfaces/IUpgradableContract.sol";
 import "../../utils/libraries/MsgFlag.sol";
 import "../../utils/libraries/FloatingPointOperations.sol";
-import "../../utils/libraries/FloatingPointOperations.sol";
 
 interface IMarketOracle {
     function receiveUpdatedPrice(address tokenRoot, uint128 nom, uint128 denom, TvmCell payload) external;

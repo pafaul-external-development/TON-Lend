@@ -119,37 +119,27 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     /*********************************************************************************************************/
     // Withdraw functions
 
-    function requestWithdrawInfo(address userTip3Wallet, address originalTip3Wallet, uint32 marketId, uint256 tokensToWithdraw) external override onlyUserAccountManager {
+    function requestWithdrawInfo(address userTip3Wallet, address originalTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, mapping(uint32 => fraction) updatedIndexes) external override onlyUserAccountManager {
+        for ((uint32 marketId_, fraction index): updatedIndexes) {
+            _updateMarketInfo(marketId_, index);
+        }
+
         mapping(uint32 => uint256) borrowInfo;
         mapping(uint32 => uint256) supplyInfo;
 
         (borrowInfo, supplyInfo) = _calculateTmpBorrowInfo();
 
-        IUAMUserAccount(userAccountManager).passWithdrawInfo{
+        IUAMUserAccount(userAccountManager).receiveWithdrawInfo{
             flag: MsgFlag.REMAINING_GAS
-        }(owner, userTip3Wallet, originalTip3Wallet, marketId, tokensToWithdraw, supplyInfo, borrowInfo);
+        }(owner, userTip3Wallet, originalTip3Wallet, tokensToWithdraw, marketId, supplyInfo, borrowInfo);
     }
 
-    function writeWithdrawInfo(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, uint256 tokensToSend, mapping(uint32 => fraction) updatedIndexes) external override onlyUserAccountManager{
-        for ((uint32 marketId_, fraction index): updatedIndexes) {
-            _updateMarketInfo(marketId_, index);
-        }
-
+    function writeWithdrawInfo(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, uint256 tokensToSend) external override onlyUserAccountManager{
         markets[marketId].suppliedTokens -= tokensToWithdraw;
 
         IUAMUserAccount(userAccountManager).requestTokenPayout{
             flag: MsgFlag.REMAINING_GAS
         }(owner, userTip3Wallet, marketId, tokensToSend);
-    }
-
-    function updateIndexesAndReturnTokens(address originalTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, mapping(uint32 => fraction) updatedIndexes) external override onlyUserAccountManager {
-        for ((uint32 marketId_, fraction index): updatedIndexes) {
-            _updateMarketInfo(marketId_, index);
-        }
-
-        IUAMUserAccount(userAccountManager).transferVTokensBack{
-            flag: MsgFlag.REMAINING_GAS
-        }(owner, originalTip3Wallet, marketId, tokensToWithdraw);
     }
 
     /*********************************************************************************************************/
