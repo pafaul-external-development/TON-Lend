@@ -60,7 +60,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
         TvmSlice ownerData = dataSlice.loadRefAsSlice();
         (owner, userAccountManager) = ownerData.decode(address, address);
 
-        borrowingAllowed = true;
+        borrowLock = false;
     }
 
     /*  Upgrade data for version 1 (from 0):
@@ -108,12 +108,12 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     /*********************************************************************************************************/
     // Supply functions
 
-    function writeSupplyInfo(address userTip3Wallet, uint32 marketId_, uint256 tokensToSupply, fraction index) external override onlyUserAccountManager {
-        markets[marketId_].suppliedTokens += tokensToSupply;
-        _updateMarketInfo(marketId_, index);
+    function writeSupplyInfo(address userTip3Wallet, uint32 marketId, uint256 tokensToSupply, fraction index) external override onlyUserAccountManager {
+        markets[marketId].suppliedTokens += tokensToSupply;
+        _updateMarketInfo(marketId, index);
         IUAMUserAccount(userAccountManager).requestVTokenMint{
             flag: MsgFlag.REMAINING_GAS
-        }(owner, userTip3Wallet, marketId_, tokensToSupply);
+        }(owner, userTip3Wallet, marketId, tokensToSupply);
     }
 
     /*********************************************************************************************************/
@@ -127,7 +127,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
         mapping(uint32 => uint256) borrowInfo;
         mapping(uint32 => uint256) supplyInfo;
 
-        (borrowInfo, supplyInfo) = _calculateTmpBorrowInfo();
+        (borrowInfo, supplyInfo) = _calculateBorrowSupplyInfo();
 
         IUAMUserAccount(userAccountManager).receiveWithdrawInfo{
             flag: MsgFlag.REMAINING_GAS
@@ -147,32 +147,84 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
 
     function borrow(uint32 marketId, uint256 amountToBorrow, address userTip3Wallet) external override onlyOwner {
         tvm.rawReserve(msg.value, 2);
-        if (!borrowLock) {
-            // TODO: check if user has any borrow limit left and add modifier for blocking borrow operation while current is not finished
+        if (
+            (!borrowLock) &&
+            (markets[marketId].exists) &&
+            (markets[marketId].borrowInfo.getMaxItem() < UserAccountConstants.MAX_BORROWS_PER_MARKET)
+        ) {
+            borrowLock = true;
+            TvmBuilder tb;
+            tb.store(owner);
+            tb.store(userTip3Wallet);
+            tb.store(amountToBorrow);
             IUAMUserAccount(userAccountManager).requestIndexUpdate{
                 flag: MsgFlag.REMAINING_GAS
-            }(owner, marketId, knownMarkets, userTip3Wallet, amountToBorrow);
-            borrowLock = false;
+            }(owner, marketId, tb.toCell());
         } else {
             address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
         }
     }
 
-    function updateIndexes(uint32 marketId_, mapping(uint32 => fraction) newIndexes, address userTip3Wallet, uint256 toBorrow) external override onlyUserAccountManager {
-        for ((uint32 marketId, fraction index): newIndexes) {
-            _updateMarketInfo(marketId, index);
+    function updateIndexes(uint32 marketId, mapping(uint32 => fraction) newIndexes, address userTip3Wallet, uint256 toBorrow) external override onlyUserAccountManager {
+        for ((uint32 marketId_, fraction index): newIndexes) {
+            _updateMarketInfo(marketId_, index);
         }
 
         mapping(uint32 => uint256) borrowInfo;
         mapping(uint32 => uint256) supplyInfo;
 
-        (borrowInfo, supplyInfo) = _calculateTmpBorrowInfo();
+        (borrowInfo, supplyInfo) = _calculateBorrowSupplyInfo();
 
         IUAMUserAccount(userAccountManager).passBorrowInformation{
             flag: MsgFlag.REMAINING_GAS
-        }(owner, userTip3Wallet, marketId_, toBorrow, borrowInfo, supplyInfo);
+        }(owner, userTip3Wallet, marketId, toBorrow, borrowInfo, supplyInfo);
     }
 
+    function writeBorrowInformation(uint32 marketId, uint256 toBorrow, address userTip3Wallet, fraction marketIndex) external override onlyUserAccountManager {
+        if (toBorrow > 0) {
+            uint8 currentBorrowId = markets[marketId].borrowInfo.getMaxItem();
+            BorrowInfo bi = BorrowInfo(toBorrow, marketIndex);
+            markets[marketId].borrowInfo[currentBorrowId] = bi;
+        }
+
+        borrowLock = false;
+
+        if (toBorrow > 0) {
+            IUAMUserAccount(userAccountManager).requestTokenPayout{
+                flag: MsgFlag.REMAINING_GAS
+            }(owner, userTip3Wallet, marketId, toBorrow);
+        } else {
+            owner.transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        }
+    }
+
+    /*********************************************************************************************************/
+    // repay functions
+
+    function sendRepayInfo(address userTip3Wallet, uint32 marketId, uint8 loanId, uint256 tokensForRepay) external override view onlyUserAccountManager {
+        IUAMUserAccount(userAccountManager).receiveRepayInfo{
+            flag: MsgFlag.REMAINING_GAS
+        }(owner, userTip3Wallet, tokensForRepay, marketId, loanId, markets[marketId].borrowInfo[loanId]);
+    }
+
+    function writeRepayInformation(address userTip3Wallet, uint32 marketId, uint8 loanId, uint256 tokensToReturn, BorrowInfo bi) external override onlyUserAccountManager {
+        if (bi.toRepay == 0) {
+            markets[marketId].borrowInfo.removeItemFrom(loanId);
+        } else {
+            markets[marketId].borrowInfo[loanId] = bi;
+        }
+
+        if (tokensToReturn != 0) { 
+            IUAMUserAccount(userAccountManager).requestTokenPayout{
+                flag: MsgFlag.REMAINING_GAS
+            }(owner, userTip3Wallet, marketId, tokensToReturn);
+        } else {
+            address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        }
+    }
+
+    /*********************************************************************************************************/
+    // internal functions
     function _updateMarketInfo(uint32 marketId, fraction index) internal {
         fraction tmpf;
         for ((, BorrowInfo bi): markets[marketId].borrowInfo) {
@@ -183,7 +235,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
         }
     }
 
-    function _calculateTmpBorrowInfo() internal view returns(mapping(uint32 => uint256), mapping(uint32 => uint256)) {
+    function _calculateBorrowSupplyInfo() internal view returns(mapping(uint32 => uint256), mapping(uint32 => uint256)) {
         mapping(uint32 => uint256) borrowInfo;
         mapping(uint32 => uint256) supplyInfo;
         for ((uint32 marketId, UserMarketInfo umi) : markets) {
@@ -196,55 +248,19 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
         return (borrowInfo, supplyInfo);
     }
 
-    function writeBorrowInformation(uint32 marketId_, uint256 toBorrow, address userTip3Wallet, fraction marketIndex) external override onlyUserAccountManager {
-        uint8 currentBorrowId = markets[marketId_].borrowInfo.getMaxItem();
-        BorrowInfo bi = BorrowInfo(toBorrow, marketIndex);
-        markets[marketId_].borrowInfo[currentBorrowId] = bi;
-
-        borrowLock = false;
-
-        IUAMUserAccount(userAccountManager).requestTokenPayout{
-            flag: MsgFlag.REMAINING_GAS
-        }(owner, userTip3Wallet, marketId_, toBorrow);
-    }
-
-    /*********************************************************************************************************/
-    // repay functions
-
-    function sendRepayInfo(address userTip3Wallet, uint32 marketId, uint8 loanId, uint256 tokensForRepay) external override view onlyUserAccountManager {
-        IUAMUserAccount(userAccountManager).sendRepayInfo{
-            flag: MsgFlag.REMAINING_GAS
-        }(owner, userTip3Wallet, marketId, loanId, tokensForRepay, markets[marketId].borrowInfo[loanId]);
-    }
-
-    function writeRepayInformation(address userTip3Wallet, uint32 marketId_, uint8 loanId, uint256 tokensToReturn, BorrowInfo bi) external override onlyUserAccountManager {
-        if (bi.toRepay == 0) {
-            markets[marketId_].borrowInfo.removeItemFrom(loanId);
-        } else {
-            markets[marketId_].borrowInfo[loanId] = bi;
-        }
-
-        if (tokensToReturn != 0) { 
-            IUAMUserAccount(userAccountManager).requestTokenPayout{
-                flag: MsgFlag.REMAINING_GAS
-            }(owner, userTip3Wallet, marketId_, tokensToReturn);
-        } else {
-            address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
-        }
-    }
-
     /*********************************************************************************************************/
 
     // Functon can only be called by the AccountManaget contract
     /**
-     * @param marketId_ Id of market to enter
+     * @param marketId Id of market to enter
      */
-    function enterMarket(uint32 marketId_) external override onlyRoot {
-        if (!knownMarkets[marketId_]) {
-            knownMarkets[marketId_] = true;
+    function enterMarket(uint32 marketId) external override onlyRoot {
+        if (!knownMarkets[marketId]) {
+            knownMarkets[marketId] = true;
 
-            markets[marketId_] = UserMarketInfo(
-                marketId_,
+            markets[marketId] = UserMarketInfo(
+                true,
+                marketId,
                 0
             );
         }

@@ -85,30 +85,30 @@ library MarketToUserPayloads {
         return ts.decode(uint256, address, fraction, uint32);
     }
 
-    function createIndexUpdateRequest(address tonWallet, uint32 marketId, mapping (uint32=>bool) upd, address tip3UserWallet, uint256 amountToBorrow) internal pure returns(TvmCell) {
+    function createIndexUpdateRequest(address tonWallet, uint32 marketId, mapping (uint32=>bool) upd, address userTip3Wallet, uint256 amountToBorrow) internal pure returns(TvmCell) {
         TvmBuilder tb;
         tb.store(MarketOperationCodes.REQUEST_INDEX_UPDATE);
         TvmBuilder op;
         op.store(tonWallet);
         op.store(marketId);
         op.store(upd);
-        op.store(tip3UserWallet);
+        op.store(userTip3Wallet);
         op.store(amountToBorrow);
         tb.store(op.toCell());
         return tb.toCell();
     }
 
-    function decodeIndexUpdateRequest(TvmCell args) internal pure returns(address, uint32, mapping (uint32=>bool) upd, address tip3UserWallet, uint256 amountToBorrow) {
+    function decodeIndexUpdateRequest(TvmCell args) internal pure returns(address, uint32, mapping (uint32=>bool) upd, address userTip3Wallet, uint256 amountToBorrow) {
         TvmSlice ts = args.toSlice();
         return ts.decode(address, uint32, mapping (uint32=>bool), address, uint256);
     }
 
-    function createIndexUpdateResponse(uint32 marketId, address tip3UserWallet, uint256 amountToBorrow, mapping (uint32=>bool) upd) internal pure returns(TvmCell) {
+    function createIndexUpdateResponse(uint32 marketId, address userTip3Wallet, uint256 amountToBorrow, mapping (uint32=>bool) upd) internal pure returns(TvmCell) {
         TvmBuilder tb;
         tb.store(MarketOperationCodes.INDEX_UPDATE_RESPONSE);
         TvmBuilder op;
         op.store(marketId);
-        op.store(tip3UserWallet);
+        op.store(userTip3Wallet);
         op.store(amountToBorrow);
         op.store(upd);
         tb.store(op);

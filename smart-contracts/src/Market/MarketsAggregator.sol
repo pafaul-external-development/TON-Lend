@@ -370,14 +370,14 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     // Borrow operation part
     // Starts at UserAccount
 
-    function requestIndexUpdate(address tonWallet, uint32 marketId, mapping (uint32=>bool) upd, address tip3UserWallet, uint256 amountToBorrow) external view override onlyUserAccountManager {
+    function requestIndexUpdate(address tonWallet, uint32 marketId, mapping (uint32=>bool) upd, address userTip3Wallet, uint256 amountToBorrow) external view override onlyUserAccountManager {
         mapping(uint32 => fraction) ui;
         for ((uint32 marketId_, ): upd) {
             ui[marketId_] = markets[marketId_].index;
         }
         IUAMUserAccount(userAccountManager).updateUserIndex{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, marketId, ui, tip3UserWallet, amountToBorrow);
+        }(tonWallet, marketId, ui, userTip3Wallet, amountToBorrow);
     }
 
     function receiveBorrowInformation(address tonWallet, uint32 marketId_, address userTip3Wallet, uint256 toBorrow, mapping(uint32 => uint256) bi, mapping(uint32 => uint256) si) external override onlyUserAccountManager {

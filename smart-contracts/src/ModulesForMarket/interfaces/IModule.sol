@@ -18,6 +18,44 @@ interface IContractStateCacheRoot {
     function receiveCacheDelta(address tonWallet, MarketDelta marketDelta) external;
 }
 
+interface ISupplyModule {
+
+}
+
+interface IWithdrawModule {
+    function withdrawTokensFromMarket(
+        address tonWallet, 
+        address userTip3Wallet, 
+        address originalTip3Wallet, 
+        uint256 tokensToWithdraw, 
+        uint32 marketId, 
+        mapping(uint32 => uint256) si,
+        mapping(uint32 => uint256) bi
+    ) external;
+}
+
+interface IBorrowModule {
+    function borrowTokensFromMarket(
+        address tonWallet,
+        address userTip3Wallet,
+        uint256 tokensToBorrow,
+        uint32 marketId,
+        mapping (uint32 => uint256) si,
+        mapping (uint32 => uint256) bi
+    ) external;
+}
+
+interface IRepayModule {
+    function repayLoan(
+        address tonWallet,
+        address userTip3Wallet,
+        uint256 tokensForRepay,
+        uint32 marketId,
+        uint8 loanId,
+        BorrowInfo borrowInfo
+    ) external;
+}
+
 
 library SupplyTokensLib {
     using UFO for uint256;

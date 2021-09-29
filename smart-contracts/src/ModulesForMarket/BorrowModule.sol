@@ -66,12 +66,11 @@ contract BorrowModule is IContractStateCache {
 
                 IUAMUserAccount(userAccountManager).writeBorrowInformation{
                     flag: MsgFlag.REMAINING_GAS
-                }(tonWallet, userTip3Wallet, tokensToBorrow, marketId);
+                }(tonWallet, userTip3Wallet, tokensToBorrow, marketId, marketInfo[marketId].index);
             } else {
-                address(tonWallet).transfer({
-                    value: 0,
+                IUAMUserAccount(userAccountManager).writeBorrowInformation{
                     flag: MsgFlag.REMAINING_GAS
-                });
+                }(tonWallet, userTip3Wallet, 0, marketId, marketInfo[marketId].index);
             }
         } else {
             // TODO: notify market to mark account for liquidation

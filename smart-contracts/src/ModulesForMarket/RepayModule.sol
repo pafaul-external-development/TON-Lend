@@ -35,12 +35,12 @@ contract RepayModule is IModule {
 
     function performAction(uint32 marketId, TvmCell args) external override onlyMarket {
         TvmSlice ts = args.toSlice();
-        (address tonWallet, address tip3UserWallet, uint256 tokensReceived, uint8 loanId) = ts.decode(address, address, uint256, uint8);
+        (address tonWallet, address userTip3Wallet, uint256 tokensReceived, uint8 loanId) = ts.decode(address, address, uint256, uint8);
         mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
 
         IUAMUserAccount(userAccountManager).requestRepayInfo{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, tip3UserWallet, tokensReceived, marketId, loanId, updatedIndexes);
+        }(tonWallet, userTip3Wallet, tokensReceived, marketId, loanId, updatedIndexes);
     }
 
     function _createUpdatedIndexes() internal view returns(mapping(uint32 => fraction) updatedIndexes) {
@@ -51,7 +51,7 @@ contract RepayModule is IModule {
 
     function repayLoan(
         address tonWallet,
-        address tip3UserWallet,
+        address userTip3Wallet,
         uint256 tokensForRepay,
         uint32 marketId,
         uint8 loanId,
@@ -86,7 +86,7 @@ contract RepayModule is IModule {
 
         IUAMUserAccount(userAccountManager).writeRepayInformation{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, tip3UserWallet, marketId, loanId, tokensToReturn, borrowInfo);
+        }(tonWallet, userTip3Wallet, marketId, loanId, tokensToReturn, borrowInfo);
     }
 
     modifier onlyMarket() {
