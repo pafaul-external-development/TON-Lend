@@ -18,7 +18,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
 
     bool borrowLock;
 
-    address owner;
+    address static owner;
     
     // Used for interactions with market 
     address userAccountManager;

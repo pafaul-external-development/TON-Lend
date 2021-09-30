@@ -18,7 +18,8 @@ import "../Controllers/libraries/PlatformCodes.sol";
 
 import "../utils/interfaces/IUpgradableContract.sol";
 import "../utils/libraries/MsgFlag.sol";
-import "../utils/Platform/Platform.sol";
+
+import './UserAccount.sol';
 
 contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUserAccount, IUAMMarket {
     // Information for update
@@ -55,7 +56,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) override external onlyOwner {
         tvm.accept();
 
-        tvm.setCode(code);
+        tvm.setcode(code);
         tvm.setCurrentCode(code);
 
         onCodeUpgrade(
@@ -94,13 +95,16 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     /**
      * @param tonWallet Address of user's ton wallet
      */
-    function createUserAccount(address tonWallet) external override view {
-        TvmCell empty;
-        IContractControllerCodeManager(root).createContract{
-            value: 0,
-            bounce: false,
-            flag: MsgFlag.REMAINING_GAS
-        }(PlatformCodes.USER_ACCOUNT, _buildUserAccountInitialData(tonWallet), empty);
+    function createUserAccount(address tonWallet) external override view responsible returns(address) {
+        address userAccount = new UserAccount{
+            value: 1 ton,
+            code: userAccountCodes[0],
+            pubkey: 0,
+            varInit: {
+                owner: tonWallet
+            }
+        }();
+        return userAccount;
     }
 
     // address calculation functions
@@ -122,27 +126,14 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
      * @param tonWallet Address of user's ton wallet
      */
     function _buildUserAccountData(address tonWallet) private view returns (TvmCell data) {
-        TvmCell userData = _buildUserAccountInitialData(tonWallet);
         return tvm.buildStateInit({
-            contr: Platform,
+            contr: UserAccount,
             varInit: {
-                root: root,
-                platformType: PlatformCodes.USER_ACCOUNT,
-                platformCode: platformCode,
-                initialData: userData
+                owner: tonWallet
             },
             pubkey: 0,
-            code: platformCode
+            code: userAccountCodes[0]
         });
-    }
-
-    /**
-     * @param tonWallet Address of user's ton wallet
-     */
-    function _buildUserAccountInitialData(address tonWallet) private pure returns (TvmCell data) {
-        TvmBuilder userData;
-        userData.store(tonWallet);
-        return userData.toCell();
     }
 
     /*********************************************************************************************************/
@@ -351,10 +342,22 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     }
 
     function updateUserAccount(address tonWallet) external override {
-
+        tvm.rawReserve(msg.value, 2);
+        address userAccount = _calculateUserAccountAddress(tonWallet);
+        optional(uint32, TvmCell) latestVersion = userAccountCodes.max();
+        if (latestVersion.hasValue()) {
+            TvmCell empty;
+            (uint32 codeVersion, TvmCell code) = latestVersion.get();
+            IUpgradableContract(userAccount).upgradeContractCode{
+                flag: MsgFlag.REMAINING_GAS
+            }(code, empty, codeVersion);
+        } else {
+            address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        }
     }
-    function getUserAccountCode(uint32 version) external override returns(TvmCell) {
 
+    function getUserAccountCode(uint32 version) external override view responsible returns(TvmCell) {
+        return {flag: MsgFlag.REMAINING_GAS} userAccountCodes[version];
     }
 
     /*********************************************************************************************************/
@@ -373,7 +376,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     // modifiers
     // TODO: add error codes
     modifier onlyOwner() {
-        require(msg.sender == root, UserAccountErrorCodes.ERROR_NOT_ROOT);
+        require(msg.sender == owner, UserAccountErrorCodes.ERROR_NOT_ROOT);
         _;
     }
 
