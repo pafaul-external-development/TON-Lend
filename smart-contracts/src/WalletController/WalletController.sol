@@ -24,11 +24,9 @@ import "../utils/libraries/MsgFlag.sol";
 
 contract WalletController is IWCMInteractions, IWalletControllerMarketManagement, IWalletControllerGetters, IUpgradableContract, ITokenWalletDeployedCallback, ITokensReceivedCallback {
     // Information for update
-    address root;
-    uint8 contractType;
     uint32 contractCodeVersion;
-    TvmCell platformCode;
 
+    address owner;
     address marketAddress;
 
     // Root TIP-3 to market address mapping
@@ -40,32 +38,10 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
 
     /*********************************************************************************************************/
     // Functions for deployment and upgrade
-    constructor() public { revert(); } // Contract will be deployed using platform
-
-    /*  Upgrade Data for version 0 (from Platform):
-        bits:
-            address root
-            uint8 platformType
-            address gasTo ?
-        refs:
-            1. platformCode
-            2. initialData
-            bits: 
-                1. marketAddress
-     */
-    /**
-     * @param data Data builded in upgradeContractCode
-     */
-    function onCodeUpgrade(TvmCell data) private {
-        tvm.resetStorage();
-        TvmSlice dataSlice = data.toSlice();
-        (root, contractType) = dataSlice.decode(address, uint8);
-        contractCodeVersion = 0;
-
-        platformCode = dataSlice.loadRef();         // Loading platform code
-        TvmSlice addressInfo = dataSlice.loadRefAsSlice();
-        (marketAddress) = addressInfo.decode(address);
-    }
+    constructor() public { 
+        tvm.accept();
+        owner = msg.sender;
+     } // Contract will be deployed using platform
 
     /*  Upgrade data for version 1 (from 0):
         bits:
@@ -81,39 +57,57 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
     /**
      * @param code New contract code
      * @param updateParams Extrenal parameters used during update
-     * @param codeVersion_ New code version
-     * @param contractType_ Contract type of received update
+     * @param codeVersion New code version
      */
-    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion_, uint8 contractType_) override external onlyRoot correctContractType(contractType_) {
-        contractCodeVersion = codeVersion_;
-        
-        TvmBuilder builder;
-        builder.store(root);
-        builder.store(contractType);
-        builder.store(platformCode);
-
-        TvmBuilder mappingStorage;
-        TvmBuilder marketStorage;
-        marketStorage.store(marketAddress);
-        TvmBuilder walletStorage;
-        walletStorage.store(wallets);
-
-        mappingStorage.store(marketStorage.toCell());
-        mappingStorage.store(walletStorage.toCell());
-
-        builder.store(mappingStorage);
+    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) override external onlyOwner {
+        tvm.accept();
 
         tvm.setcode(code);
         tvm.setCurrentCode(code);
         
-        onCodeUpgrade(builder.toCell());
+        onCodeUpgrade(
+            owner,
+            marketAddress,
+            wallets,
+            realTokenRoots,
+            vTokenRoots,
+            marketTIP3Info,
+            updateParams,
+            codeVersion
+        );
+    }
+
+    /*  Upgrade Data for version 0 (from Platform):
+        bits:
+            address root
+            uint8 platformType
+            address gasTo ?
+        refs:
+            1. platformCode
+            2. initialData
+            bits: 
+                1. marketAddress
+     */
+    function onCodeUpgrade(
+        address, 
+        address, 
+        mapping(address => address), 
+        mapping(address => bool), 
+        mapping(address => bool), 
+        mapping(uint32 => MarketTokenAddresses), 
+        TvmCell, 
+        uint32
+    ) private {
+
     }
 
     /*********************************************************************************************************/
     // Market functions
-    function setMarketAddress(address market_) external override onlyRoot {
-        tvm.accept();
+    function setMarketAddress(address market_) external override onlyOwner {
+        tvm.rawReserve(msg.value, 2);
         marketAddress = market_;
+
+        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     function addMarket(uint32 marketId, address realTokenRoot, address virtualTokenRoot) external override onlyMarket {
@@ -133,12 +127,14 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
 
         addWallet(realTokenRoot);
         addWallet(virtualTokenRoot);
+
+        address(marketAddress).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     /**
      * @param marketId Id of market to remove
      */
-    function removeMarket(uint32 marketId) external override onlyRoot {
+    function removeMarket(uint32 marketId) external override onlyOwner {
         tvm.accept();
         MarketTokenAddresses marketTokenAddresses = marketTIP3Info[marketId];
 
@@ -247,8 +243,8 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
     /*********************************************************************************************************/
     // modifiers
     
-    modifier onlyRoot() {
-        require(msg.sender == root, WalletControllerErrorCodes.ERROR_MSG_SENDER_IS_NOT_ROOT);
+    modifier onlyOwner() {
+        require(msg.sender == owner);
         _;
     }
 
@@ -271,14 +267,6 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
      */
     modifier onlyExisingTIP3Root(address rootAddress) {
         require(wallets.exists(rootAddress), WalletControllerErrorCodes.ERROR_TIP3_ROOT_IS_UNKNOWN);
-        _;
-    }
-
-    /**
-     * @param contractType_ Received contract type
-     */
-    modifier correctContractType(uint8 contractType_) {
-        require(contractType == contractType_, WalletControllerErrorCodes.ERROR_INVALID_CONTRACT_TYPE);
         _;
     }
 

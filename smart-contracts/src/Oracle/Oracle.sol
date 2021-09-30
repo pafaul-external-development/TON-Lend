@@ -38,8 +38,10 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
     /*********************************************************************************************************/
     // Base functions - for deploying and upgrading contract
     // We are using Platform so constructor is not available
-    constructor() public {
-        revert();
+    constructor(uint256 _ownerPubkey) public {
+        tvm.accept();
+        ownerAddress = msg.sender;
+        ownerPubket = _ownerPubkey;
     }
 
     /*  Upgrade Data for version 1 (from version 0):

@@ -30,7 +30,8 @@ contract TIP3TokenDeployer is ITIP3Deployer, ITIP3DeployerManageCode, ITIP3Deplo
 
     // Contract is deployed using platform
     constructor() public {
-        revert();
+        tvm.accept();
+        ownerAddress = msg.sender;
     }
 
     /*  Upgrade Data for version 0 (from Platform):

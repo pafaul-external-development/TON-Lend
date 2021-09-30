@@ -31,6 +31,77 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     mapping(address => bool) isModule;
 
     /*********************************************************************************************************/
+    // Events
+
+    event MarketCreated(uint32 marketId, MarketInfo marketState);
+    event MarketDeleted(uint32 marketId, MarketInfo marketState);
+    event TokensSupplied(address tonWallet, uint32 marketId, uint256 tokensSupplied, MarketInfo marketState);
+    event TokensWithdrawn(address tonWallet, uint32 marketId, uint256 tokensWithdrawn, MarketInfo marketState);
+    event TokensBorrowed(address tonWallet, uint32 marketId, uint256 tokensBorrowed, MarketInfo marketState);
+    event TokensRepayed(address tonWallet, uint32 marketId, uint256 tokensToRepay, uint256 tokensRepayed, MarketInfo marketState);
+
+    /*********************************************************************************************************/
+    // Base functions - for deploying and upgrading contract
+    // We are using Platform so constructor is not available
+    constructor() public {
+        tvm.accept();
+        owner = msg.sender;
+    }
+
+    /**
+     * @param code New contract code
+     * @param updateParams Extrenal parameters used during update
+     * @param codeVersion_ New code version
+     * @param contractType_ Contract type of received update
+     */
+    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion_, uint8 contractType_) override external onlyRoot correctContractType(contractType_) {
+        tvm.accept();
+
+        TvmBuilder builder;
+
+        tvm.setcode(code);
+        tvm.setCurrentCode(code);
+
+        onCodeUpgrade(builder.toCell());
+    }
+    
+    /*
+        Data for upgrade from platform to version 0:
+        data:
+            bits:
+                address root
+                uint8 contractType
+            refs:
+                1. platformCode
+                2. initialData:
+                    refs: 
+                    1. Service addresses
+                        bits: 
+                        1. userAccountManager
+                        2. walletController
+                        3. oracle
+                    2. Owner info:
+                        bits:
+                        1. ownerAddress
+    */
+    /**
+     * @param data Data builded in upgradeContractCode
+     */
+    function onCodeUpgrade(TvmCell data) private {
+        tvm.resetStorage();
+        TvmSlice dataSlice = data.toSlice();
+        (root, contractType) = dataSlice.decode(address, uint8);
+        contractCodeVersion = 0;
+
+        platformCode = dataSlice.loadRef();         // Loading platform code
+        TvmSlice initialData = dataSlice.loadRefAsSlice();
+        TvmSlice tmp = initialData.loadRefAsSlice();
+        (userAccountManager, walletController, oracle) = tmp.decode(address, address, address);
+        tmp = initialData.loadRefAsSlice();
+        (owner) = tmp.decode(address);
+    }
+
+    /*********************************************************************************************************/
     // Cache update functions
 
     function receiveMarketDelta(address sendGasTo, MarketDelta marketDelta, uint32 marketId) external onlyModule {
@@ -104,74 +175,8 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         address(owner).transfer({flag: 1, value: amount});
     }
 
-    /*********************************************************************************************************/
-    // Events
-
-    event MarketCreated(uint32 marketId, MarketInfo marketState);
-    event MarketDeleted(uint32 marketId, MarketInfo marketState);
-    event TokensSupplied(address tonWallet, uint32 marketId, uint256 tokensSupplied, MarketInfo marketState);
-    event TokensWithdrawn(address tonWallet, uint32 marketId, uint256 tokensWithdrawn, MarketInfo marketState);
-    event TokensBorrowed(address tonWallet, uint32 marketId, uint256 tokensBorrowed, MarketInfo marketState);
-    event TokensRepayed(address tonWallet, uint32 marketId, uint256 tokensToRepay, uint256 tokensRepayed, MarketInfo marketState);
-
-    /*********************************************************************************************************/
-    // Base functions - for deploying and upgrading contract
-    // We are using Platform so constructor is not available
-    constructor() public {
-        revert();
-    }
-
-    /**
-     * @param code New contract code
-     * @param updateParams Extrenal parameters used during update
-     * @param codeVersion_ New code version
-     * @param contractType_ Contract type of received update
-     */
-    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion_, uint8 contractType_) override external onlyRoot correctContractType(contractType_) {
-        tvm.accept();
-
-        TvmBuilder builder;
-
-        tvm.setcode(code);
-        tvm.setCurrentCode(code);
-
-        onCodeUpgrade(builder.toCell());
-    }
-    
-    /*
-        Data for upgrade from platform to version 0:
-        data:
-            bits:
-                address root
-                uint8 contractType
-            refs:
-                1. platformCode
-                2. initialData:
-                    refs: 
-                    1. Service addresses
-                        bits: 
-                        1. userAccountManager
-                        2. walletController
-                        3. oracle
-                    2. Owner info:
-                        bits:
-                        1. ownerAddress
-    */
-    /**
-     * @param data Data builded in upgradeContractCode
-     */
-    function onCodeUpgrade(TvmCell data) private {
-        tvm.resetStorage();
-        TvmSlice dataSlice = data.toSlice();
-        (root, contractType) = dataSlice.decode(address, uint8);
-        contractCodeVersion = 0;
-
-        platformCode = dataSlice.loadRef();         // Loading platform code
-        TvmSlice initialData = dataSlice.loadRefAsSlice();
-        TvmSlice tmp = initialData.loadRefAsSlice();
-        (userAccountManager, walletController, oracle) = tmp.decode(address, address, address);
-        tmp = initialData.loadRefAsSlice();
-        (owner) = tmp.decode(address);
+    function getAllModules() external override view responsible returns(mapping(uint8 => address)) {
+        return {flag: MsgFlag.REMAINING_GAS} modules;
     }
 
     /*********************************************************************************************************/

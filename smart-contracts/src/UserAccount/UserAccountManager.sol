@@ -22,10 +22,9 @@ import "../utils/Platform/Platform.sol";
 
 contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUserAccount, IUAMMarket {
     // Information for update
-    address root;
-    uint8 contractType;
     uint32 contractCodeVersion;
-    TvmCell platformCode;
+
+    address owner;
 
     address marketAddress;
     mapping(uint8 => address) modules;
@@ -33,39 +32,12 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     mapping(uint32 => TvmCell) userAccountCodes;
 
     /*********************************************************************************************************/
-    // Function for userAccountCode
-    function uploadUserAccountCode(uint32 version, TvmCell code) external override {
-        require(
-            !userAccountCodes.exists(version)
-        );
-        userAccountCodes[version] = code;
-        
-        address(msg.sender).transfer({flag: MsgFlag.REMAINING_GAS, value: 0});
-    }
-
-    function updateUserAccount(address tonWallet) external override {
-
-    }
-    function getUserAccountCode(uint32 version) external override returns(TvmCell) {
-
-    }
-
-    /*********************************************************************************************************/
-    // Functions to add/remove modules info
-    function addModule(uint8 operationId, address module) external override onlyMarket {
-        modules[operationId] = module;
-        existingModules[module] = true;
-    }
-
-    function removeModule(uint8 operationId) external override onlyMarket {
-        delete existingModules[modules[operationId]];
-        delete modules[operationId];
-    }
-
-    /*********************************************************************************************************/
     // Functions for deployment and upgrade
     // Contract is deployed via platform
-    constructor() public { revert(); }
+    constructor() public { 
+        tvm.accept();
+        owner = msg.sender;
+    }
 
     /*  Upgrade Data for version 1 (from version 0):
         bits:
@@ -80,27 +52,20 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
             refs:
                 1. mapping(uint32 => bool) marketIds
      */
-    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion_, uint8 contractType_) override external onlyRoot correctContractType(contractType_) {
+    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) override external onlyOwner {
         tvm.accept();
 
-        contractCodeVersion = codeVersion_;
-
-        TvmBuilder builder;
-        builder.store(root);
-        builder.store(contractType);
-        builder.store(codeVersion_);
-        builder.store(platformCode);
-
-        TvmBuilder additionalData;
-        additionalData.store(marketAddress);
-
-        TvmBuilder mappingData;
-        additionalData.store(mappingData.toCell());
-
-        tvm.setcode(code);
+        tvm.setCode(code);
         tvm.setCurrentCode(code);
 
-        onCodeUpgrade(builder.toCell());
+        onCodeUpgrade(
+            marketAddress,
+            modules,
+            existingModules,
+            userAccountCodes,
+            updateParams,
+            codeVersion
+        );
     }
 
     /*  Upgrade Data for version 0 (from Platform):
@@ -113,14 +78,15 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
             bits:
                 1. marketAddress
      */
-    function onCodeUpgrade(TvmCell data) private {
-        tvm.resetStorage();
-        TvmSlice dataSlice = data.toSlice();
-        (root, contractType) = dataSlice.decode(address, uint8);
+    function onCodeUpgrade(
+        address,
+        mapping(uint8 => address),
+        mapping(address => bool),
+        mapping(uint32 => TvmCell),
+        TvmCell,
+        uint32
+    ) private {
 
-        platformCode = dataSlice.loadRef();         // Loading platform code
-        TvmSlice addressData = dataSlice.loadRefAsSlice();
-        (marketAddress) = addressData.decode(address);
     }
 
     /*********************************************************************************************************/
@@ -368,15 +334,45 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     /**
      * @param market_ Address of market smart contract
      */
-    function setMarketAddress(address market_) external override onlyRoot {
+    function setMarketAddress(address market_) external override onlyOwner {
         tvm.accept();
         marketAddress = market_;
     }
 
     /*********************************************************************************************************/
+    // Function for userAccountCode
+    function uploadUserAccountCode(uint32 version, TvmCell code) external override {
+        require(
+            !userAccountCodes.exists(version)
+        );
+        userAccountCodes[version] = code;
+        
+        address(msg.sender).transfer({flag: MsgFlag.REMAINING_GAS, value: 0});
+    }
+
+    function updateUserAccount(address tonWallet) external override {
+
+    }
+    function getUserAccountCode(uint32 version) external override returns(TvmCell) {
+
+    }
+
+    /*********************************************************************************************************/
+    // Functions to add/remove modules info
+    function addModule(uint8 operationId, address module) external override onlyMarket {
+        modules[operationId] = module;
+        existingModules[module] = true;
+    }
+
+    function removeModule(uint8 operationId) external override onlyMarket {
+        delete existingModules[modules[operationId]];
+        delete modules[operationId];
+    }
+
+    /*********************************************************************************************************/
     // modifiers
     // TODO: add error codes
-    modifier onlyRoot() {
+    modifier onlyOwner() {
         require(msg.sender == root, UserAccountErrorCodes.ERROR_NOT_ROOT);
         _;
     }
@@ -410,14 +406,6 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     modifier onlyValidUserAccount(address tonWallet) {
         require(msg.sender == _calculateUserAccountAddress(tonWallet));
         tvm.rawReserve(msg.value, 2);
-        _;
-    }
-
-    /**
-     * @param contractType_ Type of contract
-     */
-    modifier correctContractType(uint8 contractType_) {
-        require(contractType == contractType_, UserAccountErrorCodes.ERROR_INVALID_CONTRACT_TYPE);
         _;
     }
 }

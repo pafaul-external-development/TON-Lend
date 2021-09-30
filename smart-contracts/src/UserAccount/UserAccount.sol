@@ -24,81 +24,44 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     address userAccountManager;
 
     // Information for update
-    address root;
-    uint8 contractType;
     uint32 contractCodeVersion;
-    TvmCell platformCode;
 
     mapping(uint32 => bool) knownMarkets;
     mapping(uint32 => UserMarketInfo) markets;
 
     // Contract is deployed via platform
     constructor() public { 
-        revert(); 
+        tvm.accept();
     }
 
-    /*  Upgrade Data for version 0 (from Platform):
-        bits:
-            address root
-            uint8 platformType
-            address gasTo ?
-        refs:
-            1. platformCode
-            2. initialData
-                bits:
-                    address owner
-                    address userAccountManager
-     */
-    function onCodeUpgrade(TvmCell data) private {
-        tvm.resetStorage();
-        TvmSlice dataSlice = data.toSlice();
-        address sendGasTo;
-        (root, contractType, sendGasTo) = dataSlice.decode(address, uint8, address);
-        contractCodeVersion = 0;
-
-        platformCode = dataSlice.loadRef();         // Loading platform code
-        TvmSlice ownerData = dataSlice.loadRefAsSlice();
-        (owner, userAccountManager) = ownerData.decode(address, address);
-
-        borrowLock = false;
-    }
-
-    /*  Upgrade data for version 1 (from 0):
-        bits:
-            address root
-            uint8 platformType
-            uint32 contractVersion
-        refs:
-            1. TvmCell platformCode
-            2. user data:
-                bits:
-                    address owner
-                    address userAccountManager
-                refs:
-                    1. mapping(address => TvmCell) userData
-     */
-    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion_, uint8 contractType_) override external onlyRoot correctContractType(contractType_) {
-        contractCodeVersion = codeVersion_;
-
-        TvmBuilder builder;
-        builder.store(root);
-        builder.store(contractType);
-        builder.store(codeVersion_);
-        builder.store(platformCode);
-
-        TvmBuilder userDataBuilder;
-        userDataBuilder.store(owner);
-        userDataBuilder.store(userAccountManager);
-
-        TvmBuilder userDataMapping;
-        userDataMapping.store(markets);
-        userDataBuilder.store(userDataMapping.toCell());
-        builder.store(userDataBuilder.toCell());
+    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) override external onlyUserAccountManager {
+        require(!borrowLock);
+        tvm.accept();
 
         tvm.setcode(code);
         tvm.setCurrentCode(code);
 
-        onCodeUpgrade(builder.toCell());
+        onCodeUpgrade(
+            borrowLock,
+            owner,
+            userAccountManager,
+            knownMarkets,
+            markets,
+            updateParams,
+            codeVersion
+        );
+    }
+
+    function onCodeUpgrade(
+        bool,
+        address,
+        address,
+        mapping(uint32 => bool),
+        mapping(uint32 => UserMarketInfo),
+        TvmCell,
+        uint32
+    ) private {
+
     }
 
     function getOwner() external override responsible view returns(address) {
@@ -258,7 +221,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     /**
      * @param marketId Id of market to enter
      */
-    function enterMarket(uint32 marketId) external override onlyRoot {
+    function enterMarket(uint32 marketId) external override onlyUserAccountManager {
         if (!knownMarkets[marketId]) {
             knownMarkets[marketId] = true;
 
@@ -280,11 +243,6 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
 
     /*********************************************************************************************************/
     // modifiers
-    modifier onlyRoot() {
-        require(msg.sender == root);
-        _;
-    }
-
     modifier onlyOwner() {
         require(msg.sender == owner);
         _;
@@ -298,14 +256,6 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
 
     modifier onlySelf() {
         require(msg.sender == address(this));
-        _;
-    }
-
-    /**
-     * @param contractType_ Type of contract
-     */
-    modifier correctContractType(uint8 contractType_) {
-        require(contractType == contractType_);
         _;
     }
 }
