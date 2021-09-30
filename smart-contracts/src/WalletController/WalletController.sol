@@ -94,7 +94,7 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
 
         TvmBuilder mappingStorage;
         TvmBuilder marketStorage;
-        marketStorage.store(marketAddresses);
+        marketStorage.store(marketAddress);
         TvmBuilder walletStorage;
         walletStorage.store(wallets);
 
@@ -159,9 +159,9 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
      */
     function addWallet(address tokenRoot) private pure {
         IRootTokenContract(tokenRoot).deployEmptyWallet{
-            value: CostConstants.WALLET_DEPLOY_COST
+            value: WCCostConstants.WALLET_DEPLOY_COST
         }(
-            CostConstants.WALLET_DEPLOY_GRAMS,
+            WCCostConstants.WALLET_DEPLOY_GRAMS,
             0,
             address(this),
             address(this)
@@ -185,34 +185,13 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
         uint256, // sender_public_key,
         address sender_address,
         address sender_wallet,
-        address original_gas_to,
+        address, // original_gas_to,
         uint128, // updated_balance,
         TvmCell payload
     ) external override onlyOwnWallet(token_root, token_wallet) {
         tvm.rawReserve(msg.value, 2);
         TvmSlice ts = payload.toSlice();
         uint8 operation = ts.decode(uint8);
-        TvmSlice args = ts.loadRefAsSlice();
-        // if ((operation == OperationCodes.SUPPLY_TOKENS) && realTokenRoots.exists(token_root)) {
-        //     (address tonWallet, address userTip3Wallet) = args.decode(address, address);
-        //     IMarketOperations(marketAddress).supplyTokensToMarket{
-        //         flag: MsgFlag.REMAINING_GAS
-        //     }(token_root, tonWallet, userTip3Wallet, amount);
-        // } else if ((operation == OperationCodes.REPAY_TOKENS) && realTokenRoots.exists(token_root)) {
-        //     (address tonWallet, uint8 loanId) = args.decode(address, uint8);
-        //     IMarketOperations(marketAddress).repayBorrow{
-        //         flag: MsgFlag.REMAINING_GAS
-        //     }(token_root, tonWallet, sender_wallet, amount, loanId);
-        // } else if ((operation == OperationCodes.WITHDRAW_TOKENS) && vTokenRoots.exists(token_root)) {
-        //     (address tonWallet, address userTip3Wallet) = args.decode(address, address);
-        //     IMarketOperations(marketAddress).withdrawVToken{
-        //         flag: MsgFlag.REMAINING_GAS
-        //     }(token_root, tonWallet, userTip3Wallet, sender_wallet, amount);
-        // } else {
-        //     ITONTokenWallet(msg.sender).transfer{
-        //         flag: MsgFlags.REMAINING_GAS
-        //     }(sender_wallet, amount, 0, original_gas_to, true, args);
-        // }
         if (operation == OperationCodes.SUPPLY_TOKENS) {
             (address userTip3Wallet) = ts.decode(address);
             TvmBuilder tb;
@@ -229,6 +208,14 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
             tb.store(userTip3Wallet);
             tb.store(sender_wallet);
             tb.store(amount);
+            IMarketOperations(marketAddress).performOperationWalletController{
+                flag: MsgFlag.REMAINING_GAS
+            }(operation, token_root, tb.toCell());
+        } else if (operation == OperationCodes.REPAY_TOKENS) {
+            (address tonWallet, uint8 loanId) = ts.decode(address, uint8);
+            TvmBuilder tb;
+            tb.store(tonWallet);
+            tb.store(loanId);
             IMarketOperations(marketAddress).performOperationWalletController{
                 flag: MsgFlag.REMAINING_GAS
             }(operation, token_root, tb.toCell());

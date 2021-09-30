@@ -314,7 +314,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         modules[operationId] = module;
     }
 
-    function performOperationWalletController(uint8 operationId, address tokenRoot, TvmCell args) external view onlyWalletController {
+    function performOperationWalletController(uint8 operationId, address tokenRoot, TvmCell args) external override view onlyWalletController {
         uint32 marketId = tokensToMarkets[tokenRoot];
         address module = modules[operationId];
         IModule(module).performAction{
@@ -322,7 +322,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         }(marketId, args);
     }
 
-    function performOperationUserAccountManager(uint8 operationId, uint32 marketId, TvmCell args) external view onlyUserAccountManager {
+    function performOperationUserAccountManager(uint8 operationId, uint32 marketId, TvmCell args) external override view onlyUserAccountManager {
         address module = modules[operationId];
         IModule(module).performAction{
             flag: MsgFlag.REMAINING_GAS

@@ -1,7 +1,7 @@
 pragma ton-solidity >= 0.39.0;
 pragma AbiHeader expire;
 
-import "./AllowanceInfoMarketInfo.sol";
+import "./AllowanceInfoStructure.sol";
 
 interface ITONTokenWallet is AllowanceInfoStructure {
 
