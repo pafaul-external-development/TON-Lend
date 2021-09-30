@@ -201,7 +201,11 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     /*********************************************************************************************************/
     // repay functions
 
-    function sendRepayInfo(address userTip3Wallet, uint32 marketId, uint8 loanId, uint256 tokensForRepay) external override view onlyUserAccountManager {
+    function sendRepayInfo(address userTip3Wallet, uint32 marketId, uint8 loanId, uint256 tokensForRepay, mapping(uint32 => fraction) updatedIndexes) external override onlyUserAccountManager {
+        for ((uint32 marketId_, fraction index): updatedIndexes) {
+            _updateMarketInfo(marketId_, index);
+        }
+
         IUAMUserAccount(userAccountManager).receiveRepayInfo{
             flag: MsgFlag.REMAINING_GAS
         }(owner, userTip3Wallet, tokensForRepay, marketId, loanId, markets[marketId].borrowInfo[loanId]);

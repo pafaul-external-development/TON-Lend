@@ -51,6 +51,8 @@ interface IMarketTIP3Root {
 }
 
 interface IMarketOperations {
+    function performOperationWalletController(uint8 operationId, address tokenRoot, TvmCell args) external view;
+    function performOperationUserAccountManager(uint8 operationId, uint32 marketId, TvmCell args) external view;
     function mintVTokens(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toMint) external view;
     function requestTokenPayout(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toPayout) external view;
     function transferVTokensBack(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToReturn) external view;
