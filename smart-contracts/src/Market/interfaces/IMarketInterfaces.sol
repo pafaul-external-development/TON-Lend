@@ -9,6 +9,7 @@ import "../libraries/MarketOperations.sol";
 import "../../Controllers/interfaces/ICCMarketDeployed.sol";
 import "../../TIP3Deployer/interfaces/ITIP3Deployer.sol";
 import "../../WalletController/interfaces/IWalletControllerMarketInteractions.sol";
+import '../../WalletController/interfaces/IWalletControllerMarketManagement.sol';
 import "../../ModulesForMarket/interfaces/IModule.sol";
 import "../../UserAccount/interfaces/IUserAccount.sol";
 import "../../UserAccount/interfaces/IUAMUserAccount.sol";
@@ -37,6 +38,7 @@ interface IMarketGetters {
     function getTokenPrices() external view responsible returns(mapping(address => fraction));
     function getMarketInformation(uint32 marketId) external view responsible returns(MarketInfo);
     function getAllMarkets() external view responsible returns(mapping(uint32 => MarketInfo));
+    function getAllModules() external view responsible returns(mapping(uint8 => address));
 }
 
 interface IMarketOwnerFunctions {

@@ -7,10 +7,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     using FPO for fraction;
 
     // Information for update
-    address root;
-    uint8 contractType;
     uint32 contractCodeVersion;
-    TvmCell platformCode;
     
     // owner info
     address owner;
@@ -48,13 +45,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         owner = msg.sender;
     }
 
-    /**
-     * @param code New contract code
-     * @param updateParams Extrenal parameters used during update
-     * @param codeVersion_ New code version
-     * @param contractType_ Contract type of received update
-     */
-    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion_, uint8 contractType_) override external onlyRoot correctContractType(contractType_) {
+    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) override external onlyOwner {
         tvm.accept();
 
         TvmBuilder builder;
@@ -62,43 +53,34 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         tvm.setcode(code);
         tvm.setCurrentCode(code);
 
-        onCodeUpgrade(builder.toCell());
+        onCodeUpgrade(
+            owner,
+            userAccountManager,
+            walletController,
+            oracle,
+            tip3Deployer,
+            markets,
+            tokenPrices,
+            modules,
+            updateParams,
+            codeVersion
+        );
     }
-    
-    /*
-        Data for upgrade from platform to version 0:
-        data:
-            bits:
-                address root
-                uint8 contractType
-            refs:
-                1. platformCode
-                2. initialData:
-                    refs: 
-                    1. Service addresses
-                        bits: 
-                        1. userAccountManager
-                        2. walletController
-                        3. oracle
-                    2. Owner info:
-                        bits:
-                        1. ownerAddress
-    */
-    /**
-     * @param data Data builded in upgradeContractCode
-     */
-    function onCodeUpgrade(TvmCell data) private {
-        tvm.resetStorage();
-        TvmSlice dataSlice = data.toSlice();
-        (root, contractType) = dataSlice.decode(address, uint8);
-        contractCodeVersion = 0;
 
-        platformCode = dataSlice.loadRef();         // Loading platform code
-        TvmSlice initialData = dataSlice.loadRefAsSlice();
-        TvmSlice tmp = initialData.loadRefAsSlice();
-        (userAccountManager, walletController, oracle) = tmp.decode(address, address, address);
-        tmp = initialData.loadRefAsSlice();
-        (owner) = tmp.decode(address);
+    // mappings like createdMarkets, tokensToMarkets are derivatives from markets mapping and must be recreated
+    function onCodeUpgrade(
+        address,
+        address,
+        address,
+        address,
+        address,
+        mapping(uint32 => MarketInfo),
+        mapping(address => fraction),
+        mapping(uint8 => address),
+        TvmCell,
+        uint32
+    ) private {
+
     }
 
     /*********************************************************************************************************/
@@ -306,7 +288,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         virtualTokenRoots[tip3RootAddress] = true;
         emit MarketCreated(marketId, markets[marketId]);
 
-        ICCMarketDeployed(root).marketDeployed{
+        IWalletControllerMarketManagement(walletController).addMarket{
             value: CostConstants.NOTIFY_CONTRACT_CONTROLLER,
             bounce: false
         }(marketId, markets[marketId].token, markets[marketId].virtualToken);
@@ -496,13 +478,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     }
 
     modifier onlyOwner() {
-        require(msg.sender == owner || msg.sender == root, MarketErrorCodes.ERROR_MSG_SENDER_IS_NOT_OWNER);
-        tvm.rawReserve(msg.value, 2);
-        _;
-    }
-
-    modifier onlyRoot() {
-        require(msg.sender == root, MarketErrorCodes.ERROR_MSG_SENDER_IS_NOT_ROOT);
+        require(msg.sender == owner, MarketErrorCodes.ERROR_MSG_SENDER_IS_NOT_ROOT);
         _;
     }
 
@@ -536,14 +512,6 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
 
     modifier onlyModule() {
         require(isModule.exists(msg.sender));
-        _;
-    }
-
-    /**
-     * @param contractType_ Type of contract
-     */
-    modifier correctContractType(uint8 contractType_) {
-        require(contractType == contractType_, MarketErrorCodes.ERROR_INVALID_CONTRACT_TYPE);
         _;
     }
 }
