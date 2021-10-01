@@ -5,9 +5,21 @@ import '../../Market/libraries/MarketOperations.sol';
 
 import '../../UserAccount/interfaces/IUAMUserAccount.sol';
 
+import '../../WalletController/libraries/OperationCodes.sol';
+
+import '../../utils/libraries/MsgFlag.sol';
+
+import '../../Market/interfaces/IMarketInterfaces.sol';
+
 interface IModule {
     function performAction(uint32 marketId, TvmCell args) external;
     function sendActionId() external view responsible returns(uint8);
+}
+
+interface IContractAddressSG {
+    function setMarketAddress(address _marketAddress) external;
+    function setUserAccountManager(address _userAccountManager) external;
+    function getContractAddresses() external view responsible returns(address _owner, address _marketAddress, address _userAccountManager);
 }
 
 interface IContractStateCache {

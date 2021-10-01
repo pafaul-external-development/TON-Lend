@@ -297,6 +297,9 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
 
     function addModule(uint8 operationId, address module) external onlyOwner {
         modules[operationId] = module;
+        IContractStateCache(module).updateCache{
+            flag: MsgFlag.REMAINING_GAS
+        }(owner, markets, tokenPrices);
     }
 
     function performOperationWalletController(uint8 operationId, address tokenRoot, TvmCell args) external override view onlyWalletController {
@@ -319,7 +322,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     // Supply operation part
     // Starts at wallet controller
 
-    function mintVTokens(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toMint) external view override onlyUserAccountManager {
+    function mintVTokens(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toMint) external view override onlyExecutor {
         tvm.rawReserve(msg.value, 2);
 
         emit TokensSupplied(tonWallet, marketId, toMint, markets[marketId]);
@@ -333,7 +336,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     // Withdraw vTokens part
     // Starts at WalletController
 
-    function transferVTokensBack(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToReturn) external override view onlyUserAccountManager {
+    function transferVTokensBack(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToReturn) external override view onlyExecutor {
         IWCMInteractions(walletController).transferTokensToWallet{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, markets[marketId].virtualToken, userTip3Wallet, tokensToReturn);
@@ -351,7 +354,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     /*********************************************************************************************************/
     // Service operations
 
-    function requestTokenPayout(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toPayout) external view override onlyUserAccountManager {
+    function requestTokenPayout(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toPayout) external view override onlyExecutor {
         address tokenRoot = markets[marketId].token;
         IWCMInteractions(walletController).transferTokensToWallet{
             flag: MsgFlag.REMAINING_GAS
@@ -510,6 +513,14 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
 
     modifier onlyModule() {
         require(isModule.exists(msg.sender));
+        _;
+    }
+
+    modifier onlyExecutor() {
+        require(
+            (msg.sender == userAccountManager) ||
+            (isModule.exists(msg.sender))
+        );
         _;
     }
 }

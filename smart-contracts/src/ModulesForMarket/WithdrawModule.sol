@@ -4,7 +4,7 @@ import './interfaces/IModule.sol';
 
 import '../utils/libraries/MsgFlag.sol';
 
-contract WithdrawModule {
+contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG {
     using UFO for uint256;
     using FPO for fraction;
 
@@ -19,13 +19,33 @@ contract WithdrawModule {
         tvm.accept();
     }
 
-    function updateCache(address tonWallet, mapping(uint32 => MarketInfo) _marketInfo, mapping(address => fraction) _tokenPrices) external onlyMarket {
+    function sendActionId() external override view responsible returns(uint8) {
+        return {flag: MsgFlag.REMAINING_GAS} OperationCodes.WITHDRAW_TOKENS;
+    }
+
+    function setMarketAddress(address _marketAddress) external override onlyOwner {
+        tvm.rawReserve(msg.value, 2);
+        marketAddress = _marketAddress;
+        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+    }
+
+    function setUserAccountManager(address _userAccountManager) external override onlyOwner {
+        tvm.rawReserve(msg.value, 2);
+        userAccountManager = _userAccountManager;
+        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+    }
+
+    function getContractAddresses() external override view responsible returns(address _owner, address _marketAddress, address _userAccountManager) {
+        return {flag: MsgFlag.REMAINING_GAS} (owner, marketAddress, userAccountManager);
+    }
+
+    function updateCache(address tonWallet, mapping(uint32 => MarketInfo) _marketInfo, mapping(address => fraction) _tokenPrices) external override onlyMarket {
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;
         tonWallet.transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
-    function performAction(uint32 marketId, TvmCell args) external onlyMarket {
+    function performAction(uint32 marketId, TvmCell args) external override onlyMarket {
         TvmSlice ts = args.toSlice();
         (address tonWallet, address userTip3Wallet, address originalTip3Wallet, uint128 tokensToWithdraw) = ts.decode(address, address, address, uint128);
         mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
@@ -48,7 +68,7 @@ contract WithdrawModule {
         uint32 marketId, 
         mapping(uint32 => uint256) si,
         mapping(uint32 => uint256) bi
-    ) external onlyMarket {
+    ) external onlyUserAccountManager {
         MarketDelta marketDelta;
 
         MarketInfo mi = marketInfo[marketId];
@@ -83,7 +103,7 @@ contract WithdrawModule {
                     flag: MsgFlag.REMAINING_GAS
                 }(tonWallet, userTip3Wallet, marketId, tokensToWithdraw, tokensToSend);
             } else {
-                IMarketOperations(marketAddress).returnVTokens{
+                IMarketOperations(marketAddress).transferVTokensBack{
                     flag: MsgFlag.REMAINING_GAS
                 }(tonWallet, originalTip3Wallet, marketId, tokensToWithdraw);
             }
@@ -97,6 +117,16 @@ contract WithdrawModule {
     modifier onlyMarket() {
         require(msg.sender == marketAddress);
         tvm.rawReserve(msg.value, 2);
+        _;
+    }
+
+    modifier onlyUserAccountManager() {
+        require(msg.sender == userAccountManager);
+        _;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner);
         _;
     }
 }

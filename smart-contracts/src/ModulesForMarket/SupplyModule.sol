@@ -4,7 +4,7 @@ import './interfaces/IModule.sol';
 
 import '../utils/libraries/MsgFlag.sol';
 
-contract SupplyModule is IModule, IContractStateCache {
+contract SupplyModule is IModule, IContractStateCache, IContractAddressSG {
 
     using UFO for uint256;
     using FPO for fraction;
@@ -16,15 +16,29 @@ contract SupplyModule is IModule, IContractStateCache {
     mapping (uint32 => MarketInfo) marketInfo;
     mapping (address => fraction) tokenPrices;
     
-    constructor(address _owner, address _marketAddress, address _userAccountManager) public {
+    constructor() public {
         tvm.accept();
-        owner = _owner;
-        marketAddress = _marketAddress;
-        userAccountManager = _userAccountManager;
+        owner = msg.sender;
     }
 
     function sendActionId() external override view responsible returns(uint8) {
-        return {flag: MsgFlag.REMAINING_GAS} 0;
+        return {flag: MsgFlag.REMAINING_GAS} OperationCodes.SUPPLY_TOKENS;
+    }
+
+    function setMarketAddress(address _marketAddress) external override onlyOwner {
+        tvm.rawReserve(msg.value, 2);
+        marketAddress = _marketAddress;
+        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+    }
+
+    function setUserAccountManager(address _userAccountManager) external override onlyOwner {
+        tvm.rawReserve(msg.value, 2);
+        userAccountManager = _userAccountManager;
+        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+    }
+
+    function getContractAddresses() external override view responsible returns(address _owner, address _marketAddress, address _userAccountManager) {
+        return {flag: MsgFlag.REMAINING_GAS} (owner, marketAddress, userAccountManager);
     }
 
     function updateCache(address tonWallet, mapping (uint32 => MarketInfo) marketInfo_, mapping (address => fraction) tokenPrices_) external override onlyMarket {
@@ -51,22 +65,6 @@ contract SupplyModule is IModule, IContractStateCache {
         IUAMUserAccount(userAccountManager).writeSupplyInfo{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, userTip3Wallet, marketId, tokensToSupply, marketInfo[marketId].index);
-    }
-
-    function setMarketAddress(address _marketAddress) external onlyOwner {
-        marketAddress = _marketAddress;
-    }
-    
-    function getMarketAddress() external view responsible returns(address) {
-        return {flag: MsgFlag.REMAINING_GAS} marketAddress;
-    }
-
-    function setUserAccountManagerAddress(address _userAccountManager) external onlyOwner {
-        userAccountManager = _userAccountManager;
-    }
-
-    function getUserAccountManagerAddress() external view responsible returns(address) {
-        return {flag: MsgFlag.REMAINING_GAS} marketAddress;
     }
 
     modifier onlyMarket() {

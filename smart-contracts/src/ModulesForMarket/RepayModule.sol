@@ -4,7 +4,7 @@ import './interfaces/IModule.sol';
 
 import '../utils/libraries/MsgFlag.sol';
 
-contract RepayModule is IModule {
+contract RepayModule is IModule, IContractStateCache, IContractAddressSG {
     using UFO for uint256;
     using FPO for fraction;
 
@@ -16,18 +16,32 @@ contract RepayModule is IModule {
     mapping(address => fraction) tokenPrices;
 
 
-    constructor(address _userAccountManager, address _marketAddress, address _owner) public {
+    constructor() public {
         tvm.accept();
-        userAccountManager = _userAccountManager;
-        marketAddress = _marketAddress;
-        owner = _owner;
+        owner = msg.sender;
     }
 
     function sendActionId() external override view responsible returns(uint8) {
-        return 0;
+        return {flag: MsgFlag.REMAINING_GAS} OperationCodes.REPAY_TOKENS;
     }
 
-    function updateCache(address tonWallet, mapping(uint32 => MarketInfo) _marketInfo, mapping(address => fraction) _tokenPrices) external onlyMarket {
+    function setMarketAddress(address _marketAddress) external override onlyOwner {
+        tvm.rawReserve(msg.value, 2);
+        marketAddress = _marketAddress;
+        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+    }
+
+    function setUserAccountManager(address _userAccountManager) external override onlyOwner {
+        tvm.rawReserve(msg.value, 2);
+        userAccountManager = _userAccountManager;
+        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+    }
+
+    function getContractAddresses() external override view responsible returns(address _owner, address _marketAddress, address _userAccountManager) {
+        return {flag: MsgFlag.REMAINING_GAS} (owner, marketAddress, userAccountManager);
+    }
+
+    function updateCache(address tonWallet, mapping(uint32 => MarketInfo) _marketInfo, mapping(address => fraction) _tokenPrices) external override onlyMarket {
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;
         tonWallet.transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
@@ -87,6 +101,11 @@ contract RepayModule is IModule {
         IUAMUserAccount(userAccountManager).writeRepayInformation{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, userTip3Wallet, marketId, loanId, tokensToReturn, borrowInfo);
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner);
+        _;
     }
 
     modifier onlyMarket() {

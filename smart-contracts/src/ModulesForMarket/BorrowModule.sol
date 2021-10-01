@@ -2,12 +2,11 @@ pragma ton-solidity >= 0.47.0;
 
 import './interfaces/IModule.sol';
 
-import '../utils/libraries/MsgFlag.sol';
-
-contract BorrowModule is IContractStateCache {
+contract BorrowModule is IModule, IContractStateCache, IContractAddressSG {
     using FPO for fraction;
     using UFO for uint256;
 
+    address owner;
     address marketAddress;
     address userAccountManager;
 
@@ -16,6 +15,27 @@ contract BorrowModule is IContractStateCache {
 
     constructor() public {
         tvm.accept();
+        owner = msg.sender;
+    }
+
+    function sendActionId() external override view responsible returns(uint8) {
+        return {flag: MsgFlag.REMAINING_GAS} OperationCodes.BORROW_TOKENS;
+    }
+
+    function setMarketAddress(address _marketAddress) external override onlyOwner {
+        tvm.rawReserve(msg.value, 2);
+        marketAddress = _marketAddress;
+        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+    }
+
+    function setUserAccountManager(address _userAccountManager) external override onlyOwner {
+        tvm.rawReserve(msg.value, 2);
+        userAccountManager = _userAccountManager;
+        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+    }
+
+    function getContractAddresses() external override view responsible returns(address _owner, address _marketAddress, address _userAccountManager) {
+        return {flag: MsgFlag.REMAINING_GAS} (owner, marketAddress, userAccountManager);
     }
 
     function updateCache(address tonWallet, mapping (uint32 => MarketInfo) marketInfo_, mapping (address => fraction) tokenPrices_) external override onlyMarket {
@@ -24,7 +44,7 @@ contract BorrowModule is IContractStateCache {
         tonWallet.transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
-    function performAction(uint32 marketId, TvmCell args) external onlyMarket {
+    function performAction(uint32 marketId, TvmCell args) external override onlyMarket {
         TvmSlice ts = args.toSlice();
         (address tonWallet, address userTip3Wallet, uint256 tokensToBorrow) = ts.decode(address, address, uint256);
         mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
@@ -75,6 +95,11 @@ contract BorrowModule is IContractStateCache {
         } else {
             // TODO: notify market to mark account for liquidation
         }
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner);
+        _;
     }
 
     modifier onlyMarket() {
