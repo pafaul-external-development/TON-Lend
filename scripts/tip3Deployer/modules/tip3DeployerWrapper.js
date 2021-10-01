@@ -25,15 +25,15 @@ class TIP3Deployer extends Contract {
 
     /**
      * Set RootTokenContract code
-     * @param {String} rootContractCode_ 
+     * @param {String} _rootContractCode 
      */
-    async setTIP3RootContractCode(rootContractCode_) {}
+    async setTIP3RootContractCode(_rootContractCode) {}
 
     /**
      * Set TONTokenWallet code
-     * @param {String} walletContractCode_ 
+     * @param {String} _walletContractCode 
      */
-    async setTIP3WalletContractCode(walletContractCode_) {}
+    async setTIP3WalletContractCode(_walletContractCode) {}
 
     /**
      * Fetch RootTokenContract and TONTokenWallet codes
@@ -71,22 +71,22 @@ function extendContractToTIP3Deployer(contract) {
         });
     };
 
-    contract.setTIP3RootContractCode = async function(rootContractCode_) {
+    contract.setTIP3RootContractCode = async function(_rootContractCode) {
         return await encodeMessageBody({
             contract: contract,
             functionName: 'setTIP3RootContractCode',
             input: {
-                rootContractCode_: rootContractCode_
+                _rootContractCode: _rootContractCode
             }
         });
     };
 
-    contract.setTIP3WalletContractCode = async function(walletContractCode_) {
+    contract.setTIP3WalletContractCode = async function(_walletContractCode) {
         return await encodeMessageBody({
             contract: contract,
             functionName: 'setTIP3WalletContractCode',
             input: {
-                walletContractCode_: walletContractCode_
+                _walletContractCode: _walletContractCode
             }
         });
     };

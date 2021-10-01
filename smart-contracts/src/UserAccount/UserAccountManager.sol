@@ -323,11 +323,11 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     // Market managing functions
 
     /**
-     * @param market_ Address of market smart contract
+     * @param _market Address of market smart contract
      */
-    function setMarketAddress(address market_) external override onlyOwner {
+    function setMarketAddress(address _market) external override onlyOwner {
         tvm.accept();
-        marketAddress = market_;
+        marketAddress = _market;
     }
 
     /*********************************************************************************************************/

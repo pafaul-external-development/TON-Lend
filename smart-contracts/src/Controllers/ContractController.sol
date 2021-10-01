@@ -30,9 +30,9 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
     mapping(uint8 => address[]) deployedContracts;
     mapping(address => uint8) knownContracts;
     // Contract is deployed as regular contract
-    constructor(address ownerAddress_) public {
+    constructor(address _ownerAddress) public {
         tvm.accept();
-        ownerAddress = ownerAddress_;
+        ownerAddress = _ownerAddress;
         contractCodeVersion = 0;
     }
 

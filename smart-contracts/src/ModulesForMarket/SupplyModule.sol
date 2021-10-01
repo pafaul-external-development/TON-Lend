@@ -41,9 +41,9 @@ contract SupplyModule is IModule, IContractStateCache, IContractAddressSG {
         return {flag: MsgFlag.REMAINING_GAS} (owner, marketAddress, userAccountManager);
     }
 
-    function updateCache(address tonWallet, mapping (uint32 => MarketInfo) marketInfo_, mapping (address => fraction) tokenPrices_) external override onlyMarket {
-        marketInfo = marketInfo_;
-        tokenPrices = tokenPrices_;
+    function updateCache(address tonWallet, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
+        marketInfo = _marketInfo;
+        tokenPrices = _tokenPrices;
         tonWallet.transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 

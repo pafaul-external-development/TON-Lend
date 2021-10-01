@@ -134,7 +134,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
 
     /*********************************************************************************************************/
     // Getters
-    function getServiceContractAddresses() external override view responsible returns(address userAccountManager_, address tip3WalletController_, address oracle_) {
+    function getServiceContractAddresses() external override view responsible returns(address _userAccountManager, address _tip3WalletController, address _oracle) {
         return {flag: MsgFlag.REMAINING_GAS} (userAccountManager, walletController, oracle);
     }
 
@@ -165,23 +165,23 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
      * @param marketId Id of new market that will be created
      * @param realToken Address of real token that will be used in market
      * @param initialBalance ????
-     * @param reserveFactor_ ????
-     * @param kink_ ????
-     * @param collateral_ ????
-     * @param baseRate_ ????
-     * @param mul_ ????
-     * @param jumpMul_ ????
+     * @param _reserveFactor ????
+     * @param _kink ????
+     * @param _collateral ????
+     * @param _baseRate ????
+     * @param _mul ????
+     * @param _jumpMul ????
      */
     function createNewMarket(
         uint32 marketId, 
         address realToken, 
         uint256 initialBalance, 
-        fraction reserveFactor_, 
-        fraction kink_, 
-        fraction collateral_, 
-        fraction baseRate_,
-        fraction mul_,
-        fraction jumpMul_
+        fraction _reserveFactor, 
+        fraction _kink, 
+        fraction _collateral, 
+        fraction _baseRate,
+        fraction _mul,
+        fraction _jumpMul
     ) external onlyOwner {
         tvm.rawReserve(msg.value, 2);
         if (!createdMarkets[marketId]) {
@@ -198,12 +198,12 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
                 totalSupply: 0,
 
                 index: zero,
-                reserveFactor: reserveFactor_,
-                kink: kink_,
-                collateral: collateral_,
-                baseRate: baseRate_,
-                mul: mul_,
-                jumpMul: jumpMul_,
+                reserveFactor: _reserveFactor,
+                kink: _kink,
+                collateral: _collateral,
+                baseRate: _baseRate,
+                mul: _mul,
+                jumpMul: _jumpMul,
 
                 lastUpdateTime: now
             });
@@ -361,8 +361,8 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         }(tonWallet, tokenRoot, userTip3Wallet, toPayout);
     }
 
-    function _updateMarketState(uint32 marketId_) internal {
-        MarketInfo mi = markets[marketId_];
+    function _updateMarketState(uint32 marketId) internal {
+        MarketInfo mi = markets[marketId];
         uint256 dt = uint256(now) - mi.lastUpdateTime;
         fraction u = MarketOperations.calculateU(mi.totalBorrowed, mi.currentPoolBalance);
         fraction r = MarketOperations.calculateR(u, mi.baseRate, mi.mul, mi.kink, mi.jumpMul);
@@ -372,7 +372,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         mi.totalBorrowed = totalBorrowed.toNum();
         mi.totalReserve = totalReserve.toNum();
         mi.index = index;
-        markets[marketId_] = mi;
+        markets[marketId] = mi;
     }
 
     /*********************************************************************************************************/
@@ -439,26 +439,26 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     /*********************************************************************************************************/
     // Setters
     /**
-     * @param userAccountManager_ Address of userAccountManager smart contract
+     * @param _userAccountManager Address of userAccountManager smart contract
      */
-    function setUserAccountManager(address userAccountManager_) external override onlyOwner {
-        userAccountManager = userAccountManager_;
+    function setUserAccountManager(address _userAccountManager) external override onlyOwner {
+        userAccountManager = _userAccountManager;
         address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     /**
-     * @param tip3WalletController_ Address of TIP3WalletController smart contract
+     * @param _tip3WalletController Address of TIP3WalletController smart contract
      */
-    function setTip3WalletController(address tip3WalletController_) external override onlyOwner {
-        walletController = tip3WalletController_;
+    function setTip3WalletController(address _tip3WalletController) external override onlyOwner {
+        walletController = _tip3WalletController;
         address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     /**
-     * @param oracle_ Address of Oracle smart contract
+     * @param _oracle Address of Oracle smart contract
      */
-    function setOracleAddress(address oracle_) external override onlyOwner {
-        oracle = oracle_;
+    function setOracleAddress(address _oracle) external override onlyOwner {
+        oracle = _oracle;
         address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 

@@ -23,7 +23,7 @@ interface IContractAddressSG {
 }
 
 interface IContractStateCache {
-    function updateCache(address tonWallet, mapping (uint32 => MarketInfo) marketInfo_, mapping (address => fraction) tokenPrices_) external;
+    function updateCache(address tonWallet, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external;
 }
 
 interface IContractStateCacheRoot {

@@ -205,8 +205,8 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
         _;
     }
 
-    modifier onlyKnownTokenRoot(address tokenRoot_) {
-        require(prices.exists(tokenRoot_), OracleErrorCodes.ERROR_NOT_KNOWN_TOKEN_ROOT);
+    modifier onlyKnownTokenRoot(address _tokenRoot) {
+        require(prices.exists(_tokenRoot), OracleErrorCodes.ERROR_NOT_KNOWN_TOKEN_ROOT);
         _;
     }
 }

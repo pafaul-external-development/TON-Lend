@@ -28,13 +28,13 @@ interface IMarketOracle {
 }
 
 interface IMarketSetters {
-    function setUserAccountManager(address userAccountManager_) external;
-    function setTip3WalletController(address tip3WalletController_) external;
-    function setOracleAddress(address oracle_) external;
+    function setUserAccountManager(address _userAccountManager) external;
+    function setTip3WalletController(address _tip3WalletController) external;
+    function setOracleAddress(address _oracle) external;
 }
 
 interface IMarketGetters {
-    function getServiceContractAddresses() external view responsible returns(address userAccountManager_, address tip3WalletController_, address oracle_);
+    function getServiceContractAddresses() external view responsible returns(address _userAccountManager, address _tip3WalletController, address _oracle);
     function getTokenPrices() external view responsible returns(mapping(address => fraction));
     function getMarketInformation(uint32 marketId) external view responsible returns(MarketInfo);
     function getAllMarkets() external view responsible returns(mapping(uint32 => MarketInfo));

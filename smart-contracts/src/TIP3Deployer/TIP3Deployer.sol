@@ -113,19 +113,19 @@ contract TIP3TokenDeployer is ITIP3Deployer, ITIP3DeployerManageCode, ITIP3Deplo
     /*********************************************************************************************************/
     // TIP-3 code update functions
     /**
-     * @param rootContractCode_ Code of RootTokenContract
+     * @param _rootContractCode Code of RootTokenContract
      */
-    function setTIP3RootContractCode(TvmCell rootContractCode_) external override onlyOwner {
+    function setTIP3RootContractCode(TvmCell _rootContractCode) external override onlyOwner {
         tvm.accept();
-        rootContractCode = rootContractCode_;
+        rootContractCode = _rootContractCode;
     }
 
     /**
-     * @param walletContractCode_ Code of TONTokenWallet
+     * @param _walletContractCode Code of TONTokenWallet
      */
-    function setTIP3WalletContractCode(TvmCell walletContractCode_) external override onlyOwner {
+    function setTIP3WalletContractCode(TvmCell _walletContractCode) external override onlyOwner {
         tvm.accept();
-        walletContractCode = walletContractCode_;
+        walletContractCode = _walletContractCode;
     }
 
     function getServiceInfo() external override responsible view returns (ServiceInfo) {

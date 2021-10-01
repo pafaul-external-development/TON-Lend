@@ -23,7 +23,7 @@ async function main() {
             contract: contractController,
             initParams: {},
             constructorParams: {
-                ownerAddress_: msigWallet.address
+                _ownerAddress: msigWallet.address
             },
             keyPair
         })

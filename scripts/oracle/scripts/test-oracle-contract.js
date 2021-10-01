@@ -117,7 +117,7 @@ async function main() {
     await testRequestPriceContract.run({
         method: 'setInitialInfo',
         params: {
-            oracle_: oracleContract.address,
+            _oracle: oracleContract.address,
             payload: firstTokenAddPayload
         },
         keyPair: msigWallet.keyPair

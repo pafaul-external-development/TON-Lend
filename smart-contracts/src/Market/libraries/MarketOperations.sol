@@ -16,11 +16,11 @@ library MarketOperations {
 
     function calculateR(fraction u, fraction baseRate, fraction mul, fraction kink, fraction jumpMul) internal returns (fraction) {
         fraction r;
-        fraction mul_ = mul.fDiv(kink);
+        fraction _mul = mul.fDiv(kink);
         if (kink.isLarger(u)) {
-            r = baseRate.fAdd(u.fMul(mul_));
+            r = baseRate.fAdd(u.fMul(_mul));
         } else {
-            fraction tmp = kink.fMul(mul_);
+            fraction tmp = kink.fMul(_mul);
             tmp = tmp.fAdd(tmp);
             fraction tmp_ = u.fAdd(kink);
             tmp_ = tmp_.fMul(jumpMul);

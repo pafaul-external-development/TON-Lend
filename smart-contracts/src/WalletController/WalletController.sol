@@ -103,9 +103,9 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
 
     /*********************************************************************************************************/
     // Market functions
-    function setMarketAddress(address market_) external override onlyOwner {
+    function setMarketAddress(address _market) external override onlyOwner {
         tvm.rawReserve(msg.value, 2);
-        marketAddress = market_;
+        marketAddress = _market;
 
         address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
@@ -165,12 +165,12 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
     }
 
     /**
-     * @param root_ Receive deployed wallet address
+     * @param _root Receive deployed wallet address
      */
-    function notifyWalletDeployed(address root_) external override onlyExisingTIP3Root(root_) {
+    function notifyWalletDeployed(address _root) external override onlyExisingTIP3Root(_root) {
         tvm.accept();
-        if (wallets[root_].value == 0) {
-            wallets[root_] = msg.sender;
+        if (wallets[_root].value == 0) {
+            wallets[_root] = msg.sender;
         }
     }
 
