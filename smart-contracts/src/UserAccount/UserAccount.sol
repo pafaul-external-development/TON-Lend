@@ -11,7 +11,7 @@ import "./interfaces/IUAMUserAccount.sol";
 import "../utils/interfaces/IUpgradableContract.sol";
 import "../utils/libraries/MsgFlag.sol";
 
-contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
+contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUserAccountGetters {
     using UFO for uint256;
     using FPO for fraction;
     using ManageMapping for mapping(uint8 => BorrowInfo);
@@ -28,6 +28,22 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
 
     mapping(uint32 => bool) knownMarkets;
     mapping(uint32 => UserMarketInfo) markets;
+
+    function getKnownMarkets() external override view responsible returns(mapping(uint32 => bool)) {
+        return {flag: MsgFlag.REMAINING_GAS} knownMarkets;
+    }
+
+    function getAllMarketsInfo() external override view responsible returns(mapping(uint32 => UserMarketInfo)) {
+        return {flag: MsgFlag.REMAINING_GAS} markets;
+    }
+
+    function getMarketInfo(uint32 marketId) external override view responsible returns(UserMarketInfo) {
+        return {flag: MsgFlag.REMAINING_GAS} markets[marketId];
+    }
+
+    function getLoanInfo(uint32 marketId, uint8 loanId) external override view responsible returns(BorrowInfo) {
+        return {flag: MsgFlag.REMAINING_GAS} markets[marketId].borrowInfo[loanId];
+    }
 
     // Contract is deployed via platform
     constructor() public { 
@@ -221,7 +237,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract {
     /**
      * @param marketId Id of market to enter
      */
-    function enterMarket(uint32 marketId) external override onlyUserAccountManager {
+    function enterMarket(uint32 marketId) external override {
         if (!knownMarkets[marketId]) {
             knownMarkets[marketId] = true;
 

@@ -35,6 +35,13 @@ interface IUserAccountData {
     function requestWithdrawInfo(address userTip3Wallet, address originalTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, mapping(uint32 => fraction) updatedIndexes) external;
 }
 
+interface IUserAccountGetters {
+    function getKnownMarkets() external view responsible returns(mapping(uint32 => bool));
+    function getMarketInfo(uint32 marketId) external view responsible returns(UserMarketInfo);
+    function getAllMarketsInfo() external view responsible returns(mapping(uint32 => UserMarketInfo));
+    function getLoanInfo(uint32 marketId, uint8 loanId) external view responsible returns(BorrowInfo);
+}
+
 library UserAccountConstants {
     uint8 constant MAX_BORROWS_PER_MARKET = 8;
 }
