@@ -1,6 +1,6 @@
 const { convertCrystal } = require("locklift/locklift/utils");
 const { operationFlags } = require("../../../utils/common/_transferFlags");
-const { loadEssentialContracts } = require("../../../utils/common/_utils");
+const { loadEssentialContracts } = require("../../../utils/contracts");
 const { Module } = require("../modules/moduleWrapper");
 
 async function main() {

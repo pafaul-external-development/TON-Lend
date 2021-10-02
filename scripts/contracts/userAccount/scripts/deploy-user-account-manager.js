@@ -1,5 +1,4 @@
-const { loadEssentialContracts } = require("../../../utils/common");
-const deployContract = require("../../../utils/common/_deployContract");
+const { loadEssentialContracts, deployContract } = require("../../../utils/contracts");
 
 async function main() {
     let contracts = await loadEssentialContracts({wallet: true});

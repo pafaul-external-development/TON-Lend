@@ -1,8 +1,8 @@
 const Contract = require("locklift/locklift/contract");
 const tryToExtractAddress = require("../../errorHandler/errorHandler");
 const configuration = require("../../scripts.conf");
+const { loadEssentialContracts } = require("./_loadEssentialContracts");
 const { writeContractData } = require("../migration");
-const { loadEssentialContracts } = require("./_utils");
 
 
 /**

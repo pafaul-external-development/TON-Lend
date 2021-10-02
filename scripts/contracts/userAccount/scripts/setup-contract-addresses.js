@@ -1,4 +1,4 @@
-const { loadEssentialContracts } = require("../../../utils/common");
+const { loadEssentialContracts } = require("../../../utils/contracts");
 
 async function main() {
     let contracts = await loadEssentialContracts({
@@ -14,15 +14,12 @@ async function main() {
 
     await contracts.msigWallet.transfer({
         destination: contracts.userAccountManager.address,
-        value: convertCrystal(1, 'nano'),
-        flags: operationFlags.FEE_FROM_CONTRACT_BALANCE,
-        bounce: false,
         payload: marketPayload
     });
 
     console.log(`MarketsAggregator service address setup finished`);
 
-    for (let moduleName of contracts.modules) {
+    for (let moduleName in contracts.modules) {
         /**
          * @type {Module}
          */
@@ -37,11 +34,10 @@ async function main() {
 
         await contracts.msigWallet.transfer({
             destination: contracts.userAccountManager.address,
-            value: convertCrystal(1, 'nano'),
-            flag: operationFlags.FEE_FROM_CONTRACT_BALANCE,
-            bounce: false,
             payload: modulePayload
         });
+
+        console.log(`${moduleName} module added`);
     }
 
     console.log('Modules for markets are set up');

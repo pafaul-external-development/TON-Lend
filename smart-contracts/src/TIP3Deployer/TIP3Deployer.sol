@@ -25,9 +25,9 @@ contract TIP3TokenDeployer is ITIP3Deployer, ITIP3DeployerManageCode, ITIP3Deplo
     // Basic functions for deploy and upgrade
 
     // Contract is deployed using platform
-    constructor() public {
+    constructor(address _owner) public {
         tvm.accept();
-        ownerAddress = msg.sender;
+        ownerAddress = _owner;
     }
 
     function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) override external onlyOwner {

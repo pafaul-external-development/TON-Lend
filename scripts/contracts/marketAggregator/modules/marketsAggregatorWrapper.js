@@ -18,7 +18,7 @@ class MarketsAggregator extends ContractTemplate {
      */
     async upgradeContractCode({code, updateParams, codeVersion}) {
         return await encodeMessageBody({
-            contract,
+            contract: this,
             functionName: 'upgradeContractCode',
             input: {
                 code,
@@ -70,7 +70,7 @@ class MarketsAggregator extends ContractTemplate {
 
     async withdrawExtraTons() {
         return await encodeMessageBody({
-            contract,
+            contract: this,
             functionName: 'withdrawExtraTons',
             input: {}
         });
@@ -109,7 +109,7 @@ class MarketsAggregator extends ContractTemplate {
         _jumpMul
     }) {
         return await encodeMessageBody({
-            contract,
+            contract: this,
             functionName: 'createNewMarket',
             input: {
                 marketId,
@@ -133,7 +133,7 @@ class MarketsAggregator extends ContractTemplate {
      */
     async addModule({operationId, module}) {
         return await encodeMessageBody({
-            contract,
+            contract: this,
             functionName: 'addModule',
             input: {
                 operationId,
@@ -149,7 +149,7 @@ class MarketsAggregator extends ContractTemplate {
      */
     async forceUpdatePrice({tokenRoot}) {
         return await encodeMessageBody({
-            contract,
+            contract: this,
             functionName: 'forceUpdatePrice',
             input: {
                 tokenRoot
@@ -159,7 +159,7 @@ class MarketsAggregator extends ContractTemplate {
 
     async forceUpdateAllPrices() {
         return await encodeMessageBody({
-            contract,
+            contract: this,
             functionName: 'forceUpdateAllPrices',
             input: {}
         });
@@ -172,7 +172,7 @@ class MarketsAggregator extends ContractTemplate {
      */
     async setUserAccountManager({_userAccountManager}) {
         return await encodeMessageBody({
-            contract, 
+            contract: this, 
             functionName: 'setUserAccountManager',
             input: {
                 _userAccountManager
@@ -187,7 +187,7 @@ class MarketsAggregator extends ContractTemplate {
      */
     async setWalletController({_tip3WalletController}) {
         return await encodeMessageBody({
-            contract,
+            contract: this,
             functionName: 'setWalletController',
             input: {
                 _tip3WalletController
@@ -202,7 +202,7 @@ class MarketsAggregator extends ContractTemplate {
      */
     async setOracleAddress({_oracle}) {
         return await encodeMessageBody({
-            contract,
+            contract: this,
             functionName: 'setOracleAddress',
             input: {
                 _oracle
@@ -217,7 +217,7 @@ class MarketsAggregator extends ContractTemplate {
      */
     async transferOwnership({newOwner}) {
         return await encodeMessageBody({
-            contract,
+            contract: this,
             functionName: 'transferOwnership',
             input: {
                 newOwner

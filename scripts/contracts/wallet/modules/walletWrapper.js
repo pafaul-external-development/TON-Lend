@@ -1,3 +1,4 @@
+const { convertCrystal } = require('locklift/locklift/utils');
 const { operationFlags } = require('../../../utils/common');
 const { ContractTemplate } = require('../../../utils/migration');
 
@@ -11,7 +12,7 @@ class MsigWallet extends ContractTemplate {
      * @param {Boolean} p.bounce
      * @param {String} p.payload 
      */
-    async transfer({destination, value, flags = operationFlags.FEE_FROM_CONTRACT_BALANCE, bounce = false, payload}) {
+    async transfer({destination, value = convertCrystal(1, 'nano'), flags = operationFlags.FEE_FROM_CONTRACT_BALANCE, bounce = false, payload}) {
         return await this.run({
             method: 'sendTransaction',
             params: {

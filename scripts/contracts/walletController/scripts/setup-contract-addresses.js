@@ -1,11 +1,13 @@
 const { convertCrystal } = require("locklift/locklift/utils");
-const { loadEssentialContracts, operationFlags } = require("../../../utils/common");
+const { operationFlags } = require("../../../utils/common");
+const { loadEssentialContracts } = require("../../../utils/contracts");
 
 async function main() {
     let contracts = await loadEssentialContracts({
         wallet: true,
         market: true,
-        userAM: true
+        userAM: true,
+        walletC: true
     });
 
     let marketPayload = await contracts.walletController.setMarketAddress({
@@ -14,9 +16,6 @@ async function main() {
 
     await contracts.msigWallet.transfer({
         destination: contracts.walletController.address,
-        value: convertCrystal(1, 'nano'),
-        flags: operationFlags.FEE_FROM_CONTRACT_BALANCE,
-        bounce: false,
         payload: marketPayload
     });
     

@@ -6,9 +6,7 @@ class Module extends ContractTemplate {
     async sendActionId() {
         return await this.call({
             method: 'sendActionId',
-            params: {
-                _answer_id
-            },
+            params: {},
             keyPair: this.keyPair
         });
     }

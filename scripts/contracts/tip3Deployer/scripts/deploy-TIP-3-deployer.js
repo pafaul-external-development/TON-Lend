@@ -1,9 +1,12 @@
-const { deployContract } = require("../../../utils/common");
+const { deployContract, loadEssentialContracts } = require("../../../utils/contracts");
 
 async function main() {
+    let contracts = await loadEssentialContracts({wallet: true});
     await deployContract({
         contractName: 'TIP3Deployer',
-        constructorParams: {},
+        constructorParams: {
+            _owner: contracts.msigWallet.address
+        },
         initParams: {}
     });
 }

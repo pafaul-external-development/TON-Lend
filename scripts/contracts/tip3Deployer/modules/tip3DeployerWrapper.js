@@ -1,55 +1,21 @@
-const Contract = require('locklift/locklift/contract');
-const { encodeMessageBody } = require('../../utils/utils');
+const { encodeMessageBody } = require('../../../utils/common');
+const { ContractTemplate } = require('../../../utils/migration');
 
 /**
- * @classdesc Interface for TIP3Deployer contract. Use extendContractToTIP3Deployer to gain real functionality
  * @class
  * @name TIP3Deployer
- * @augments Contract
  */
-class TIP3Deployer extends Contract {
+class TIP3Deployer extends ContractTemplate {
     /**
      * Deploy TIP-3 token
-     * @param {Object} rootInfo 
-     * @param {String} deployGrams 
-     * @param {String} pubkeyToInsert 
+     * @param {Object} p
+     * @param {Object} p.rootInfo 
+     * @param {String} p.deployGrams 
+     * @param {String} p.pubkeyToInsert 
      */
-    async deployTIP3(rootInfo, deployGrams, pubkeyToInsert) {}
-
-    /**
-     * Get future address of TIP-3 token with given parameters
-     * @param {Object} rootInfo 
-     * @param {String} pubkeyToInsert 
-     */
-    async getFutureTIP3Address(rootInfo, pubkeyToInsert) {}
-
-    /**
-     * Set RootTokenContract code
-     * @param {String} _rootContractCode 
-     */
-    async setTIP3RootContractCode(_rootContractCode) {}
-
-    /**
-     * Set TONTokenWallet code
-     * @param {String} _walletContractCode 
-     */
-    async setTIP3WalletContractCode(_walletContractCode) {}
-
-    /**
-     * Fetch RootTokenContract and TONTokenWallet codes
-     */
-    async getServiceInfo() {}
-}
-
-/**
- * Extend Contract to TIP3Deployer
- * @param {Contract} contract 
- * @returns {TIP3Deployer}
- */
-function extendContractToTIP3Deployer(contract) {
-    contract.deployTIP3 = async function(rootInfo, deployGrams, pubkeyToInsert) {
+    async deployTIP3({rootInfo, deployGrams, pubkeyToInsert}) {
         return await encodeMessageBody({
-            contract: contract,
+            contract: this,
             functionName: 'deployTIP3',
             input: {
                 _answer_id: 0,
@@ -58,51 +24,67 @@ function extendContractToTIP3Deployer(contract) {
                 pubkeyToInsert: pubkeyToInsert
             }
         });
-    };
+    }
 
-    contract.getFutureTIP3Address = async function(rootInfo, pubkeyToInsert) {
-        return await contract.call({
+    /**
+     * Get future address of TIP-3 token with given parameters
+     * @param {Object} p
+     * @param {Object} p.rootInfo 
+     * @param {String} p.pubkeyToInsert 
+     */
+    async getFutureTIP3Address({rootInfo, pubkeyToInsert}) {
+        return await this.call({
             method: 'getFutureTIP3Address',
             params: {
                 rootInfo: rootInfo,
                 pubkeyToInsert: pubkeyToInsert
             },
-            keyPair: contract.keyPair
+            keyPair: this.keyPair
         });
-    };
+    }
 
-    contract.setTIP3RootContractCode = async function(_rootContractCode) {
+    /**
+     * Set RootTokenContract code
+     * @param {Object} p
+     * @param {String} p._rootContractCode 
+     */
+    async setTIP3RootContractCode({_rootContractCode}) {
         return await encodeMessageBody({
-            contract: contract,
+            contract: this,
             functionName: 'setTIP3RootContractCode',
             input: {
                 _rootContractCode: _rootContractCode
             }
         });
-    };
+    }
 
-    contract.setTIP3WalletContractCode = async function(_walletContractCode) {
+    /**
+     * Set TONTokenWallet code
+     * @param {Object} p
+     * @param {String} p._walletContractCode 
+     */
+    async setTIP3WalletContractCode({_walletContractCode}) {
         return await encodeMessageBody({
-            contract: contract,
+            contract: this,
             functionName: 'setTIP3WalletContractCode',
             input: {
                 _walletContractCode: _walletContractCode
             }
         });
-    };
+    }
 
-    contract.getServiceInfo = async function() {
-        return await contract.call({
+    /**
+     * Fetch RootTokenContract and TONTokenWallet codes
+     */
+    async getServiceInfo() {
+        return await this.call({
             method: 'getServiceInfo',
             params: {},
-            keyPair: contract.keyPair
+            keyPair: this.keyPair
         });
-    };
-
-    return contract;
+    }
 }
 
 module.exports = {
-    TIP3Deployer,
-    extendContractToTIP3Deployer
+    TIP3Deployer
 }

@@ -1,13 +1,10 @@
-const deployContract = require("./_deployContract");
-const encodeMessageBody = require("./_encodeMessageBody");
+const encodeMessageBody = require('./_encodeMessageBody');
 const { operationFlags } = require("./_transferFlags");
-const { describeTransaction, stringToBytesArray, loadEssentialContracts } = require("./_utils");
+const { describeTransaction, stringToBytesArray } = require("./_utils");
 
 module.exports = {
-    deployContract,
     operationFlags,
     encodeMessageBody,
     describeTransaction,
-    stringToBytesArray,
-    loadEssentialContracts
+    stringToBytesArray
 }

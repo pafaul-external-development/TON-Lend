@@ -23,14 +23,14 @@ import './UserAccount.sol';
 
 contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUserAccount, IUAMMarket {
     // Information for update
-    uint32 contractCodeVersion;
+    uint32 public contractCodeVersion;
 
-    address owner;
+    address public owner;
 
-    address marketAddress;
-    mapping(uint8 => address) modules;
-    mapping(address => bool) existingModules;
-    mapping(uint32 => TvmCell) userAccountCodes;
+    address public marketAddress;
+    mapping(uint8 => address) public modules;
+    mapping(address => bool) public existingModules;
+    mapping(uint32 => TvmCell) public userAccountCodes;
 
     /*********************************************************************************************************/
     // Functions for deployment and upgrade
@@ -362,12 +362,12 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
 
     /*********************************************************************************************************/
     // Functions to add/remove modules info
-    function addModule(uint8 operationId, address module) external override onlyMarket {
+    function addModule(uint8 operationId, address module) external override onlyTrusted {
         modules[operationId] = module;
         existingModules[module] = true;
     }
 
-    function removeModule(uint8 operationId) external override onlyMarket {
+    function removeModule(uint8 operationId) external override onlyTrusted {
         delete existingModules[modules[operationId]];
         delete modules[operationId];
     }
@@ -385,6 +385,14 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
             msg.sender == marketAddress
         );
         tvm.rawReserve(msg.value, 2);
+        _;
+    }
+
+    modifier onlyTrusted() {
+        require(
+            msg.sender == owner ||
+            msg.sender == marketAddress
+        );
         _;
     }
 

@@ -1,4 +1,4 @@
-const { loadEssentialContracts } = require("../../../utils/common");
+const { loadEssentialContracts } = require("../../../utils/contracts");
 
 async function main() {
     let contracts = await loadEssentialContracts({market: true});

@@ -1,51 +1,33 @@
-const configuration = require("../../scripts.conf");
-const initializeLocklift = require("../../utils/initializeLocklift");
-const { operationCosts } = require('../modules/tip3DeployerConstants');
-
-const { loadContractData } = require("../../utils/migration/manageContractData");
-const { TIP3Deployer, extendContractToTIP3Deployer } = require('../modules/tip3DeployerWrapper');
-const { MsigWallet, extendContractToWallet } = require("../../wallet/modules/walletWrapper");
-const { operationFlags } = require("../../utils/transferFlags");
-const { stringToBytesArray } = require("../../utils/utils");
+const { loadEssentialContracts } = require("../../../utils/contracts");
+const Contract = require("locklift/locklift/contract");
+const configuration = require("../../../scripts.conf");
 
 async function main() {
-    let locklift = await initializeLocklift(configuration.pathToLockliftConfig, configuration.network);
-    /**
-     * @type {TIP3Deployer}
-     */
-    let tip3DeployerContract = await loadContractData(locklift, `${configuration.network}_TIP3DeployerContract.json`);
-    tip3DeployerContract = extendContractToTIP3Deployer(tip3DeployerContract);
+    let contracts = await loadEssentialContracts({wallet: true, deployer: true});
 
     /**
-     * @type {MsigWallet}
+     * @type {Contract}
      */
-    let msigWallet = await loadContractData(locklift, `${configuration.network}_MsigWallet.json`);
-    msigWallet = extendContractToWallet(msigWallet);
+    let rootTIP3Contract = await contracts.locklift.factory.getContract('RootTokenContract', configuration.buildDirectory);
+    /**
+     * @type {Contract}
+     */
+    let walletTIP3Contract = await contracts.locklift.factory.getContract('TONTokenWallet', configuration.buildDirectory);
 
-    let rootTIP3Contract = await locklift.factory.getContract('RootTokenContract', configuration.buildDirectory);
-    let walletTIP3Contract = await locklift.factory.getContract('TONTokenWallet', configuration.buildDirectory);
+    let setTIP3RootCodePayload = await contracts.tip3Deployer.setTIP3RootContractCode({_rootContractCode: rootTIP3Contract.code});
+    let setTIP3WalletCodePayload = await contracts.tip3Deployer.setTIP3WalletContractCode({_walletContractCode: walletTIP3Contract.code});
 
-    let setTIP3RootCodePayload = await tip3DeployerContract.setTIP3RootContractCode(rootTIP3Contract.code);
-    let setTIP3WalletCodePayload = await tip3DeployerContract.setTIP3WalletContractCode(walletTIP3Contract.code);
+    await contracts.msigWallet.transfer({
+        destination: contracts.tip3Deployer.address,
+        payload: setTIP3RootCodePayload
+    });
 
+    await contracts.msigWallet.transfer({
+        destination: contracts.tip3Deployer.address,
+        payload: setTIP3WalletCodePayload
+    });
 
-    await msigWallet.transfer(
-        tip3DeployerContract.address,
-        locklift.utils.convertCrystal(operationCosts.codeUpload, 'nano'),
-        operationFlags.FEE_FROM_CONTRACT_BALANCE,
-        false,
-        setTIP3RootCodePayload
-    );
-
-    await msigWallet.transfer(
-        tip3DeployerContract.address,
-        locklift.utils.convertCrystal(operationCosts.codeUpload, 'nano'),
-        operationFlags.FEE_FROM_CONTRACT_BALANCE,
-        false,
-        setTIP3WalletCodePayload
-    );
-
-    let result = await tip3DeployerContract.getServiceInfo();
+    let result = await contracts.tip3Deployer.getServiceInfo();
 
     console.log(`Root contract code is correct: ${result.rootCode == rootTIP3Contract.code}`);
     console.log(`Wallet contract code is correct: ${result.walletCode == walletTIP3Contract.code}`);

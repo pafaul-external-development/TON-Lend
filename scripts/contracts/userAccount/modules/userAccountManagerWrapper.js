@@ -11,7 +11,7 @@ class UserAccountManager extends Contract {
      */
     async upgradeContractCode({code, updateParams, codeVersion}) {
         return await encodeMessageBody({
-            contract, 
+            contract: this, 
             functionName: 'upgradeContractCode',
             input: {
                 code,
@@ -28,7 +28,7 @@ class UserAccountManager extends Contract {
      */
     async createUserAccount({tonWallet}) {
         return await encodeMessageBody({
-            contract,
+            contract: this,
             functionName: 'createUserAccount',
             input: {
                 _answer_id: 0,
@@ -59,7 +59,7 @@ class UserAccountManager extends Contract {
      */
     async setMarketAddress({_market}) {
         return await encodeMessageBody({
-            contract,
+            contract: this,
             functionName: 'setMarketAddress',
             input: {
                 _market
@@ -75,7 +75,7 @@ class UserAccountManager extends Contract {
      */
     async uploadUserAccountCode({version, code}) {
         return await encodeMessageBody({
-            contract,
+            contract: this,
             functionName: 'uploadUserAccountCode',
             input: {
                 version,
@@ -91,10 +91,42 @@ class UserAccountManager extends Contract {
      */
     async updateUserAccount({tonWallet}) {
         return await encodeMessageBody({
-            contract,
+            contract: this,
             functionName: 'updateUserAccount',
             input: {
                 tonWallet
+            }
+        });
+    }
+
+    /**
+     * 
+     * @param {Object} param0 
+     * @param {Number} param0.operationId
+     * @param {String} param0.module
+     */
+    async addModule({operationId, module}) {
+        return await encodeMessageBody({
+            contract: this,
+            functionName: 'addModule',
+            input: {
+                operationId,
+                module
+            }
+        });
+    }
+
+    /**
+     * 
+     * @param {Object} param0 
+     * @param {Number} param0.operationId
+     */
+    async removeModule({operationId}) {
+        return await encodeMessageBody({
+            contract: this,
+            functionName: 'removeModule',
+            input: {
+                operationId
             }
         });
     }
@@ -114,35 +146,43 @@ class UserAccountManager extends Contract {
         });
     }
 
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {Number} param0.operationId
-     * @param {String} param0.module
-     */
-    async addModule({operationId, module}) {
-        return await encodeMessageBody({
-            contract,
-            functionName: 'addModule',
-            input: {
-                operationId,
-                module
-            }
+    async owner() {
+        return await this.call({
+            method: 'owner',
+            params: {},
+            keyPair: this.keyPair
         });
     }
 
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {Number} param0.operationId
-     */
-    async removeModule({operationId}) {
-        return await encodeMessageBody({
-            contract,
-            functionName: 'removeModule',
-            input: {
-                operationId
-            }
+    async marketAddress() {
+        return await this.call({
+            method: 'marketAddress',
+            params: {},
+            keyPair: this.keyPair
+        });
+    }
+
+    async modules() {
+        return await this.call({
+            method: 'modules',
+            params: {},
+            keyPair: this.keyPair
+        });
+    }
+
+    async existingModules() {
+        return await this.call({
+            method: 'existingModules',
+            params: {},
+            keyPair: this.keyPair
+        });
+    }
+
+    async userAccountCodes() {
+        return await this.call({
+            method: 'userAccountCodes',
+            params: {},
+            keyPair: this.keyPair
         });
     }
 }
