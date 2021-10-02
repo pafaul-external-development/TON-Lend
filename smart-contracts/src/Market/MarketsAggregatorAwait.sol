@@ -591,7 +591,7 @@ contract MarketAggregator is IUpgradableContract {
     /**
      * @param _tip3WalletController Address of TIP3WalletController smart contract
      */
-    function setTip3WalletController(address _tip3WalletController) external onlyOwner {
+    function setWalletController(address _tip3WalletController) external onlyOwner {
         walletController = _tip3WalletController;
         address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }

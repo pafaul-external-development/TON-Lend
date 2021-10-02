@@ -1,7 +1,10 @@
 const { Locklift } = require('locklift/locklift');
 
-const { loadConfig } = require('./load_config');
+const { loadConfig } = require('./_load_config');
 
+/**
+ * @type {Locklift}
+ */
 let locklift = undefined;
 
 /**

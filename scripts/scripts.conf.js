@@ -5,6 +5,7 @@
  * @property {String} network
  * @property {String} buildDirectory
  * @property {String} pathToLockliftConfig
+ * @property {String} deployedContractsDir
  */
 
 /**
@@ -12,8 +13,9 @@
  */
 const configuration = {
     network: 'local',
-    buildDirectory: './build',
-    pathToLockliftConfig: './scripts/l.conf.js'
+    buildDirectory: './build/',
+    pathToLockliftConfig: './scripts/l.conf.js',
+    deployedContractsDir: './deployed/'
 }
 
 module.exports = configuration;

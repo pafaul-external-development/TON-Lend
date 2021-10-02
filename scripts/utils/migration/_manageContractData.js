@@ -1,8 +1,7 @@
 const fs = require('fs');
 const { Locklift } = require("locklift/locklift");
 const Contract = require('locklift/locklift/contract');
-
-const scriptConfiguration = require('../../scripts.conf');
+const configuration = require('../../scripts.conf');
 
 /**
  * @typedef ContractData
@@ -56,20 +55,19 @@ async function loadContractFromData(locklift, config, contractData) {
  * @returns {String}
  */
 function writeContractData(contract, filename) {
-    let resultFilename = `${scriptConfiguration.network}_` + filename;
-    fs.writeFileSync(resultFilename, JSON.stringify(createContractData(contract, scriptConfiguration), null, '\t'));
+    let resultFilename = `${configuration.deployedContractsDir}/${configuration.network}_` + filename;
+    fs.writeFileSync(resultFilename, JSON.stringify(createContractData(contract, configuration), null, '\t'));
     return resultFilename;
 }
 
 /**
  * 
  * @param {Locklift} locklift 
- * @param {import('../../scripts.conf').ScriptConfiguration} configuration 
  * @param {String} filename 
  * @returns 
  */
-async function loadContractData(locklift, configuration, filename) {
-    let data = JSON.parse(fs.readFileSync(`${configuration.network}_`+filename + '.json'));
+async function loadContractData(locklift, filename) {
+    let data = JSON.parse(fs.readFileSync(`${configuration.deployedContractsDir}/${configuration.network}_`+filename + '.json'));
     return loadContractFromData(locklift, configuration, data);
 }
 

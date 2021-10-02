@@ -48,6 +48,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     // Contract is deployed via platform
     constructor() public { 
         tvm.accept();
+        userAccountManager = msg.sender;
     }
 
     function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) override external onlyUserAccountManager {

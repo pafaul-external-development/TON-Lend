@@ -9,7 +9,10 @@
     },
     "devDependencies": {},
     "scripts": {
-        "test": "mocha"
+        "test": "mocha",
+        "setup": "npm install && npm install -g tondev && tondev sol set -c 0.47.0 -s 0.47.0 && mkdir build && mkdir deployed",
+        "build-sc": "node scripts/utils/build-sc.js",
+        "deploy-wallet": "node scripts/contracts/wallet/scripts/deploy-multisig-wallet.js"
     },
     "repository": {
         "type": "git",
