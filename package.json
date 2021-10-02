@@ -10,9 +10,24 @@
     "devDependencies": {},
     "scripts": {
         "test": "mocha",
+
         "setup": "npm install && npm install -g tondev && tondev sol set -c 0.47.0 -s 0.47.0 && mkdir build && mkdir deployed",
+
         "build-sc": "node scripts/utils/build-sc.js",
-        "deploy-wallet": "node scripts/contracts/wallet/scripts/deploy-multisig-wallet.js"
+
+        "deploy-wallet": "node scripts/contracts/wallet/scripts/deploy-multisig-wallet.js",
+        "deploy-market": "node scripts/contracts/marketAggregator/scripts/deploy-market.js",
+        "deploy-market-modules": "node scripts/contracts/marketModules/scripts/deploy-modules.js",
+        "deploy-oracle": "node scripts/contracts/oracle/scripts/deploy-oracle.js",
+        "deploy-tip-3-deployer": "node scripts/contracts/tip3Deployer/scripts/deploy-TIP-3-deployer.js",
+        "deploy-user-account-manager": "node scripts/contracts/userAccount/scripts/deploy-user-account-manager.js",
+        "deploy-wallet-controller": "node scripts/contracts/walletController/scripts/deploy-wallet-controller.js",
+
+        "get-market-full-info": "node scripts/contracts/marketAggregator/scripts/get-full-info.js",
+
+        "setup-market-addresses": "node ./scripts/contracts/marketAggregator/scripts/setup-contract-addresses.js",
+        "setup-module-addresses": "node ./scripts/contracts/marketModules/scripts/setup-modules.js",
+        "setup-tip-3-deployer": ""
     },
     "repository": {
         "type": "git",

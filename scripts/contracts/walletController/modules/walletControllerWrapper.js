@@ -1,5 +1,3 @@
-// @ts-check
-
 const { encodeMessageBody } = require("../../../utils/common");
 const { ContractTemplate } = require("../../../utils/migration/_contractTemplate");
 
@@ -72,79 +70,49 @@ class WalletController extends ContractTemplate {
         })
     }
 
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {Number} param0._answer_id
-     */
-    async getRealTokenRoots({_answer_id = 0}) {
+    async getRealTokenRoots() {
         return await this.call({
             method: 'getRealTokenRoots',
-            params: {
-                _answer_id
-            },
+            params: {},
             keyPair: this.keyPair
         });
     }
 
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {Number} param0._answer_id
-     */
-    async getVirtualTokenRoots({_answer_id = 0}) {
+    async getVirtualTokenRoots() {
         return await this.call({
             method: 'getVirtualTokenRoots',
-            params: {
-                _answer_id
-            },
+            params: {},
             keyPair: this.keyPair
         });
     }
 
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {Number} param0._answer_id
-     */
-    async getWallets({_answer_id = 0}) {
+    async getWallets() {
         return await this.call({
             method: 'getWallets',
-            params: {
-                _answer_id
-            },
+            params: {},
             keyPair: this.keyPair
         });
     }
 
     /**
      * 
-     * @param {Object} param0 
-     * @param {Number} param0._answer_id
+     * @param {Object} param0
      * @param {Number} param0.marketId
      */
-    async getMarketAddresses({_answer_id = 0, marketId}) {
+    async getMarketAddresses({marketId}) {
         return await this.call({
             method: 'getmarketAddresses',
             params: {
-                _answer_id,
                 marketId
             },
             keyPair: this.keyPair
         });
     }
 
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {Number} param0._answer_id
-     */
-    async getAllMarkets({_answer_id = 0}) {
+    async getAllMarkets() {
         return await this.call({
             method: 'getAllMarkets',
-            params: {
-                _answer_id
-            },
+            params: {},
             keyPair: this.keyPair
         });
     }

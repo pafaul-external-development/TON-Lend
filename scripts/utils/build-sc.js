@@ -13,7 +13,7 @@ const contracts = [
     'TIP3Deployer/TIP3Deployer',
     'UserAccount/UserAccount',
     'UserAccount/UserAccountManager',
-    'WalletControllers/WalletController'
+    'WalletController/WalletController'
 ]
 
 async function main() {

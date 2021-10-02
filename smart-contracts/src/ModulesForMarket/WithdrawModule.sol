@@ -15,8 +15,9 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG {
     mapping (uint32 => MarketInfo) marketInfo;
     mapping (address => fraction) tokenPrices;
 
-    constructor() public {
+    constructor(address _owner) public {
         tvm.accept();
+        owner = _owner;
     }
 
     function sendActionId() external override view responsible returns(uint8) {

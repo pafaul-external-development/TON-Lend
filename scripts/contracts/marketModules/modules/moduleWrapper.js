@@ -1,13 +1,9 @@
+const { encodeMessageBody } = require('../../../utils/common');
 const { ContractTemplate } = require('../../../utils/migration');
-const { encodeMessageBody } = require('../../utils/common/utils');
 
 class Module extends ContractTemplate {
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {Number} param0._answer_id
-     */
-    async sendActionId({_answer_id}) {
+
+    async sendActionId() {
         return await this.call({
             method: 'sendActionId',
             params: {
@@ -47,17 +43,10 @@ class Module extends ContractTemplate {
         });
     }
 
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {String} param0._answer_id
-     */
-    async getContractAddresses({_answer_id}) {
+    async getContractAddresses() {
         return await this.call({
             method: 'getContractAddresses',
-            params: {
-                _answer_id
-            },
+            params: {},
             keyPair: this.keyPair
         });
     }

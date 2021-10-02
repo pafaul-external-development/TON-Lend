@@ -1,12 +1,7 @@
-const Contract = require('locklift/locklift/contract');
+const { operationFlags } = require('../../../utils/common');
+const { ContractTemplate } = require('../../../utils/migration');
 
-/**
- * Add functionality of MsigWallet (multisig) to contract. THIS IS INTERFACE, to gain real functionality use extendContractToWallet
- * @name MsigWallet
- * @class
- * @augments Contract
- */
-class MsigWallet extends Contract {
+class MsigWallet extends ContractTemplate {
     /**
      * Transfer TONs to specified destination
      * @param {Object} p
@@ -16,17 +11,8 @@ class MsigWallet extends Contract {
      * @param {Boolean} p.bounce
      * @param {String} p.payload 
      */
-    async transfer({destination, value, flags, bounce, payload}) {}
-}
-
-/**
- * Extend contract to multisig wallet
- * @param {Contract} contract 
- * @returns {MsigWallet}
- */
-function extendContractToWallet(contract) {
-    contract.transfer = async function({destination, value, flags, bounce, payload}) {
-        return await contract.run({
+    async transfer({destination, value, flags = operationFlags.FEE_FROM_CONTRACT_BALANCE, bounce = false, payload}) {
+        return await this.run({
             method: 'sendTransaction',
             params: {
                 dest: destination,
@@ -35,14 +21,11 @@ function extendContractToWallet(contract) {
                 flags: flags,
                 payload: payload
             },
-            keyPair: contract.keyPair
+            keyPair: this.keyPair
         })
     }
-
-    return contract;
 }
 
 module.exports = {
-    MsigWallet,
-    extendContractToWallet
+    MsigWallet
 }

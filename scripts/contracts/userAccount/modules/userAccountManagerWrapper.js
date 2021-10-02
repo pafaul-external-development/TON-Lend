@@ -1,5 +1,5 @@
- const Contract = require('locklift/locklift/contract');
-const { encodeMessageBody } = require('../../utils/utils');
+const Contract = require('locklift/locklift/contract');
+const { encodeMessageBody } = require('../../../utils/common');
 
 class UserAccountManager extends Contract {
     /**
@@ -9,77 +9,7 @@ class UserAccountManager extends Contract {
      * @param {String} param0.updateParams
      * @param {Number} param0.codeVersion
      */
-    async upgradeContractCode({code, updateParams, codeVersion}) {}
-
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {Number} param0._answer_id
-     * @param {String} param0.tonWallet
-     */
-    async createUserAccount({_answer_id, tonWallet}) {}
-
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {Number} param0._answer_id
-     * @param {String} param0.tonWallet
-     */
-    async calculateUserAccoutAddress({_answer_id, tonWallet}) {}
-
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {String} param0._market
-     */
-    async setMarketAddress({_market}) {}
-
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {Number} param0.version
-     * @param {String} param0.code
-     */
-    async uploadUserAccountCode({version, code}) {}
-
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {String} param0.tonWallet
-     */
-    async updateUserAccount({tonWallet}) {}
-
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {Number} param0._answer_id
-     * @param {Number} param0.version
-     */
-    async getUserAccountCode({_answer_id, version}) {}
-
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {Number} param0.operationId
-     * @param {String} param0.module
-     */
-    async addModule({operationId, module}) {}
-
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {Number} param0.operationId
-     */
-    async removeModule({operationId}) {}
-}
-
-/**
- * 
- * @param {Contract} contract 
- * @returns {UserAccountManager}
- */
-function toUserAccountManager(contract) {
-    contract.upgradeContractCode = async function({code, updateParams, codeVersion}) {
+    async upgradeContractCode({code, updateParams, codeVersion}) {
         return await encodeMessageBody({
             contract, 
             functionName: 'upgradeContractCode',
@@ -91,29 +21,43 @@ function toUserAccountManager(contract) {
         });
     }
 
-    contract.createUserAccount = async function({_answer_id = 0, tonWallet}) {
+    /**
+     * 
+     * @param {Object} param0
+     * @param {String} param0.tonWallet
+     */
+    async createUserAccount({tonWallet}) {
         return await encodeMessageBody({
             contract,
             functionName: 'createUserAccount',
             input: {
-                _answer_id,
+                _answer_id: 0,
                 tonWallet
             }
         });
     }
 
-    contract.calculateUserAccoutAddress = async function({_answer_id = 0, tonWallet}) {
-        return await contract.call({
+    /**
+     * 
+     * @param {Object} param0 
+     * @param {String} param0.tonWallet
+     */
+    async calculateUserAccoutAddress({tonWallet}) {
+        return await this.call({
             method: 'calculateUserAccountAddress',
             params: {
-                _answer_id,
                 tonWallet
             },
-            keyPair: contract.keyPair
+            keyPair: this.keyPair
         });
     }
 
-    contract.setMarketAddress = async function({_market}) {
+    /**
+     * 
+     * @param {Object} param0 
+     * @param {String} param0._market
+     */
+    async setMarketAddress({_market}) {
         return await encodeMessageBody({
             contract,
             functionName: 'setMarketAddress',
@@ -123,7 +67,13 @@ function toUserAccountManager(contract) {
         });
     }
 
-    contract.uploadUserAccountCode = async function({version, code}) {
+    /**
+     * 
+     * @param {Object} param0 
+     * @param {Number} param0.version
+     * @param {String} param0.code
+     */
+    async uploadUserAccountCode({version, code}) {
         return await encodeMessageBody({
             contract,
             functionName: 'uploadUserAccountCode',
@@ -134,7 +84,12 @@ function toUserAccountManager(contract) {
         });
     }
 
-    contract.updateUserAccount = async function({tonWallet}) {
+    /**
+     * 
+     * @param {Object} param0 
+     * @param {String} param0.tonWallet
+     */
+    async updateUserAccount({tonWallet}) {
         return await encodeMessageBody({
             contract,
             functionName: 'updateUserAccount',
@@ -144,18 +99,28 @@ function toUserAccountManager(contract) {
         });
     }
 
-    contract.getUserAccountCode = async function({_answer_id = 0, version}) {
-        return await contract.call({
+    /**
+     * 
+     * @param {Object} param0 
+     * @param {Number} param0.version
+     */
+    async getUserAccountCode({version}) {
+        return await this.call({
             method: 'getUserAccountCode',
             params: {
-                _answer_id,
                 version
             },
-            keyPair: contract.keyPair
+            keyPair: this.keyPair
         });
     }
 
-    contract.addModule = async function({operationId, module}) {
+    /**
+     * 
+     * @param {Object} param0 
+     * @param {Number} param0.operationId
+     * @param {String} param0.module
+     */
+    async addModule({operationId, module}) {
         return await encodeMessageBody({
             contract,
             functionName: 'addModule',
@@ -164,9 +129,14 @@ function toUserAccountManager(contract) {
                 module
             }
         });
-    }   
+    }
 
-    contract.removeModule = async function({operationId}) {
+    /**
+     * 
+     * @param {Object} param0 
+     * @param {Number} param0.operationId
+     */
+    async removeModule({operationId}) {
         return await encodeMessageBody({
             contract,
             functionName: 'removeModule',
@@ -175,11 +145,8 @@ function toUserAccountManager(contract) {
             }
         });
     }
-
-    return contract;
 }
 
 module.exports = {
-    UserAccountManager,
-    toUserAccountManager
+    UserAccountManager
 }

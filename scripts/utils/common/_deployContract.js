@@ -1,7 +1,8 @@
 const Contract = require("locklift/locklift/contract");
 const tryToExtractAddress = require("../../errorHandler/errorHandler");
+const configuration = require("../../scripts.conf");
 const { writeContractData } = require("../migration");
-const { loadEssentialContracts } = require("./utils");
+const { loadEssentialContracts } = require("./_utils");
 
 
 /**
@@ -46,7 +47,7 @@ async function deployContract({
         console.log(`Data is written to file: ${filename}`);
     }
 
-    return contract;
+    return contractToDeploy;
 }
 
 module.exports = deployContract;

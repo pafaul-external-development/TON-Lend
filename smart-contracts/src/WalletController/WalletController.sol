@@ -38,9 +38,9 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
 
     /*********************************************************************************************************/
     // Functions for deployment and upgrade
-    constructor() public { 
+    constructor(address _owner) public { 
         tvm.accept();
-        owner = msg.sender;
+        owner = _owner;
      } // Contract will be deployed using platform
 
     /*  Upgrade data for version 1 (from 0):

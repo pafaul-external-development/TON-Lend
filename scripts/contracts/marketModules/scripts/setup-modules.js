@@ -38,6 +38,8 @@ async function main() {
             bounce: false,
             payload: userAccountManagerPayload
         });
+
+        console.log(`${moduleType} module is set up`);
     }
 
     console.log('Addresses for modules set up');

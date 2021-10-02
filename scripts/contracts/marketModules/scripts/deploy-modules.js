@@ -1,21 +1,18 @@
+const { loadEssentialContracts } = require("../../../utils/common");
 const deployContract = require("../../../utils/common/_deployContract");
 
 async function main() {
-    await deployContract({
-        contractName: 'SupplyModule'
-    });
-
-    await deployContract({
-        contractName: 'BorrowModule'
-    });
-
-    await deployContract({
-        contractName: 'RepayModule'
-    });
-
-    await deployContract({
-        contractName: 'WithdrawModule'
-    });
+    let contracts = await loadEssentialContracts({wallet: true});
+    let modules = ['SupplyModule', 'BorrowModule', 'RepayModule', 'WithdrawModule'];
+    let constructorParams = {
+        _owner: contracts.msigWallet.address
+    };
+    for (let contractName of modules) {
+        await deployContract({
+            contractName,
+            constructorParams
+        });
+    }
 }
 
 main().then(

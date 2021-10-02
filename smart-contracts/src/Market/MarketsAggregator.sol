@@ -1,4 +1,7 @@
 pragma ton-solidity >= 0.43.0;
+pragma AbiHeader time;
+pragma AbiHeader expire;
+pragma AbiHeader pubkey;
 
 import './interfaces/IMarketInterfaces.sol';
 
@@ -40,9 +43,9 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     /*********************************************************************************************************/
     // Base functions - for deploying and upgrading contract
     // We are using Platform so constructor is not available
-    constructor() public {
+    constructor(address _owner) public {
         tvm.accept();
-        owner = msg.sender;
+        owner = _owner;
     }
 
     function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) override external onlyOwner {
@@ -296,6 +299,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     // Operations with modules
 
     function addModule(uint8 operationId, address module) external onlyOwner {
+        tvm.rawReserve(msg.value, 2);
         modules[operationId] = module;
         IContractStateCache(module).updateCache{
             flag: MsgFlag.REMAINING_GAS
@@ -442,6 +446,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
      * @param _userAccountManager Address of userAccountManager smart contract
      */
     function setUserAccountManager(address _userAccountManager) external override onlyOwner {
+        tvm.rawReserve(msg.value, 2);
         userAccountManager = _userAccountManager;
         address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
@@ -450,6 +455,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
      * @param _tip3WalletController Address of TIP3WalletController smart contract
      */
     function setWalletController(address _tip3WalletController) external override onlyOwner {
+        tvm.rawReserve(msg.value, 2);
         walletController = _tip3WalletController;
         address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
@@ -458,6 +464,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
      * @param _oracle Address of Oracle smart contract
      */
     function setOracleAddress(address _oracle) external override onlyOwner {
+        tvm.rawReserve(msg.value, 2);
         oracle = _oracle;
         address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
@@ -466,6 +473,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
      * @param newOwner Address of new contract's owner
      */
     function transferOwnership(address newOwner) external override onlyOwner {
+        tvm.rawReserve(msg.value, 2);
         owner = newOwner;
         address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
@@ -479,7 +487,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     }
 
     modifier onlyOwner() {
-        require(msg.sender == owner, MarketErrorCodes.ERROR_MSG_SENDER_IS_NOT_ROOT);
+        require(msg.sender == owner, MarketErrorCodes.ERROR_MSG_SENDER_IS_NOT_OWNER);
         _;
     }
 

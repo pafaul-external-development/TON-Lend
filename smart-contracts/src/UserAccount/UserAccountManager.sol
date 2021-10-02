@@ -35,9 +35,9 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     /*********************************************************************************************************/
     // Functions for deployment and upgrade
     // Contract is deployed via platform
-    constructor() public { 
+    constructor(address _owner) public {
         tvm.accept();
-        owner = msg.sender;
+        owner = _owner;
     }
 
     /*  Upgrade Data for version 1 (from version 0):

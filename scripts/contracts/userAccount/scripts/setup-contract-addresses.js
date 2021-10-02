@@ -28,7 +28,7 @@ async function main() {
          */
         let module = contracts.modules[moduleName];
 
-        let operationId = await module.sendActionId({});
+        let operationId = await module.sendActionId();
 
         let modulePayload = await contracts.userAccountManager.addModule({
             operationId,

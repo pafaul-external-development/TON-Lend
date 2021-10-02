@@ -28,6 +28,7 @@ async function main() {
         _tip3WalletController: contracts.walletController.address
     }));
 
+    let i = 1;
     for (let payload of payloads) {
         await contracts.msigWallet.transfer({
             destination: contracts.marketsAggregator.address,
@@ -36,30 +37,32 @@ async function main() {
             bounce: false,
             payload
         });
+        console.log(`${i} message sent`);
+        i++;
     }
 
     console.log(`MarketsAggregator service address setup finished`);
 
-    for (let moduleName of contracts.modules) {
+    for (let moduleName in contracts.modules) {
         /**
          * @type {Module}
          */
         let module = contracts.modules[moduleName];
 
-        let operationId = await module.sendActionId({});
+        let operationId = await module.sendActionId();
 
         let modulePayload = await contracts.marketsAggregator.addModule({
-            operationId,
+            operationId: Number(operationId),
             module: module.address
         });
 
         await contracts.msigWallet.transfer({
             destination: contracts.marketsAggregator.address,
             value: convertCrystal(2, 'nano'),
-            flag: operationFlags.FEE_FROM_CONTRACT_BALANCE,
             bounce: false,
             payload: modulePayload
         });
+        console.log(`${moduleName} module set up`);
     }
 
     console.log('Modules for markets are set up');

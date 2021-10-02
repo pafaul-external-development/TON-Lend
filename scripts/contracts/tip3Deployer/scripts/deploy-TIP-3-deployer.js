@@ -1,4 +1,4 @@
-const { deployContract } = require("../../utils/common");
+const { deployContract } = require("../../../utils/common");
 
 async function main() {
     await deployContract({

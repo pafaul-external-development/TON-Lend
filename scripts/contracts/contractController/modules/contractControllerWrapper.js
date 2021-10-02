@@ -1,7 +1,7 @@
 const Contract = require("locklift/locklift/contract");
 const { Locklift } = require("locklift/locklift");
 const { abiContract, signerNone } = require("@tonclient/core");
-const { encodeMessageBody } = require("../../utils/utils");
+const { encodeMessageBody } = require("../../../utils/common");
 
 /**
  * @classdesc Intreface for ContractController contract. Use extendContractToContractController to gain real functionality

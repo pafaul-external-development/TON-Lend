@@ -16,9 +16,9 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG {
     mapping(address => fraction) tokenPrices;
 
 
-    constructor() public {
+    constructor(address _owner) public {
         tvm.accept();
-        owner = msg.sender;
+        owner = _owner;
     }
 
     function sendActionId() external override view responsible returns(uint8) {

@@ -1,42 +1,15 @@
-// @ts-check
-
-const { abiContract, signerNone } = require("@tonclient/core")
-const Contract = require("locklift/locklift/contract");
-const { MarketsAggregator, toMarketsAggregator } = require("../../contracts/marketAggregator/modules/marketsAggregatorWrapper");
-const { extendContractToOracle, Oracle } = require("../../contracts/oracle/modules/oracleWrapper");
+const { MarketsAggregator } = require("../../contracts/marketAggregator/modules/marketsAggregatorWrapper");
+const { Oracle } = require("../../contracts/oracle/modules/oracleWrapper");
 const configuration = require("../../scripts.conf");
-const { UserAccountManager, toUserAccountManager } = require("../../contracts/userAccount/modules/userAccountManagerWrapper");
-const { UserAccount, toUserAccount } = require("../../contracts/userAccount/modules/userAccountWrapper");
-const { MsigWallet, extendContractToWallet } = require("../../contracts/wallet/modules/walletWrapper");
+const { UserAccountManager } = require("../../contracts/userAccount/modules/userAccountManagerWrapper");
+const { UserAccount } = require("../../contracts/userAccount/modules/userAccountWrapper");
+const { MsigWallet } = require("../../contracts/wallet/modules/walletWrapper");
 const initializeLocklift = require("../initializeLocklift");
 const { loadContractData } = require("../migration/_manageContractData");
 const { Locklift } = require('locklift/locklift');
 const { WalletController } = require("../../contracts/walletController/modules/walletControllerWrapper");
 const { Module } = require("../../contracts/marketModules/modules/moduleWrapper");
-
-/**
- * Encode message body
- * @param {Object} encodeMessageBodyParameters
- * @param {Contract} encodeMessageBodyParameters.contract 
- * @param {String} encodeMessageBodyParameters.functionName 
- * @param {JSON} encodeMessageBodyParameters.input 
- * @returns 
- */
-async function encodeMessageBody({
-    contract,
-    functionName,
-    input
-}) {
-    return (await contract.locklift.ton.client.abi.encode_message_body({
-        abi: abiContract(contract.abi),
-        call_set: {
-            function_name: functionName,
-            input: input
-        },
-        is_internal: true,
-        signer: signerNone()
-    })).body;
-}
+const encodeMessageBody = require("./_encodeMessageBody");
 
 function describeTransaction(tx) {
     let description = '';
@@ -85,8 +58,7 @@ async function loadEssentialContracts({wallet = false, market = false, oracle = 
      */
     let msigWallet = undefined;
     if (wallet) {
-        msigWallet = await loadContractData(locklift, 'MsigWallet');
-        msigWallet = extendContractToWallet(msigWallet);
+        msigWallet = new MsigWallet(await loadContractData(locklift, 'MsigWallet'));
     }
 
     /**
@@ -94,8 +66,7 @@ async function loadEssentialContracts({wallet = false, market = false, oracle = 
      */
     let marketsAggregator = undefined;
     if (market) {
-        marketsAggregator = await loadContractData(locklift, 'MarketsAggregator');
-        marketsAggregator = toMarketsAggregator(marketsAggregator);
+        marketsAggregator = new MarketsAggregator(await loadContractData(locklift, 'MarketsAggregator'));
     }
 
     /**
@@ -103,8 +74,7 @@ async function loadEssentialContracts({wallet = false, market = false, oracle = 
      */
     let oracleContract = undefined;
     if (oracle) {
-        oracleContract = await loadContractData(locklift, 'Oracle');
-        oracleContract = extendContractToOracle(oracleContract);
+        oracleContract = new Oracle(await loadContractData(locklift, 'Oracle'));
     }
 
     /**
@@ -112,8 +82,7 @@ async function loadEssentialContracts({wallet = false, market = false, oracle = 
      */
     let userAccountManager = undefined;
     if (userAM) {
-        userAccountManager = await loadContractData(locklift, 'UserAccountManager');
-        userAccountManager = toUserAccountManager(userAccountManager);
+        userAccountManager = new UserAccountManager(await loadContractData(locklift, 'UserAccountManager'));
     }
 
     /**
@@ -121,8 +90,7 @@ async function loadEssentialContracts({wallet = false, market = false, oracle = 
      */
     let userAccount = undefined;
     if (user) {
-        userAccount = await loadContractData(locklift, 'UserAccount');
-        userAccount = toUserAccount(userAccount);
+        userAccount = new UserAccount(await loadContractData(locklift, 'UserAccount'));
     }
 
     /**
@@ -130,8 +98,7 @@ async function loadEssentialContracts({wallet = false, market = false, oracle = 
      */
     let walletController = undefined;
     if (walletC) {
-        let tmp = await loadContractData(locklift, 'WalletController');
-        walletController = new WalletController(tmp);
+        walletController = new WalletController(await loadContractData(locklift, 'WalletController'));
     }
 
     /**

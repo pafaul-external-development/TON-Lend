@@ -55,7 +55,7 @@ async function loadContractFromData(locklift, config, contractData) {
  * @returns {String}
  */
 function writeContractData(contract, filename) {
-    let resultFilename = `${configuration.deployedContractsDir}/${configuration.network}_` + filename;
+    let resultFilename = `${configuration.deployedContractsDir}/${configuration.network}_${filename}.json`;
     fs.writeFileSync(resultFilename, JSON.stringify(createContractData(contract, configuration), null, '\t'));
     return resultFilename;
 }

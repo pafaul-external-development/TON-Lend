@@ -1,71 +1,8 @@
-const Contract = require('locklift/locklift/contract');
-const { encodeMessageBody } = require('../../utils/utils');
+const { encodeMessageBody } = require('../../../utils/common');
+const { ContractTemplate } = require('../../../utils/migration');
 
-class UserAccount extends Contract {
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {Number} param0._answer_id
-     */
-    async getOwner({_answer_id}) {}
-
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {Number} param0._answer_id
-     */
-    async getKnownMarkets({_answer_id}) {}
-
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {Number} param0._answer_id
-     */
-    async getAllMarketsInfo({_answer_id}) {}
-
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {Number} param0._answer_id
-     * @param {Number} param0.marketId
-     */
-    async getMarketInfo({_answer_id, marketId}) {}
-
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {Number} param0._answer_id
-     * @param {Number} param0.marketId
-     * @param {Number} param0.loanId
-     */
-    async getLoanInfo({_answer_id, marketId, loanId}) {}
-
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {Number} param0.marketId
-     * @param {Number} param0.amountToBorrow
-     * @param {String} param0.userTip3Wallet
-     */
-    async borrow({marketId, amountToBorrow, userTip3Wallet}) {}
-
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {Number} param0.marketId
-     */
-    async enterMarket({marketId}) {}
-
-    async withdrawExtraTons({}) {}
-}
-
-/**
- * 
- * @param {Contract} contract 
- * @returns {UserAccount}
- */
-function toUserAccount(contract) {
-    contract.getOwner = async function({_answer_id = 0}) {
+class UserAccount extends ContractTemplate {
+    async getOwner() {
         return await contract.call({
             method: 'getOwner',
             params: {
@@ -75,7 +12,7 @@ function toUserAccount(contract) {
         });
     }
 
-    contract.getKnownMarkets = async function({_answer_id = 0}) {
+    async getKnownMarkets() {
         return await contract.call({
             method: 'getKnownMarkets',
             params: {
@@ -85,7 +22,7 @@ function toUserAccount(contract) {
         });
     }
 
-    contract.getAllMarketsInfo = async function({_answer_id = 0}) {
+    async getAllMarketsInfo() {
         return await contract.call({
             method: 'getAllMarketsInfo',
             params: {
@@ -95,7 +32,12 @@ function toUserAccount(contract) {
         });
     }
 
-    contract.getMarketInfo = async function({_answer_id = 0, marketId}) {
+    /**
+     * 
+     * @param {Object} param0 
+     * @param {Number} param0.marketId
+     */
+    async getMarketInfo({marketId}) {
         return await contract.call({
             method: 'getMarketInfo',
             params: {
@@ -106,7 +48,13 @@ function toUserAccount(contract) {
         });
     }
 
-    contract.getLoanInfo = async function({_answer_id = 0, marketId, loanId}) {
+    /**
+     * 
+     * @param {Object} param0 
+     * @param {Number} param0.marketId
+     * @param {Number} param0.loanId
+     */
+    async getLoanInfo({marketId, loanId}) {
         return await contract.call({
             method: 'getLoanInfo',
             params: {
@@ -118,7 +66,14 @@ function toUserAccount(contract) {
         });
     }
 
-    contract.borrow = async function({marketId, amountToBorrow, userTip3Wallet}) {
+    /**
+     * 
+     * @param {Object} param0 
+     * @param {Number} param0.marketId
+     * @param {Number} param0.amountToBorrow
+     * @param {String} param0.userTip3Wallet
+     */
+    async borrow({marketId, amountToBorrow, userTip3Wallet}) {
         return await encodeMessageBody({
             contract,
             functionName: 'borrow',
@@ -130,7 +85,12 @@ function toUserAccount(contract) {
         });
     }
 
-    contract.enterMarket = async function({marketId}) {
+    /**
+     * 
+     * @param {Object} param0 
+     * @param {Number} param0.marketId
+     */
+    async enterMarket({marketId}) {
         return await encodeMessageBody({
             contract,
             functionName: 'enterMarket',
@@ -140,18 +100,20 @@ function toUserAccount(contract) {
         });
     }
 
-    contract.withdrawExtraTons = async function({}) {
+    /**
+     * 
+     * @param {Object} param0 
+     * @returns 
+     */
+    async withdrawExtraTons() {
         return await encodeMessageBody({
             contract,
             functionName: 'withdrawExtraTons',
             input: {}
         });
     }
-    
-    return contract;
 }
 
 module.exports = {
-    UserAccount,
-    toUserAccount
+    UserAccount
 }
