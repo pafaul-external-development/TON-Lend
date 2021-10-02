@@ -24,17 +24,17 @@ import "../utils/libraries/MsgFlag.sol";
 
 contract WalletController is IWCMInteractions, IWalletControllerMarketManagement, IWalletControllerGetters, IUpgradableContract, ITokenWalletDeployedCallback, ITokensReceivedCallback {
     // Information for update
-    uint32 contractCodeVersion;
+    uint32 public contractCodeVersion;
 
-    address owner;
-    address marketAddress;
+    address public owner;
+    address public marketAddress;
 
     // Root TIP-3 to market address mapping
-    mapping (address => address) wallets;
-    mapping (address => bool) realTokenRoots;
-    mapping (address => bool) vTokenRoots;
+    mapping (address => address) public wallets;
+    mapping (address => bool) public realTokenRoots;
+    mapping (address => bool) public vTokenRoots;
 
-    mapping (uint32 => MarketTokenAddresses) marketTIP3Info;
+    mapping (uint32 => MarketTokenAddresses) public marketTIP3Info;
 
     /*********************************************************************************************************/
     // Functions for deployment and upgrade

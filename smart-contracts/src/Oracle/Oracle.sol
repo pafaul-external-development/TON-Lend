@@ -35,9 +35,9 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
     /*********************************************************************************************************/
     // Base functions - for deploying and upgrading contract
     // We are using Platform so constructor is not available
-    constructor(uint256 _ownerPubkey) public {
+    constructor(address _owner, uint256 _ownerPubkey) public {
         tvm.accept();
-        ownerAddress = msg.sender;
+        ownerAddress = _owner;
         ownerPubkey = _ownerPubkey;
     }
 
@@ -94,10 +94,12 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
     /*********************************************************************************************************/
     // Service functions
     function getVersion() override external responsible view returns (uint32) { 
+        tvm.rawReserve(msg.value, 2);
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } contractCodeVersion;
     }
 
     function getDetails() override external responsible view returns (OracleServiceInformation) {
+        tvm.rawReserve(msg.value, 2);
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } OracleServiceInformation(contractCodeVersion, ownerAddress, ownerPubkey);
     }
 
@@ -160,6 +162,7 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
      * @param payload Payload attached to message (contains information about operation)
      */
     function getTokenPrice(address tokenRoot, TvmCell payload) override external responsible view returns(address, uint128, uint128, TvmCell) {
+        tvm.rawReserve(msg.value, 2);
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } (tokenRoot, prices[tokenRoot].tokens, prices[tokenRoot].usd, payload);
     }
 
@@ -167,6 +170,7 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
      * @param payload Payload attached to message (contains information about operation)
      */
     function getAllTokenPrices(TvmCell payload) override external responsible view returns (mapping(address => MarketPriceInfo), TvmCell) {
+        tvm.rawReserve(msg.value, 2);
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } (prices, payload);
     }
 

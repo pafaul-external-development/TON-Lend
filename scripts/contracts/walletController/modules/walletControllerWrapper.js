@@ -101,7 +101,7 @@ class WalletController extends ContractTemplate {
      */
     async getMarketAddresses({marketId}) {
         return await this.call({
-            method: 'getmarketAddresses',
+            method: 'getMarketAddresses',
             params: {
                 marketId
             },

@@ -5,11 +5,16 @@ function describeTransaction(tx) {
     return description;
 }
 
+function pp(obj) {
+    return JSON.stringify(obj, null, '\t');
+}
+
 const stringToBytesArray = (dataString) => {
     return Buffer.from(dataString).toString('hex')
 };
 
 module.exports = {
     describeTransaction,
-    stringToBytesArray
+    stringToBytesArray,
+    pp
 }

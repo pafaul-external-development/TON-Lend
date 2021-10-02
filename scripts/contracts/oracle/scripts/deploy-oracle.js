@@ -5,6 +5,7 @@ async function main() {
     await deployContract({
         contractName: 'Oracle',
         constructorParams: {
+            _owner: contracts.msigWallet.address,
             _ownerPubkey: '0x' + contracts.msigWallet.keyPair.public
         },
         initParams: {

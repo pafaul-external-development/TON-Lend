@@ -16,15 +16,15 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     using FPO for fraction;
     using ManageMapping for mapping(uint8 => BorrowInfo);
 
-    bool borrowLock;
+    bool public borrowLock;
 
     address static owner;
     
     // Used for interactions with market 
-    address userAccountManager;
+    address public userAccountManager;
 
     // Information for update
-    uint32 contractCodeVersion;
+    uint32 public contractCodeVersion;
 
     mapping(uint32 => bool) knownMarkets;
     mapping(uint32 => UserMarketInfo) markets;

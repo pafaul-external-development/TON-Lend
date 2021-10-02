@@ -22,16 +22,22 @@
         "deploy:tip-3-deployer": "node scripts/contracts/tip3Deployer/scripts/deploy-TIP-3-deployer.js",
         "deploy:user-account-manager": "node scripts/contracts/userAccount/scripts/deploy-user-account-manager.js",
         "deploy:wallet-controller": "node scripts/contracts/walletController/scripts/deploy-wallet-controller.js",
+        "deploy:test-swap-pair": "node scripts/contracts/oracle/scripts/deploy-test-swap-pair.js",
 
         "get:market-full-info": "node scripts/contracts/marketAggregator/scripts/get-full-info.js",
         "get:modules-info": "node scripts/contracts/marketModules/scripts/get-module-info.js",
         "get:user-account-manager": "node scripts/contracts/userAccount/scripts/get-uam-info.js",
+        "get:wallet-controller": "node scripts/contracts/walletController/scripts/get-info.js",
+        "get:oracle": "node scripts/contracts/oracle/scripts/get-oracle-info.js",
 
         "setup:market": "node ./scripts/contracts/marketAggregator/scripts/setup-contract-addresses.js",
         "setup:modules": "node ./scripts/contracts/marketModules/scripts/setup-modules.js",
         "setup:tip-3-deployer": "node ./scripts/contracts/tip3Deployer/scripts/setup-TIP-3-deployer.js",
         "setup:user-account-manager-addresses": "node ./scripts/contracts/userAccount/scripts/setup-contract-addresses.js",
-        "setup:wallet-controller": "node ./scripts/contracts/walletController/scripts/setup-contract-addresses.js"
+        "setup:wallet-controller": "node ./scripts/contracts/walletController/scripts/setup-contract-addresses.js",
+        "setup:test-swap-pair": "node ./scripts/contracts/oracle/scripts/set-test-price.js",
+
+        "run:oracle-add-token": "node ./scripts/contracts/oracle/scripts/oracle-add-token.js"
     },
     "repository": {
         "type": "git",

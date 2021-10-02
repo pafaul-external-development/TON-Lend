@@ -13,24 +13,24 @@ class Oracle extends Contract {
      * @returns {Promise<Object>}
      */
     async getVersion() {
-        return await encodeMessageBody({
-            contract: contract,
-            functionName: 'getVersion',
-            input: {}
-        })
-    };
+        return await this.call({
+            method: 'getVersion',
+            params: {},
+            keyPair: this.keyPair
+        });
+    }
 
     /**
      * 
      * @returns {Promise<Object>}
      */
     async getDetails() {
-        return await contract.call({
+        return await this.call({
             method: 'getDetails',
             params: {},
-            keyPair: contract.keyPair
+            keyPair: this.keyPair
         })
-    };
+    }
 
     /**
      * @param {Object} p
@@ -39,13 +39,13 @@ class Oracle extends Contract {
      */
     async changeOwnerPubkey({newOwnerPubkey}) {
         return await encodeMessageBody({
-            contract: contract,
+            contract: this,
             functionName: 'changeOwnerPubkey',
             input: {
                 newOwnerPubkey: newOwnerPubkey
             }
         })
-    };
+    }
 
     /**
      * @param {Object} p
@@ -54,13 +54,13 @@ class Oracle extends Contract {
      */
     async changeOwnerAddress({newOwnerAddress}) {
         return await encodeMessageBody({
-            contract: contract,
+            contract: this,
             functionName: 'changeOwnerAddress',
             input: {
                 newOwnerAddress: newOwnerAddress
             }
         })
-    };
+    }
 
     /**
      * @param {Object} p
@@ -71,7 +71,7 @@ class Oracle extends Contract {
      */
     async externalUpdatePrice({tokenRoot, tokens, usd}) {
         return await encodeMessageBody({
-            contract: contract,
+            contract: this,
             functionName: 'externalUpdatePrice',
             input: {
                 tokenRoot: tokenRoot,
@@ -79,7 +79,7 @@ class Oracle extends Contract {
                 usd: usd
             }
         })
-    };
+    }
 
     /**
      * @param {Object} p 
@@ -88,13 +88,13 @@ class Oracle extends Contract {
      */
     async internalUpdatePrice({tokenRoot}) {
         return await encodeMessageBody({
-            contract: contract,
+            contract: this,
             functionName: 'internalUpdatePrice',
             input: {
                 tokenRoot: tokenRoot
             }
         })
-    };
+    }
 
     /**
      * @param {Object} p
@@ -103,15 +103,15 @@ class Oracle extends Contract {
      * @returns {Promise<Object>}
      */
     async getTokenPrice({tokenRoot, payload}) {
-        return await contract.call({
+        return await this.call({
             method: 'getTokenPrice',
             params: {
                 tokenRoot: tokenRoot,
                 payload: payload
             },
-            keyPair: contract.keyPair
+            keyPair: this.keyPair
         })
-    };
+    }
 
     /**
      * @param {Object} p
@@ -119,14 +119,14 @@ class Oracle extends Contract {
      * @returns {Promise<Object>}
      */
     async getAllTokenPrices({payload}) {
-        return await contract.call({
+        return await this.call({
             method: 'getAllTokenPrices',
             params: {
                 payload: payload
             },
-            keyPair: contract.keyPair
+            keyPair: this.keyPair
         })
-    };
+    }
 
     /**
      * @param {Object} p
@@ -137,7 +137,7 @@ class Oracle extends Contract {
      */
     async addToken({tokenRoot, swapPairAddress, isLeft}) {
         return await encodeMessageBody({
-            contract: contract,
+            contract: this,
             functionName: 'addToken',
             input: {
                 tokenRoot: tokenRoot,
@@ -145,7 +145,7 @@ class Oracle extends Contract {
                 isLeft: isLeft
             }
         })
-    };
+    }
 
     /**
      * @param {Object} p
@@ -154,13 +154,13 @@ class Oracle extends Contract {
      */
     async removeToken({tokenRoot}) {
         return await encodeMessageBody({
-            contract: contract,
+            contract: this,
             functionName: 'removeToken',
             input: {
                 tokenRoot: tokenRoot
             }
         })
-    };
+    }
 }
 
 module.exports = {

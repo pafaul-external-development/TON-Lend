@@ -11,6 +11,7 @@ const { WalletController } = require("../../contracts/walletController/modules/w
 const { Module } = require("../../contracts/marketModules/modules/moduleWrapper");
 const { TIP3Deployer } = require("../../contracts/tip3Deployer/modules/tip3DeployerWrapper");
 const { encodeMessageBody } = require("../common");
+const Contract = require("locklift/locklift/contract");
 
 /**
  * @typedef {Object} Modules
@@ -31,6 +32,7 @@ const { encodeMessageBody } = require("../common");
  * @property {WalletController} walletController
  * @property {Modules} modules
  * @property {TIP3Deployer} tip3Deployer
+ * @property {Contract} testSwapPair
  */
 
 /**
@@ -44,9 +46,20 @@ const { encodeMessageBody } = require("../common");
  * @param {Boolean} p.walletC
  * @param {Boolean} p.marketModules
  * @param {Boolean} p.deployer
+ * @param {Boolean} p.testSP
  * @returns {Promise<EssentialContracts>}
  */
- async function loadEssentialContracts({wallet = false, market = false, oracle = false, userAM = false, user = false, walletC = false, marketModules = false, deployer = false}) {
+ async function loadEssentialContracts({
+        wallet = false, 
+        market = false, 
+        oracle = false, 
+        userAM = false, 
+        user = false, 
+        walletC = false, 
+        marketModules = false, 
+        deployer = false,
+        testSP = false
+    }) {
     let locklift = await initializeLocklift(configuration.pathToLockliftConfig, configuration.network);
 
     /**
@@ -116,6 +129,14 @@ const { encodeMessageBody } = require("../common");
         tip3Deployer = new TIP3Deployer(await loadContractData(locklift, 'TIP3Deployer'));
     }
 
+    /**
+     * @type {Contract}
+     */
+    let testSwapPair = {};
+    if (testSP) {
+        testSwapPair = await loadContractData(locklift, 'TestSwapPair');
+    }
+
     return {
         locklift,
         msigWallet,
@@ -125,7 +146,8 @@ const { encodeMessageBody } = require("../common");
         userAccount,
         walletController,
         modules,
-        tip3Deployer
+        tip3Deployer,
+        testSwapPair
     }
 }
 
