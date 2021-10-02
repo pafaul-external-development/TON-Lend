@@ -151,7 +151,7 @@ function toUserAccount(contract) {
     return contract;
 }
 
-return {
+module.exports = {
     UserAccount,
     toUserAccount
 }

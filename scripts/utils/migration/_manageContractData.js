@@ -53,9 +53,12 @@ async function loadContractFromData(locklift, config, contractData) {
  * 
  * @param {Contract} contract 
  * @param {String} filename
+ * @returns {String}
  */
 function writeContractData(contract, filename) {
-    fs.writeFileSync(`${scriptConfiguration.network}_` + filename, JSON.stringify(createContractData(contract, scriptConfiguration), null, '\t'));
+    let resultFilename = `${scriptConfiguration.network}_` + filename;
+    fs.writeFileSync(resultFilename, JSON.stringify(createContractData(contract, scriptConfiguration), null, '\t'));
+    return resultFilename;
 }
 
 /**
@@ -66,7 +69,7 @@ function writeContractData(contract, filename) {
  * @returns 
  */
 async function loadContractData(locklift, configuration, filename) {
-    let data = JSON.parse(fs.readFileSync(filename));
+    let data = JSON.parse(fs.readFileSync(`${configuration.network}_`+filename + '.json'));
     return loadContractFromData(locklift, configuration, data);
 }
 

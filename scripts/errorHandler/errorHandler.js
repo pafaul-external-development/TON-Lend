@@ -4,8 +4,10 @@
  * @returns {String}
  */
 function tryToExtractAddress(err) {
-    if (err.code == 414) {
-        if (err.data.exit_code == 51) {
+    if (
+        err?.code == 414
+    ) {
+        if (err.data?.exit_code == 51) {
             return err.data.account_address;
         }
     }
