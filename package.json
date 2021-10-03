@@ -11,7 +11,7 @@
     "scripts": {
         "test": "mocha",
 
-        "setup": "npm install && npm install -g tondev && tondev sol set -c 0.47.0 -s 0.47.0 && mkdir build && mkdir deployed",
+        "setup": "npm install && npm install -g tondev && tondev sol set -c 0.47.0 -s 0.47.0",
 
         "build-sc": "node scripts/utils/build-sc.js",
 
@@ -42,7 +42,8 @@
 
         "run:oracle-add-token": "node ./scripts/contracts/oracle/scripts/oracle-add-token.js",
         "run:market-add-market": "node ./scripts/contracts/marketAggregator/scripts/add-new-market.js",
-        "run:user-account-enter-market": "node ./scripts/contracts/userAccount/scripts/run-ua-enter-market.js"
+        "run:user-account-enter-market": "node ./scripts/contracts/userAccount/scripts/run-ua-enter-market.js",
+        "run:wallet-controller-add-market": "node ./scripts/contracts/walletController/scripts/run-add-market.js"
     },
     "repository": {
         "type": "git",

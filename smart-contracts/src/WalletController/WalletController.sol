@@ -14,7 +14,6 @@ import "./libraries/OperationCodes.sol";
 import "../Market/interfaces/IMarketInterfaces.sol";
 
 import "../utils/interfaces/IUpgradableContract.sol";
-import "../utils/TIP3/interfaces/ITokenWalletDeployedCallback.sol";
 import "../utils/TIP3/interfaces/ITokensReceivedCallback.sol";
 
 import "../utils/TIP3/interfaces/IRootTokenContract.sol";
@@ -22,7 +21,7 @@ import "../utils/TIP3/interfaces/ITONTokenWallet.sol";
 
 import "../utils/libraries/MsgFlag.sol";
 
-contract WalletController is IWCMInteractions, IWalletControllerMarketManagement, IWalletControllerGetters, IUpgradableContract, ITokenWalletDeployedCallback, ITokensReceivedCallback {
+contract WalletController is IWCMInteractions, IWalletControllerMarketManagement, IWalletControllerGetters, IUpgradableContract, ITokensReceivedCallback {
     // Information for update
     uint32 public contractCodeVersion;
 
@@ -33,6 +32,7 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
     mapping (address => address) public wallets;
     mapping (address => bool) public realTokenRoots;
     mapping (address => bool) public vTokenRoots;
+    mapping (address => uint32) public tokensToMarkets;
 
     mapping (uint32 => MarketTokenAddresses) public marketTIP3Info;
 
@@ -111,7 +111,7 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
     }
 
     function addMarket(uint32 marketId, address realTokenRoot, address virtualTokenRoot) external override onlyTrusted {
-        tvm.rawReserve(msg.value, 2);
+        tvm.accept();
         marketTIP3Info[marketId] = MarketTokenAddresses({
             realToken: realTokenRoot, 
             virtualToken: virtualTokenRoot,
@@ -122,13 +122,14 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
         realTokenRoots[realTokenRoot] = true;
         vTokenRoots[virtualTokenRoot] = true;
 
-        wallets[realTokenRoot] = address.makeAddrStd(0, 0);
-        wallets[virtualTokenRoot] = address.makeAddrStd(0, 0);
+        wallets[realTokenRoot] = address.makeAddrStd(0, 1);
+        wallets[virtualTokenRoot] = address.makeAddrStd(0, 1);
+
+        tokensToMarkets[realTokenRoot] = marketId;
+        tokensToMarkets[virtualTokenRoot] = marketId;
 
         addWallet(realTokenRoot);
         addWallet(virtualTokenRoot);
-
-        address(marketAddress).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     /**
@@ -154,6 +155,14 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
      * @param tokenRoot Address of token root to request wallet deploy
      */
     function addWallet(address tokenRoot) private pure {
+        IRootTokenContract(tokenRoot).getWalletAddress{
+            value: WCCostConstants.GET_WALLET_ADDRESS,
+            callback: this.receiveTIP3WalletAddress
+        }(
+            0,
+            address(this)
+        );
+
         IRootTokenContract(tokenRoot).deployEmptyWallet{
             value: WCCostConstants.WALLET_DEPLOY_COST
         }(
@@ -165,12 +174,17 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
     }
 
     /**
-     * @param _root Receive deployed wallet address
+     * @param _wallet Receive deployed wallet address
      */
-    function notifyWalletDeployed(address _root) external override onlyExisingTIP3Root(_root) {
+    function receiveTIP3WalletAddress(address _wallet) external onlyExisingTIP3Root(msg.sender) {
         tvm.accept();
-        if (wallets[_root].value == 0) {
-            wallets[_root] = msg.sender;
+
+        wallets[msg.sender] = _wallet;
+        uint32 marketId = tokensToMarkets[msg.sender];
+        if (realTokenRoots.exists(msg.sender)) {
+            marketTIP3Info[marketId].realTokenWallet = _wallet;
+        } else {
+            marketTIP3Info[marketId].virtualTokenWallet = _wallet;
         }
     }
 
