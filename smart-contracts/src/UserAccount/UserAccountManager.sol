@@ -8,6 +8,7 @@ import "./interfaces/IUAMUserAccount.sol";
 import "./interfaces/IUAMMarket.sol";
 
 import "./libraries/UserAccountErrorCodes.sol";
+import './libraries/CostConstants.sol';
 
 import "../Market/interfaces/IMarketInterfaces.sol";
 
@@ -96,14 +97,20 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
      * @param tonWallet Address of user's ton wallet
      */
     function createUserAccount(address tonWallet) external override view responsible returns(address) {
+        tvm.rawReserve(msg.value, 2);
+
+        TvmSlice ts = userAccountCodes[0].toSlice();
+        require(!ts.empty());
+
         address userAccount = new UserAccount{
-            value: 1 ton,
+            value: UserAccountCostConstants.useForUADeploy,
             code: userAccountCodes[0],
             pubkey: 0,
             varInit: {
                 owner: tonWallet
             }
         }();
+
         return userAccount;
     }
 

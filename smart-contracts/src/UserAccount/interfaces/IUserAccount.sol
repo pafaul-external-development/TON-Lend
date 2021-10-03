@@ -9,7 +9,7 @@ struct BorrowInfo {
 
 struct UserMarketInfo {
     bool exists;
-    uint32 marketId;
+    uint32 _marketId;
     uint256 suppliedTokens;
     mapping(uint8 => BorrowInfo) borrowInfo;
 }

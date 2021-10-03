@@ -2,7 +2,7 @@ const { convertCrystal } = require("locklift/locklift/utils");
 const configuration = require("../../../scripts.conf");
 const { writeContractData } = require("../../../utils/migration/_manageContractData");
 const { operationFlags } = require("../../../utils/common/_transferFlags");
-const { loadEssentialContracts } = require("../../utils/common/utils");
+const { loadEssentialContracts } = require("../../../utils/contracts");
 
 async function main() {
     let contracts = await loadEssentialContracts({

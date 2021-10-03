@@ -31,6 +31,7 @@ interface IMarketSetters {
     function setUserAccountManager(address _userAccountManager) external;
     function setWalletController(address _tip3WalletController) external;
     function setOracleAddress(address _oracle) external;
+    function setTip3Deployer(address _tip3Deployer) external;
 }
 
 interface IMarketGetters {

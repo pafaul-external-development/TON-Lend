@@ -1,19 +1,19 @@
 const { convertCrystal } = require("locklift/locklift/utils");
 const { loadEssentialContracts } = require("../../../utils/contracts");
-const marketToAdd = require("../modules/market-to-add");
+const { userMarketToEnter } = require("../modules/config");
 
 async function main() {
     let contracts = await loadEssentialContracts({
         wallet: true,
-        market: true
+        user: true
     });
 
-    let addMarketPayload = await contracts.marketsAggregator.createNewMarket({...marketToAdd});
+    let payload = await contracts.userAccount.enterMarket({...userMarketToEnter});
 
     await contracts.msigWallet.transfer({
-        destination: contracts.marketsAggregator.address,
-        value: convertCrystal(10, 'nano'),
-        payload: addMarketPayload
+        destination: contracts.userAccount.address,
+        value: convertCrystal(3, 'nano'),
+        payload
     });
 }
 

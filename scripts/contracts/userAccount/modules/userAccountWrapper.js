@@ -3,32 +3,26 @@ const { ContractTemplate } = require('../../../utils/migration');
 
 class UserAccount extends ContractTemplate {
     async getOwner() {
-        return await contract.call({
+        return await this.call({
             method: 'getOwner',
-            params: {
-                _answer_id
-            },
-            keyPair: contract.keyPair
+            params: {},
+            keyPair: this.keyPair
         });
     }
 
     async getKnownMarkets() {
-        return await contract.call({
+        return await this.call({
             method: 'getKnownMarkets',
-            params: {
-                _answer_id
-            },
-            keyPair: contract.keyPair
+            params: {},
+            keyPair: this.keyPair
         });
     }
 
     async getAllMarketsInfo() {
-        return await contract.call({
+        return await this.call({
             method: 'getAllMarketsInfo',
-            params: {
-                _answer_id
-            },
-            keyPair: contract.keyPair
+            params: {},
+            keyPair: this.keyPair
         });
     }
 
@@ -38,13 +32,12 @@ class UserAccount extends ContractTemplate {
      * @param {Number} param0.marketId
      */
     async getMarketInfo({marketId}) {
-        return await contract.call({
+        return await this.call({
             method: 'getMarketInfo',
             params: {
-                _answer_id,
                 marketId
             },
-            keyPair: contract.keyPair
+            keyPair: this.keyPair
         });
     }
 
@@ -55,14 +48,13 @@ class UserAccount extends ContractTemplate {
      * @param {Number} param0.loanId
      */
     async getLoanInfo({marketId, loanId}) {
-        return await contract.call({
+        return await this.call({
             method: 'getLoanInfo',
             params: {
-                _answer_id,
                 marketId,
                 loanId
             },
-            keyPair: contract.keyPair
+            keyPair: this.keyPair
         });
     }
 
@@ -75,7 +67,7 @@ class UserAccount extends ContractTemplate {
      */
     async borrow({marketId, amountToBorrow, userTip3Wallet}) {
         return await encodeMessageBody({
-            contract,
+            contract: this,
             functionName: 'borrow',
             input: {
                 marketId,
@@ -92,7 +84,7 @@ class UserAccount extends ContractTemplate {
      */
     async enterMarket({marketId}) {
         return await encodeMessageBody({
-            contract,
+            contract: this,
             functionName: 'enterMarket',
             input: {
                 marketId
@@ -107,7 +99,7 @@ class UserAccount extends ContractTemplate {
      */
     async withdrawExtraTons() {
         return await encodeMessageBody({
-            contract,
+            contract: this,
             functionName: 'withdrawExtraTons',
             input: {}
         });

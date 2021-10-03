@@ -9,7 +9,8 @@ async function main() {
         oracle: true,
         userAM: true,
         walletC: true,
-        marketModules: true
+        marketModules: true,
+        deployer: true
     });
 
     /**
@@ -28,13 +29,14 @@ async function main() {
         _tip3WalletController: contracts.walletController.address
     }));
 
+    payloads.push(await contracts.marketsAggregator.setTip3DeployerAddress({
+        _tip3Deployer: contracts.tip3Deployer.address
+    }))
+
     let i = 1;
     for (let payload of payloads) {
         await contracts.msigWallet.transfer({
             destination: contracts.marketsAggregator.address,
-            value: convertCrystal(1, 'nano'),
-            flags: operationFlags.FEE_FROM_CONTRACT_BALANCE,
-            bounce: false,
             payload
         });
         console.log(`${i} message sent`);

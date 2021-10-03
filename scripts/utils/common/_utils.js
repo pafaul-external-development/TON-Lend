@@ -5,6 +5,13 @@ function describeTransaction(tx) {
     return description;
 }
 
+function fraction(nom, denom) {
+    return {
+        nom,
+        denom
+    }
+}
+
 function pp(obj) {
     return JSON.stringify(obj, null, '\t');
 }
@@ -16,5 +23,6 @@ const stringToBytesArray = (dataString) => {
 module.exports = {
     describeTransaction,
     stringToBytesArray,
-    pp
+    pp,
+    fraction
 }

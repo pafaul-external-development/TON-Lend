@@ -213,6 +213,21 @@ class MarketsAggregator extends ContractTemplate {
     /**
      * 
      * @param {Object} param0 
+     * @param {String} param0._tip3Deployer
+     */
+    async setTip3DeployerAddress({_tip3Deployer}) {
+        return await encodeMessageBody({
+            contract: this,
+            functionName: 'setTip3Deployer',
+            input: {
+                _tip3Deployer
+            }
+        });
+    }
+
+    /**
+     * 
+     * @param {Object} param0 
      * @param {String} param0.newOwner
      */
     async transferOwnership({newOwner}) {

@@ -238,15 +238,14 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     /**
      * @param marketId Id of market to enter
      */
-    function enterMarket(uint32 marketId) external override {
+    function enterMarket(uint32 marketId) external override onlyOwner {
+        tvm.rawReserve(msg.value, 2);
         if (!knownMarkets[marketId]) {
             knownMarkets[marketId] = true;
 
-            markets[marketId] = UserMarketInfo(
-                true,
-                marketId,
-                0
-            );
+            markets[marketId].exists = true;
+            markets[marketId]._marketId = marketId;
+            markets[marketId].suppliedTokens = 0;
         }
         address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }

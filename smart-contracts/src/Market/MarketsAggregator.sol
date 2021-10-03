@@ -198,7 +198,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
                 currentPoolBalance: initialBalance,
                 totalBorrowed: 0,
                 totalReserve: 0,
-                totalSupply: 0,
+                totalSupply: initialBalance,
 
                 index: zero,
                 reserveFactor: _reserveFactor,
@@ -466,6 +466,12 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     function setOracleAddress(address _oracle) external override onlyOwner {
         tvm.rawReserve(msg.value, 2);
         oracle = _oracle;
+        address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+    }
+
+    function setTip3Deployer(address _tip3Deployer) external override onlyOwner {
+        tvm.rawReserve(msg.value, 2);
+        tip3Deployer = _tip3Deployer;
         address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 

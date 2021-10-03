@@ -1,3 +1,4 @@
+const { pp } = require("../../../utils/common");
 const { loadEssentialContracts } = require("../../../utils/contracts");
 
 async function main() {
@@ -10,9 +11,11 @@ async function main() {
     
     console.log(`Market address: ${await contracts.userAccountManager.marketAddress()}`);
 
-    console.log(`Modules: ${JSON.stringify(await contracts.userAccountManager.modules(), null, '\t')}`);
+    console.log(`Modules: ${pp(await contracts.userAccountManager.modules())}`);
 
-    console.log(`Existing modules: ${JSON.stringify(await contracts.userAccountManager.existingModules(), null, '\t')}`);
+    console.log(`Existing modules: ${pp(await contracts.userAccountManager.existingModules())}`);
+
+    console.log(`Existing codes: ${pp(await contracts.userAccountManager.getUserAccountCode({version: 1}))}`);
 }
 
 main().then(
