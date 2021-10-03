@@ -155,20 +155,20 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
      * @param tokenRoot Address of token root to request wallet deploy
      */
     function addWallet(address tokenRoot) private pure {
-        IRootTokenContract(tokenRoot).getWalletAddress{
-            value: WCCostConstants.GET_WALLET_ADDRESS,
-            callback: this.receiveTIP3WalletAddress
-        }(
-            0,
-            address(this)
-        );
-
         IRootTokenContract(tokenRoot).deployEmptyWallet{
             value: WCCostConstants.WALLET_DEPLOY_COST
         }(
             WCCostConstants.WALLET_DEPLOY_GRAMS,
             0,
             address(this),
+            address(this)
+        );
+
+        IRootTokenContract(tokenRoot).getWalletAddress{
+            value: WCCostConstants.GET_WALLET_ADDRESS,
+            callback: this.receiveTIP3WalletAddress
+        }(
+            0,
             address(this)
         );
     }
@@ -186,6 +186,20 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
         } else {
             marketTIP3Info[marketId].virtualTokenWallet = _wallet;
         }
+
+        this.setReceiveCallback(_wallet);
+    }
+
+    function setReceiveCallback(address _wallet) external {
+        require(msg.sender == address(this));
+        tvm.accept();
+
+        ITONTokenWallet(_wallet).setReceiveCallback{
+            value: WCCostConstants.SET_RECEIVE_CALLBACK
+        }(
+            address(this),
+            true
+        );
     }
 
     function tokensReceivedCallback(
@@ -198,7 +212,7 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
         address, // original_gas_to,
         uint128, // updated_balance,
         TvmCell payload
-    ) external override onlyOwnWallet(token_root, token_wallet) {
+    ) external override onlyOwnWallet(token_root, msg.sender) {
         tvm.rawReserve(msg.value, 2);
         TvmSlice ts = payload.toSlice();
         uint8 operation = ts.decode(uint8);

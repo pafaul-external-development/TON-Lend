@@ -6,6 +6,7 @@ const { writeContractData } = require('../../../utils/migration/_manageContractD
 
 const initializeLocklift = require('../../../utils/initializeLocklift');
 const configuration = require('../../../scripts.conf');
+const { convertCrystal } = require('locklift/locklift/utils');
 
 async function main() {
     let locklift = await initializeLocklift(configuration.pathToLockliftConfig, configuration.network);
@@ -28,6 +29,16 @@ async function main() {
 
         if (walletContract.address) {
             console.log(`Multisig wallet deployed at address: ${walletContract.address}`);
+        }
+
+        if (configuration.network == 'local') {
+            await locklift.giver.giver.run({
+                method: 'sendGrams',
+                params: {
+                    dest: walletContract.address,
+                    amount: convertCrystal(1111111, 'nano')
+                }
+            });
         }
     } catch (err) {
         console.log(err);

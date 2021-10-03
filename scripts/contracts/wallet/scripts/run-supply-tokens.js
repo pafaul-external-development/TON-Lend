@@ -1,3 +1,4 @@
+const { convertCrystal, zeroAddress } = require("locklift/locklift/utils");
 const { loadEssentialContracts } = require("../../../utils/contracts");
 const { loadContractData } = require("../../../utils/migration");
 const { Tip3Wallet } = require("../modules/tip3WalletWrapper");
@@ -8,14 +9,39 @@ async function main() {
         walletC: true
     });
 
-    let realTip3 = new Tip3Wallet(await loadContractData(contracts.locklift, 'realTip3'));
-    let virtualTip3 = new Tip3Wallet(await loadContractData(contracts.locklift, 'virtualTip3'));
+    let realTip3 = new Tip3Wallet(await loadContractData(contracts.locklift, 'RealTip3'));
+    let virtualTip3 = new Tip3Wallet(await loadContractData(contracts.locklift, 'VirtualTip3'));
+
+    let supllyModuleInfo = await contracts.walletController.getMarketAddresses({
+        marketId: 0
+    });
 
     let supplyPayload = await contracts.walletController.createSupplyPayload({
         userVTokenWallet: virtualTip3.address
     });
 
     let transferPayload = await realTip3.transfer({
-        to: 
+        to: supllyModuleInfo.realTokenWallet,
+        tokens: 100e9,
+        grams: 0,
+        send_gas_to: zeroAddress,
+        notify_receiver: true,
+        payload: supplyPayload
+    });
+
+    await contracts.msigWallet.transfer({
+        destination: realTip3.address,
+        value: convertCrystal(10, 'nano'),
+        bounce: false,
+        payload: transferPayload
     });
 }
+
+main().then(
+    () => process.exit(0)
+).catch(
+    (err) => {
+        console.log(err);
+        process.exit(1);
+    }
+)
