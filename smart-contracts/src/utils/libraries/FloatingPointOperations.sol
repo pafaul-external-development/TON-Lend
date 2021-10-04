@@ -41,6 +41,45 @@ library FPO {
     function toNum(fraction a) internal pure returns(uint256) {
         return a.nom / a.denom;
     }
+
+    function simplify(fraction a) internal pure returns(fraction) {
+        // loosing 0.5% of presicion at most
+        if (a.nom / a.denom > 500) {
+            return fraction(a.nom / a.denom, 1);
+        } else {
+            // using bitshift for simultaneos division
+            // leaving up to 16 bits of information if nom & denom > 2^32
+            // leaving up to 8 bits of information if 2^32 >nom & denom > 2^16
+            uint256 bits128 = 2**128;
+            uint256 bits96 = 2**96;
+            uint256 bits64 = 2**64;
+            uint256 bits32 = 2**32;
+            uint256 bits24 = 2**24;
+            uint256 bits16 = 2**16;
+            uint256 bits8 = 2**8;
+            if ( (a.nom > bits128) && (a.denom > bits128) ) {
+                return fraction(a.nom / bits96, a.denom / bits96);
+            }
+
+            if ( (a.nom > bits96) && (a.denom > bits96) ) {
+                return fraction(a.nom / bits64, a.denom / bits64);
+            }
+
+            if ( (a.nom > bits64) && (a.denom > bits64) ) {
+                return fraction(a.nom / bits32, a.denom / bits32);
+            }
+
+            if ( (a.nom > bits32) && (a.nom > bits32) ) {
+                return fraction(a.nom / bits24, a.denom / bits24);
+            }
+
+            if ( (a.nom > bits16) && (a.denom > bits16) ) {
+                return fraction(a.nom / bits8, a.denom / bits8);
+            }
+
+            return a;
+        }
+    }
 }
 
 library UFO {
