@@ -45,6 +45,7 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG {
     }
 
     function performAction(uint32 marketId, TvmCell args) external override onlyMarket {
+        tvm.rawReserve(msg.value, 2);
         TvmSlice ts = args.toSlice();
         (address tonWallet, address userTip3Wallet, uint256 tokensToBorrow) = ts.decode(address, address, uint256);
         mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
@@ -67,6 +68,7 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG {
         mapping (uint32 => uint256) si,
         mapping (uint32 => uint256) bi
     ) external onlyMarket {
+        tvm.rawReserve(msg.value - msg.value / 4, 2);
         MarketDelta marketDelta;
         (uint256 supplySum, uint256 borrowSum) = Utilities.calculateSupplyBorrow(si, bi, marketInfo, tokenPrices);
 
@@ -81,8 +83,8 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG {
                 marketDelta.currentPoolBalance.positive = false;
 
                 IContractStateCacheRoot(marketAddress).receiveCacheDelta{
-                    value: 1 ton
-                }(tonWallet, marketDelta);
+                    value: msg.value / 4
+                }(tonWallet, marketDelta, marketId);
 
                 IUAMUserAccount(userAccountManager).writeBorrowInformation{
                     flag: MsgFlag.REMAINING_GAS

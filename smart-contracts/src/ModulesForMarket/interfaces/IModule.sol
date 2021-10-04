@@ -27,7 +27,7 @@ interface IContractStateCache {
 }
 
 interface IContractStateCacheRoot {
-    function receiveCacheDelta(address tonWallet, MarketDelta marketDelta) external;
+    function receiveCacheDelta(address tonWallet, MarketDelta marketDelta, uint32 marketId) external;
 }
 
 interface ISupplyModule {

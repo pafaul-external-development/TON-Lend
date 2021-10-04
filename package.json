@@ -41,9 +41,12 @@
         "setup:test-swap-pair": "node ./scripts/contracts/oracle/scripts/set-test-price.js",
 
         "run:oracle-add-token": "node ./scripts/contracts/oracle/scripts/oracle-add-token.js",
+        "run:oracle-update-price": "node ./scripts/contracts/oracle/scripts/run-internal-update-price.js",
         "run:market-add-market": "node ./scripts/contracts/marketAggregator/scripts/add-new-market.js",
+        "run:market-update-price": "node ./scripts/contracts/marketAggregator/scripts/run-update-price.js",
         "run:user-account-enter-market": "node ./scripts/contracts/userAccount/scripts/run-ua-enter-market.js",
         "run:wallet-controller-add-market": "node ./scripts/contracts/walletController/scripts/run-add-market.js",
+        "run:wallet-controller-remove-market": "node ./scripts/contracts/walletController/scripts/run-delete-market.js",
         "run:user-supply-tokens": "node ./scripts/contracts/wallet/scripts/run-supply-tokens.js"
     },
     "repository": {

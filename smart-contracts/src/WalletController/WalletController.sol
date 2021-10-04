@@ -11,7 +11,8 @@ import "./libraries/CostConstants.sol";
 import "./libraries/WalletControllerErrorCodes.sol";
 import "./libraries/OperationCodes.sol";
 
-import "../Market/interfaces/IMarketInterfaces.sol";
+// import "../Market/interfaces/IMarketInterfaces.sol";
+import "../Market/MarketsAggregator.sol";
 
 import "../utils/interfaces/IUpgradableContract.sol";
 import "../utils/TIP3/interfaces/ITokensReceivedCallback.sol";
@@ -141,6 +142,10 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
 
         delete wallets[marketTokenAddresses.realToken];
         delete wallets[marketTokenAddresses.virtualToken];
+        delete realTokenRoots[marketTokenAddresses.realToken];
+        delete vTokenRoots[marketTokenAddresses.virtualToken];
+        delete tokensToMarkets[marketTokenAddresses.realToken];
+        delete tokensToMarkets[marketTokenAddresses.virtualToken];
         delete marketTIP3Info[marketId];
     }
 
@@ -212,37 +217,43 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
         address, // original_gas_to,
         uint128, // updated_balance,
         TvmCell payload
-    ) external override onlyOwnWallet(token_root, msg.sender) {
+    ) external override onlyOwnWallet(token_root, msg.sender) 
+    {
         tvm.rawReserve(msg.value, 2);
         TvmSlice ts = payload.toSlice();
         uint8 operation = ts.decode(uint8);
+        TvmSlice args = ts.loadRefAsSlice();
         if (operation == OperationCodes.SUPPLY_TOKENS) {
-            (address userTip3Wallet) = ts.decode(address);
+            (address userTip3Wallet) = args.decode(address);
             TvmBuilder tb;
             tb.store(sender_address);
             tb.store(userTip3Wallet);
             tb.store(amount);
-            IMarketOperations(marketAddress).performOperationWalletController{
+            MarketAggregator(marketAddress).performOperationWalletController{
                 flag: MsgFlag.REMAINING_GAS
             }(operation, token_root, tb.toCell());
         } else if (operation == OperationCodes.WITHDRAW_TOKENS) {
-            (address userTip3Wallet) = ts.decode(address);
+            (address userTip3Wallet) = args.decode(address);
             TvmBuilder tb;
             tb.store(sender_address);
             tb.store(userTip3Wallet);
             tb.store(sender_wallet);
             tb.store(amount);
-            IMarketOperations(marketAddress).performOperationWalletController{
+            MarketAggregator(marketAddress).performOperationWalletController{
                 flag: MsgFlag.REMAINING_GAS
             }(operation, token_root, tb.toCell());
         } else if (operation == OperationCodes.REPAY_TOKENS) {
-            (uint8 loanId) = ts.decode(uint8);
+            (uint8 loanId) = args.decode(uint8);
             TvmBuilder tb;
             tb.store(sender_address);
             tb.store(loanId);
-            IMarketOperations(marketAddress).performOperationWalletController{
+            MarketAggregator(marketAddress).performOperationWalletController{
                 flag: MsgFlag.REMAINING_GAS
             }(operation, token_root, tb.toCell());
+        } else {
+            require(
+                false, 255
+            );
         }
     }
     
@@ -314,7 +325,7 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
         tb.store(OperationCodes.SUPPLY_TOKENS);
         TvmBuilder op;
         op.store(userVTokenWallet);
-        tb.store(op.toCell());
+        tb.storeRef(op.toCell());
 
         return tb.toCell();
     }
@@ -324,7 +335,7 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
         tb.store(OperationCodes.REPAY_TOKENS);
         TvmBuilder op;
         op.store(loanId);
-        tb.store(op.toCell());
+        tb.storeRef(op.toCell());
 
         return tb.toCell();
     }
@@ -334,7 +345,7 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
         tb.store(OperationCodes.WITHDRAW_TOKENS);
         TvmBuilder op;
         op.store(userTip3Wallet);
-        tb.store(op.toCell());
+        tb.storeRef(op.toCell());
 
         return tb.toCell();
     }

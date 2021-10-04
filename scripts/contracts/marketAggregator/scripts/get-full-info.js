@@ -17,6 +17,9 @@ async function main() {
 
     console.log(`All modules:`);
     console.log(await contracts.marketsAggregator.getAllModules());
+
+    console.log(`Token price info:`);
+    console.log(await contracts.marketsAggregator.getTokenPrices());
 }
 
 main().then(

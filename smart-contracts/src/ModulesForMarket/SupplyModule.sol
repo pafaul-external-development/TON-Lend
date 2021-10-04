@@ -42,12 +42,14 @@ contract SupplyModule is IModule, IContractStateCache, IContractAddressSG {
     }
 
     function updateCache(address tonWallet, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
+        tvm.rawReserve(msg.value, 2);
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;
         tonWallet.transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     function performAction(uint32 marketId, TvmCell args) external override onlyMarket {
+        tvm.rawReserve(msg.value - msg.value / 4, 2);
         TvmSlice ts = args.toSlice();
         (address tonWallet, address userTip3Wallet, uint128 tokenAmount) = ts.decode(address, address, uint128);
         uint256 tokensToSupply = SupplyTokensLib.calculateSupply(tokenAmount, marketInfo[marketId]);
@@ -60,7 +62,7 @@ contract SupplyModule is IModule, IContractStateCache, IContractAddressSG {
 
         IContractStateCacheRoot(marketAddress).receiveCacheDelta{
             value: msg.value/4
-        }(tonWallet, marketDelta);
+        }(tonWallet, marketDelta, marketId);
 
         IUAMUserAccount(userAccountManager).writeSupplyInfo{
             flag: MsgFlag.REMAINING_GAS
@@ -69,7 +71,6 @@ contract SupplyModule is IModule, IContractStateCache, IContractAddressSG {
 
     modifier onlyMarket() {
         require(msg.sender == marketAddress);
-        tvm.rawReserve(msg.value, 2);
         _;
     }
 

@@ -70,9 +70,9 @@ contract ContractController is IContractControllerCodeManager, IUpgradableContra
         deployedContractsStorage.store(deployedContracts);
         knownContractsStorage.store(knownContracts);
 
-        mappingBuilder.store(contractCodesStorage.toCell());
-        mappingBuilder.store(deployedContractsStorage.toCell());
-        mappingBuilder.store(knownContractsStorage.toCell());
+        mappingBuilder.storeRef(contractCodesStorage.toCell());
+        mappingBuilder.storeRef(deployedContractsStorage.toCell());
+        mappingBuilder.storeRef(knownContractsStorage.toCell());
 
         dataBuilder.store(mappingBuilder);
 

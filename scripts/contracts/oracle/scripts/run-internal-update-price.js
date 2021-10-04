@@ -1,23 +1,25 @@
+const { convertCrystal } = require("locklift/locklift/utils");
 const { loadEssentialContracts } = require("../../../utils/contracts");
-const tokenToAdd = require("../modules/tokenToAdd");
 
 async function main() {
     let contracts = await loadEssentialContracts({
-        oracle: true, 
         wallet: true,
-        testSP: true,
+        oracle: true,
         market: true
     });
 
-    tokenToAdd.swapPairAddress = contracts.testSwapPair.address;
-    tokenToAdd.tokenRoot = (await contracts.marketsAggregator.getMarketInformation({
+    let marketInfo = await contracts.marketsAggregator.getMarketInformation({
         marketId: 0
-    })).token;
-    let addPayload = await contracts.oracle.addToken({...tokenToAdd});
+    });
+
+    let internalUpdatePayload = await contracts.oracle.internalUpdatePrice({
+        tokenRoot: marketInfo.token
+    });
 
     await contracts.msigWallet.transfer({
         destination: contracts.oracle.address,
-        payload: addPayload
+        value: convertCrystal(2, 'nano'),
+        payload: internalUpdatePayload
     });
 }
 

@@ -4,14 +4,18 @@ const tokenToAdd = require("../modules/tokenToAdd");
 
 async function main() {
     let contracts = await loadEssentialContracts({
-        oracle: true
+        oracle: true,
+        market: true
     });
 
     console.log(`Contract version: ${pp(await contracts.oracle.getVersion())}`);
 
     console.log(`Contract details: ${pp(await contracts.oracle.getDetails())}`);
 
-    console.log(`Token info: ${pp(await contracts.oracle.getTokenPrice({tokenRoot: tokenToAdd.tokenRoot, payload: ''}))}`);
+    console.log(`Token info: ${pp(await contracts.oracle.getTokenPrice({
+        tokenRoot: (await contracts.marketsAggregator.getMarketInformation({marketId: 0})).token, 
+        payload: ''
+    }))}`);
 
     console.log(`All token info: ${pp(await contracts.oracle.getAllTokenPrices({payload: ''}))}`);
 }

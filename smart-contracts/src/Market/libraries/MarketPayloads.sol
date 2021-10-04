@@ -30,7 +30,7 @@ library MarketToUserPayloads {
         op.store(marketId);
         op.store(tokensToBorrow);
         op.store(userTargetWallet);
-        tb.store(op.toCell());
+        tb.storeRef(op.toCell());
         return tb.toCell();
     }
 

@@ -63,7 +63,7 @@ class WalletController extends ContractTemplate {
     async removeMarket({marketId}) {
         return await encodeMessageBody({
             contract: this,
-            functionNamen: 'removeMarket',
+            functionName: 'removeMarket',
             input: {
                 marketId
             }

@@ -42,12 +42,14 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG {
     }
 
     function updateCache(address tonWallet, mapping(uint32 => MarketInfo) _marketInfo, mapping(address => fraction) _tokenPrices) external override onlyMarket {
+        tvm.rawReserve(msg.value , 2);
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;
         tonWallet.transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     function performAction(uint32 marketId, TvmCell args) external override onlyMarket {
+        tvm.rawReserve(msg.value, 2);
         TvmSlice ts = args.toSlice();
         (address tonWallet, address userTip3Wallet, uint256 tokensReceived, uint8 loanId) = ts.decode(address, address, uint256, uint8);
         mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
@@ -71,6 +73,7 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG {
         uint8 loanId,
         BorrowInfo borrowInfo
     ) external onlyUserAccountManager {
+        tvm.rawReserve(msg.value - msg.value / 4, 2);
         MarketDelta marketDelta;
 
         fraction newRepayInfo = marketInfo[marketId].index.fNumMul(borrowInfo.toRepay);
@@ -95,8 +98,8 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG {
         marketDelta.currentPoolBalance.positive = true;
 
         IContractStateCacheRoot(marketAddress).receiveCacheDelta{
-            value: 1 ton
-        }(tonWallet, marketDelta);
+            value: msg.value / 4
+        }(tonWallet, marketDelta, marketId);
 
         IUAMUserAccount(userAccountManager).writeRepayInformation{
             flag: MsgFlag.REMAINING_GAS

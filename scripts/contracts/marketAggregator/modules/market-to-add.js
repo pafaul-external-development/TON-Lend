@@ -2,7 +2,7 @@ const { fraction } = require("../../../utils/common");
 
 const marketToAdd = {
     marketId: 0,
-    realToken: '0:f8790386f28a78b95e175934d540c03ce9f6fa206e4e6357c1baf1ea003e6091',
+    realToken: '0:6c562ae2ade420ae672c007a8d66565a066f7320ac746519420a8e5d5ec6897b',
     initialBalance: 100e9,
     _reserveFactor: fraction(1, 100),
     _kink: fraction(20, 100),

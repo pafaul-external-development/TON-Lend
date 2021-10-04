@@ -70,6 +70,7 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG {
         mapping(uint32 => uint256) si,
         mapping(uint32 => uint256) bi
     ) external onlyUserAccountManager {
+        tvm.rawReserve(msg.value - msg.value / 4, 2);
         MarketDelta marketDelta;
 
         MarketInfo mi = marketInfo[marketId];
@@ -97,8 +98,8 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG {
                 marketDelta.totalSupply.positive = false;
 
                 IContractStateCacheRoot(marketAddress).receiveCacheDelta{
-                    value: 1 ton
-                }(tonWallet, marketDelta);
+                    value: msg.value / 4
+                }(tonWallet, marketDelta, marketId);
 
                 IUAMUserAccount(userAccountManager).writeWithdrawInfo{
                     flag: MsgFlag.REMAINING_GAS

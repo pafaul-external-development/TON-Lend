@@ -5,7 +5,7 @@ pragma AbiHeader pubkey;
 
 import './interfaces/IMarketInterfaces.sol';
 
-contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters, IMarketTIP3Root, IMarketOwnerFunctions, IMarketGetters, IMarketOperations {
+contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters, IMarketTIP3Root, IMarketOwnerFunctions, IMarketGetters, IMarketOperations, IContractStateCacheRoot {
     using UFO for uint256;
     using FPO for fraction;
 
@@ -87,7 +87,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     /*********************************************************************************************************/
     // Cache update functions
 
-    function receiveMarketDelta(address sendGasTo, MarketDelta marketDelta, uint32 marketId) external onlyModule {
+    function receiveCacheDelta(address sendGasTo, MarketDelta marketDelta, uint32 marketId) external override onlyModule {
         tvm.rawReserve(msg.value, 2);
         if (
             marketDelta.currentPoolBalance.positive &&
@@ -285,6 +285,11 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         tvm.accept();
         TvmSlice s = payload.toSlice();
         uint32 marketId = s.decode(uint32);
+
+        this.forceUpdatePrice{
+            value: 1 ton
+        }(markets[marketId].token);
+
         markets[marketId].virtualToken = tip3RootAddress;
         virtualTokenRoots[tip3RootAddress] = true;
         emit MarketCreated(marketId, markets[marketId]);
