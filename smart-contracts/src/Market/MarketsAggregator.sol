@@ -15,10 +15,10 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     // owner info
     address owner;
 
-    address userAccountManager;
-    address walletController;
-    address oracle;
-    address tip3Deployer;
+    address public userAccountManager;
+    address public walletController;
+    address public oracle;
+    address public tip3Deployer;
     mapping(uint32 => bool) createdMarkets;
     mapping(address => uint32) tokensToMarkets;
     mapping(uint32 => MarketInfo) markets;
@@ -26,7 +26,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     mapping(address => bool) realTokenRoots;
     mapping(address => bool) virtualTokenRoots;
 
-    mapping(uint8 => address) modules;
+    mapping(uint8 => address) public modules;
     uint128 moduleAmount;
     mapping(address => bool) isModule;
 
@@ -135,6 +135,16 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         }
     }
 
+    function updateModulesCache() external onlyOwner {
+        tvm.accept();
+        uint128 valueToTransfer = msg.value / (moduleAmount + 1);
+        for ((, address module) : modules) {
+            IContractStateCache(module).updateCache{
+                value: valueToTransfer
+            }(owner, markets, tokenPrices);
+        }
+    }
+
     /*********************************************************************************************************/
     // Getters
     function getServiceContractAddresses() external override view responsible returns(address _userAccountManager, address _tip3WalletController, address _oracle) {
@@ -190,17 +200,17 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         if (!createdMarkets[marketId]) {
             createdMarkets[marketId] = true;
             
-            fraction zero = fraction(0, 1);
+            fraction one = fraction({nom: 1, denom: 1});
 
             markets[marketId] = MarketInfo({
                 token: realToken,
                 virtualToken: address.makeAddrStd(0, 0),
                 currentPoolBalance: initialBalance,
-                totalBorrowed: 0,
-                totalReserve: 0,
+                totalBorrowed: 1,
+                totalReserve: initialBalance,
                 totalSupply: initialBalance,
 
-                index: zero,
+                index: one,
                 reserveFactor: _reserveFactor,
                 kink: _kink,
                 collateral: _collateral,
@@ -306,6 +316,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     function addModule(uint8 operationId, address module) external onlyOwner {
         tvm.rawReserve(msg.value, 2);
         modules[operationId] = module;
+        isModule[module] = true;
         IContractStateCache(module).updateCache{
             flag: MsgFlag.REMAINING_GAS
         }(owner, markets, tokenPrices);

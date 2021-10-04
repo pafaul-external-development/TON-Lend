@@ -88,7 +88,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         TvmCell,
         uint32
     ) private {
-
+        tvm.accept();
     }
 
     /*********************************************************************************************************/

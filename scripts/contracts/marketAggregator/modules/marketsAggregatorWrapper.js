@@ -9,6 +9,14 @@ const { ContractTemplate } = require('../../../utils/migration');
  */
 
 class MarketsAggregator extends ContractTemplate {
+    async updateModulesCache() {
+        return await encodeMessageBody({
+            contract: this,
+            functionName: 'updateModulesCache',
+            input: {}
+        });
+    }
+
     /**
      * 
      * @param {Object} param0 
@@ -31,6 +39,14 @@ class MarketsAggregator extends ContractTemplate {
     async getServiceContractAddresses() {
         return await this.call({
             method: 'getServiceContractAddresses',
+            params: {},
+            keyPair: this.keyPair
+        });
+    }
+
+    async tip3Deployer() {
+        return await this.call({
+            method: 'tip3Deployer',
             params: {},
             keyPair: this.keyPair
         });

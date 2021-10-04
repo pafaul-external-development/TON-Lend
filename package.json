@@ -15,6 +15,8 @@
 
         "build-sc": "node scripts/utils/build-sc.js",
 
+        "full-setup": "npm-run-all deploy:* && npm-run-all setup:* && npm run setup:market && npm run run:oracle-add-token && npm run run:oracle-update-price && npm run run:market-add-market &&  npm run deploy:user-account &&  npm run run:market-update-cache && npm run run:user-account-enter-market && npm run run:wallet-controller-add-market",
+
         "deploy:wallet": "node scripts/contracts/wallet/scripts/deploy-multisig-wallet.js",
         "deploy:market": "node scripts/contracts/marketAggregator/scripts/deploy-market.js",
         "deploy:market-modules": "node scripts/contracts/marketModules/scripts/deploy-modules.js",
@@ -25,29 +27,31 @@
         "deploy:wallet-controller": "node scripts/contracts/walletController/scripts/deploy-wallet-controller.js",
         "deploy:test-swap-pair": "node scripts/contracts/oracle/scripts/deploy-test-swap-pair.js",
 
-        "get:market-full-info": "node scripts/contracts/marketAggregator/scripts/get-full-info.js",
+        "get:market": "node scripts/contracts/marketAggregator/scripts/get-full-info.js",
         "get:modules-info": "node scripts/contracts/marketModules/scripts/get-module-info.js",
         "get:user-account-manager": "node scripts/contracts/userAccount/scripts/get-uam-info.js",
         "get:user-account": "node scripts/contracts/userAccount/scripts/get-ua-info.js",
         "get:wallet-controller": "node scripts/contracts/walletController/scripts/get-info.js",
         "get:oracle": "node scripts/contracts/oracle/scripts/get-oracle-info.js",
 
+        "setup:test-swap-pair": "node ./scripts/contracts/oracle/scripts/set-test-price.js",
+        "setup:tip-3-deployer": "node ./scripts/contracts/tip3Deployer/scripts/setup-TIP-3-deployer.js",
         "setup:market": "node ./scripts/contracts/marketAggregator/scripts/setup-contract-addresses.js",
         "setup:modules": "node ./scripts/contracts/marketModules/scripts/setup-modules.js",
-        "setup:tip-3-deployer": "node ./scripts/contracts/tip3Deployer/scripts/setup-TIP-3-deployer.js",
         "setup:user-account-manager-addresses": "node ./scripts/contracts/userAccount/scripts/setup-contract-addresses.js",
         "setup:user-account-manager-code": "node ./scripts/contracts/userAccount/scripts/setup-upload-ua-code.js",
         "setup:wallet-controller": "node ./scripts/contracts/walletController/scripts/setup-contract-addresses.js",
-        "setup:test-swap-pair": "node ./scripts/contracts/oracle/scripts/set-test-price.js",
 
         "run:oracle-add-token": "node ./scripts/contracts/oracle/scripts/oracle-add-token.js",
         "run:oracle-update-price": "node ./scripts/contracts/oracle/scripts/run-internal-update-price.js",
         "run:market-add-market": "node ./scripts/contracts/marketAggregator/scripts/add-new-market.js",
         "run:market-update-price": "node ./scripts/contracts/marketAggregator/scripts/run-update-price.js",
-        "run:user-account-enter-market": "node ./scripts/contracts/userAccount/scripts/run-ua-enter-market.js",
+        "run:market-update-cache": "node ./scripts/contracts/marketAggregator/scripts/run-update-module-cache.js", 
+        "run:user-enter-market": "node ./scripts/contracts/userAccount/scripts/run-ua-enter-market.js",
         "run:wallet-controller-add-market": "node ./scripts/contracts/walletController/scripts/run-add-market.js",
         "run:wallet-controller-remove-market": "node ./scripts/contracts/walletController/scripts/run-delete-market.js",
-        "run:user-supply-tokens": "node ./scripts/contracts/wallet/scripts/run-supply-tokens.js"
+        "run:user-supply-tokens": "node ./scripts/contracts/wallet/scripts/run-supply-tokens.js",
+        "run:user-update": "node ./scripts/contracts/userAccount/scripts/run-upgrade-user-account.js"
     },
     "repository": {
         "type": "git",

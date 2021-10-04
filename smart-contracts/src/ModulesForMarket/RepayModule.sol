@@ -73,7 +73,7 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG {
         uint8 loanId,
         BorrowInfo borrowInfo
     ) external onlyUserAccountManager {
-        tvm.rawReserve(msg.value - msg.value / 4, 2);
+        tvm.rawReserve(msg.value - msg.value / 4, 0);
         MarketDelta marketDelta;
 
         fraction newRepayInfo = marketInfo[marketId].index.fNumMul(borrowInfo.toRepay);

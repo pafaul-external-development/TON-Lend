@@ -6,6 +6,9 @@ async function main() {
     console.log(`Service contract addresses:`);
     console.log(await contracts.marketsAggregator.getServiceContractAddresses());
 
+    console.log(`TIP3 deployer address`);
+    console.log(await contracts.marketsAggregator.tip3Deployer());
+
     console.log(`Known token prices:`);
     console.log(await contracts.marketsAggregator.getTokenPrices());
 

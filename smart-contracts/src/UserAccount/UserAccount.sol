@@ -89,6 +89,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     // Supply functions
 
     function writeSupplyInfo(address userTip3Wallet, uint32 marketId, uint256 tokensToSupply, fraction index) external override onlyUserAccountManager {
+        tvm.rawReserve(msg.value, 2);
         markets[marketId].suppliedTokens += tokensToSupply;
         _updateMarketInfo(marketId, index);
         IUAMUserAccount(userAccountManager).requestVTokenMint{
@@ -100,6 +101,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     // Withdraw functions
 
     function requestWithdrawInfo(address userTip3Wallet, address originalTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, mapping(uint32 => fraction) updatedIndexes) external override onlyUserAccountManager {
+        tvm.rawReserve(msg.value, 2);
         for ((uint32 marketId_, fraction index): updatedIndexes) {
             _updateMarketInfo(marketId_, index);
         }
@@ -115,6 +117,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     }
 
     function writeWithdrawInfo(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, uint256 tokensToSend) external override onlyUserAccountManager{
+        tvm.rawReserve(msg.value, 2);
         markets[marketId].suppliedTokens -= tokensToWithdraw;
 
         IUAMUserAccount(userAccountManager).requestTokenPayout{
@@ -146,6 +149,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     }
 
     function updateIndexes(uint32 marketId, mapping(uint32 => fraction) newIndexes, address userTip3Wallet, uint256 toBorrow) external override onlyUserAccountManager {
+        tvm.rawReserve(msg.value, 2);
         for ((uint32 marketId_, fraction index): newIndexes) {
             _updateMarketInfo(marketId_, index);
         }
@@ -161,6 +165,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     }
 
     function writeBorrowInformation(uint32 marketId, uint256 toBorrow, address userTip3Wallet, fraction marketIndex) external override onlyUserAccountManager {
+        tvm.rawReserve(msg.value, 2);
         if (toBorrow > 0) {
             uint8 currentBorrowId = markets[marketId].borrowInfo.getMaxItem();
             BorrowInfo bi = BorrowInfo(toBorrow, marketIndex);
@@ -182,6 +187,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     // repay functions
 
     function sendRepayInfo(address userTip3Wallet, uint32 marketId, uint8 loanId, uint256 tokensForRepay, mapping(uint32 => fraction) updatedIndexes) external override onlyUserAccountManager {
+        tvm.rawReserve(msg.value, 2);
         for ((uint32 marketId_, fraction index): updatedIndexes) {
             _updateMarketInfo(marketId_, index);
         }
@@ -192,6 +198,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     }
 
     function writeRepayInformation(address userTip3Wallet, uint32 marketId, uint8 loanId, uint256 tokensToReturn, BorrowInfo bi) external override onlyUserAccountManager {
+        tvm.rawReserve(msg.value, 2);
         if (bi.toRepay == 0) {
             markets[marketId].borrowInfo.removeItemFrom(loanId);
         } else {
@@ -211,11 +218,13 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     // internal functions
     function _updateMarketInfo(uint32 marketId, fraction index) internal {
         fraction tmpf;
-        for ((, BorrowInfo bi): markets[marketId].borrowInfo) {
-            tmpf = index.fNumMul(bi.toRepay);
-            tmpf = tmpf.fDiv(bi.index);
-            bi.toRepay = tmpf.toNum();
-            bi.index = index;
+        if (markets[marketId].borrowInfo.getMaxItem() != 0) {
+            for ((, BorrowInfo bi): markets[marketId].borrowInfo) {
+                tmpf = index.fNumMul(bi.toRepay);
+                tmpf = tmpf.fDiv(bi.index);
+                bi.toRepay = tmpf.toNum();
+                bi.index = index;
+            }
         }
     }
 
@@ -266,7 +275,6 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
 
     modifier onlyUserAccountManager() {
         require(msg.sender == userAccountManager);
-        tvm.rawReserve(msg.value, 2);
         _;
     }
 

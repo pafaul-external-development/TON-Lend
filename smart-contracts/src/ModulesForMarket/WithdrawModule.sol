@@ -70,7 +70,7 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG {
         mapping(uint32 => uint256) si,
         mapping(uint32 => uint256) bi
     ) external onlyUserAccountManager {
-        tvm.rawReserve(msg.value - msg.value / 4, 2);
+        tvm.rawReserve(msg.value - msg.value / 4, 0);
         MarketDelta marketDelta;
 
         MarketInfo mi = marketInfo[marketId];

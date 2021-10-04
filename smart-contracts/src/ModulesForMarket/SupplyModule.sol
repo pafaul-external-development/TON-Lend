@@ -49,7 +49,7 @@ contract SupplyModule is IModule, IContractStateCache, IContractAddressSG {
     }
 
     function performAction(uint32 marketId, TvmCell args) external override onlyMarket {
-        tvm.rawReserve(msg.value - msg.value / 4, 2);
+        tvm.rawReserve(msg.value - msg.value / 4, 0);
         TvmSlice ts = args.toSlice();
         (address tonWallet, address userTip3Wallet, uint128 tokenAmount) = ts.decode(address, address, uint128);
         uint256 tokensToSupply = SupplyTokensLib.calculateSupply(tokenAmount, marketInfo[marketId]);

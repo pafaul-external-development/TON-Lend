@@ -11,6 +11,8 @@ async function main() {
     console.log(`Known markets: ${pp(await contracts.userAccount.getKnownMarkets())}`);
 
     console.log(`Market info: ${pp(await contracts.userAccount.getAllMarketsInfo())}`);
+
+    console.log(`UAM: ${await contracts.userAccount.userAccountManager()}`);
 }
 
 main().then(

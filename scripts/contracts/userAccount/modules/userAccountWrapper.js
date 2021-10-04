@@ -104,6 +104,14 @@ class UserAccount extends ContractTemplate {
             input: {}
         });
     }
+
+    async userAccountManager() {
+        return await this.call({
+            method: 'userAccountManager',
+            params: {},
+            keyPair: this.keyPair
+        });
+    }
 }
 
 module.exports = {

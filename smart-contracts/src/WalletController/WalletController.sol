@@ -325,7 +325,7 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
         tb.store(OperationCodes.SUPPLY_TOKENS);
         TvmBuilder op;
         op.store(userVTokenWallet);
-        tb.storeRef(op.toCell());
+        tb.store(op.toCell());
 
         return tb.toCell();
     }
@@ -335,7 +335,7 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
         tb.store(OperationCodes.REPAY_TOKENS);
         TvmBuilder op;
         op.store(loanId);
-        tb.storeRef(op.toCell());
+        tb.store(op.toCell());
 
         return tb.toCell();
     }
@@ -345,7 +345,7 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
         tb.store(OperationCodes.WITHDRAW_TOKENS);
         TvmBuilder op;
         op.store(userTip3Wallet);
-        tb.storeRef(op.toCell());
+        tb.store(op.toCell());
 
         return tb.toCell();
     }

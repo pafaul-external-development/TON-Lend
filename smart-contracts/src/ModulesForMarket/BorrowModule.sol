@@ -68,7 +68,7 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG {
         mapping (uint32 => uint256) si,
         mapping (uint32 => uint256) bi
     ) external onlyMarket {
-        tvm.rawReserve(msg.value - msg.value / 4, 2);
+        tvm.rawReserve(msg.value - msg.value / 4, 0);
         MarketDelta marketDelta;
         (uint256 supplySum, uint256 borrowSum) = Utilities.calculateSupplyBorrow(si, bi, marketInfo, tokenPrices);
 

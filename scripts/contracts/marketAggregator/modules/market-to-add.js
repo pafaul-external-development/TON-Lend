@@ -1,8 +1,10 @@
 const { fraction } = require("../../../utils/common");
 
+// 1000000000
+
 const marketToAdd = {
     marketId: 0,
-    realToken: '0:6c562ae2ade420ae672c007a8d66565a066f7320ac746519420a8e5d5ec6897b',
+    realToken: '0:6713c872168b18f18fbceb6e47857010cc829f19d06ade1c1cb1a2c04f5dce0f',
     initialBalance: 100e9,
     _reserveFactor: fraction(1, 100),
     _kink: fraction(20, 100),
