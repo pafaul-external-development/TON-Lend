@@ -10,7 +10,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     using FPO for fraction;
 
     // Information for update
-    uint32 contractCodeVersion;
+    uint32 public contractCodeVersion;
     
     // owner info
     address owner;

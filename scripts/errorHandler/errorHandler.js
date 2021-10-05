@@ -11,6 +11,14 @@ function tryToExtractAddress(err) {
             return err.data.account_address;
         }
     }
+
+    if (
+        err?.code == 507
+    ) {
+        if (err.data.local_error.data.exit_code == 51) {
+            return err.data.local_error.data.account_address;
+        }
+    }
     return '';
 }
 

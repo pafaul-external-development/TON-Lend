@@ -1,0 +1,205 @@
+{
+	"ABI version": 2,
+	"header": ["pubkey", "time", "expire"],
+	"functions": [
+		{
+			"name": "constructor",
+			"inputs": [
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "getKnownMarkets",
+			"inputs": [
+				{"name":"_answer_id","type":"uint32"}
+			],
+			"outputs": [
+				{"name":"value0","type":"map(uint32,bool)"}
+			]
+		},
+		{
+			"name": "getAllMarketsInfo",
+			"inputs": [
+				{"name":"_answer_id","type":"uint32"}
+			],
+			"outputs": [
+				{"components":[{"name":"exists","type":"bool"},{"name":"_marketId","type":"uint32"},{"name":"suppliedTokens","type":"uint256"},{"components":[{"name":"toRepay","type":"uint256"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"index","type":"tuple"}],"name":"borrowInfo","type":"map(uint8,tuple)"}],"name":"value0","type":"map(uint32,tuple)"}
+			]
+		},
+		{
+			"name": "getMarketInfo",
+			"inputs": [
+				{"name":"_answer_id","type":"uint32"},
+				{"name":"marketId","type":"uint32"}
+			],
+			"outputs": [
+				{"components":[{"name":"exists","type":"bool"},{"name":"_marketId","type":"uint32"},{"name":"suppliedTokens","type":"uint256"},{"components":[{"name":"toRepay","type":"uint256"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"index","type":"tuple"}],"name":"borrowInfo","type":"map(uint8,tuple)"}],"name":"value0","type":"tuple"}
+			]
+		},
+		{
+			"name": "getLoanInfo",
+			"inputs": [
+				{"name":"_answer_id","type":"uint32"},
+				{"name":"marketId","type":"uint32"},
+				{"name":"loanId","type":"uint8"}
+			],
+			"outputs": [
+				{"components":[{"name":"toRepay","type":"uint256"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"index","type":"tuple"}],"name":"value0","type":"tuple"}
+			]
+		},
+		{
+			"name": "upgradeContractCode",
+			"inputs": [
+				{"name":"code","type":"cell"},
+				{"name":"updateParams","type":"cell"},
+				{"name":"codeVersion","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "getOwner",
+			"inputs": [
+				{"name":"_answer_id","type":"uint32"}
+			],
+			"outputs": [
+				{"name":"value0","type":"address"}
+			]
+		},
+		{
+			"name": "writeSupplyInfo",
+			"inputs": [
+				{"name":"userTip3Wallet","type":"address"},
+				{"name":"marketId","type":"uint32"},
+				{"name":"tokensToSupply","type":"uint256"},
+				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"index","type":"tuple"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "requestWithdrawInfo",
+			"inputs": [
+				{"name":"userTip3Wallet","type":"address"},
+				{"name":"originalTip3Wallet","type":"address"},
+				{"name":"marketId","type":"uint32"},
+				{"name":"tokensToWithdraw","type":"uint256"},
+				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"updatedIndexes","type":"map(uint32,tuple)"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "writeWithdrawInfo",
+			"inputs": [
+				{"name":"userTip3Wallet","type":"address"},
+				{"name":"marketId","type":"uint32"},
+				{"name":"tokensToWithdraw","type":"uint256"},
+				{"name":"tokensToSend","type":"uint256"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "borrow",
+			"inputs": [
+				{"name":"marketId","type":"uint32"},
+				{"name":"amountToBorrow","type":"uint256"},
+				{"name":"userTip3Wallet","type":"address"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "updateIndexes",
+			"inputs": [
+				{"name":"marketId","type":"uint32"},
+				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"newIndexes","type":"map(uint32,tuple)"},
+				{"name":"userTip3Wallet","type":"address"},
+				{"name":"toBorrow","type":"uint256"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "writeBorrowInformation",
+			"inputs": [
+				{"name":"marketId","type":"uint32"},
+				{"name":"toBorrow","type":"uint256"},
+				{"name":"userTip3Wallet","type":"address"},
+				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"marketIndex","type":"tuple"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "sendRepayInfo",
+			"inputs": [
+				{"name":"userTip3Wallet","type":"address"},
+				{"name":"marketId","type":"uint32"},
+				{"name":"loanId","type":"uint8"},
+				{"name":"tokensForRepay","type":"uint256"},
+				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"updatedIndexes","type":"map(uint32,tuple)"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "writeRepayInformation",
+			"inputs": [
+				{"name":"userTip3Wallet","type":"address"},
+				{"name":"marketId","type":"uint32"},
+				{"name":"loanId","type":"uint8"},
+				{"name":"tokensToReturn","type":"uint256"},
+				{"components":[{"name":"toRepay","type":"uint256"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"index","type":"tuple"}],"name":"bi","type":"tuple"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "enterMarket",
+			"inputs": [
+				{"name":"marketId","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "withdrawExtraTons",
+			"inputs": [
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "borrowLock",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"borrowLock","type":"bool"}
+			]
+		},
+		{
+			"name": "userAccountManager",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"userAccountManager","type":"address"}
+			]
+		},
+		{
+			"name": "contractCodeVersion",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"contractCodeVersion","type":"uint32"}
+			]
+		}
+	],
+	"data": [
+		{"key":1,"name":"owner","type":"address"}
+	],
+	"events": [
+	]
+}

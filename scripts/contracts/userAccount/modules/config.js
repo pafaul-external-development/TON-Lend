@@ -1,5 +1,5 @@
 const userCodeToUpload = {
-    version: 2,
+    version: 0,
     code: ''
 }
 

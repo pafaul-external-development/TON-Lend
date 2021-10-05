@@ -50,7 +50,7 @@ async function main() {
     }
 
     if (walletContract.address) {
-        await writeContractData(walletContract, 'MsigWallet.json');
+        await writeContractData(walletContract, 'MsigWallet');
     }
 }
 

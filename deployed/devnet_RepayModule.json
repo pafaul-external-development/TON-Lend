@@ -1,0 +1,9 @@
+{
+	"name": "RepayModule",
+	"address": "0:b39fcd7bf6d033339b7348342537e8c5840f381b923fcd80ecae19f5f18ddc84",
+	"keyPair": {
+		"public": "1d0bafcaa5a39a39f7567bcd5ddaa556eaa12a4eecc87ea142bd0a991e9cf749",
+		"secret": "e682829f060325cdb06dedb59636f62f11234c0cbe53511580a388b38b4970bd"
+	},
+	"network": "devnet"
+}

@@ -1,0 +1,9 @@
+{
+	"name": "SupplyModule",
+	"address": "0:8299a81cf889b6f3dd3fb6393a0f5e36cfbfa2b6f23f4cb3f6a417955ac84dc8",
+	"keyPair": {
+		"public": "1d0bafcaa5a39a39f7567bcd5ddaa556eaa12a4eecc87ea142bd0a991e9cf749",
+		"secret": "e682829f060325cdb06dedb59636f62f11234c0cbe53511580a388b38b4970bd"
+	},
+	"network": "devnet"
+}
