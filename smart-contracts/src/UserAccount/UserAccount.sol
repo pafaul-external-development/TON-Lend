@@ -14,7 +14,6 @@ import "../utils/libraries/MsgFlag.sol";
 contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUserAccountGetters {
     using UFO for uint256;
     using FPO for fraction;
-    using ManageMapping for mapping(uint8 => BorrowInfo);
 
     bool public borrowLock;
 
@@ -88,13 +87,10 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     /*********************************************************************************************************/
     // Supply functions
 
-    function writeSupplyInfo(address userTip3Wallet, uint32 marketId, uint256 tokensToSupply, fraction index) external override onlyUserAccountManager {
+    function writeSupplyInfo(uint32 marketId, uint256 tokensToSupply, fraction index) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
         markets[marketId].suppliedTokens += tokensToSupply;
         _updateMarketInfo(marketId, index);
-        IUAMUserAccount(userAccountManager).requestVTokenMint{
-            flag: MsgFlag.REMAINING_GAS
-        }(owner, userTip3Wallet, marketId, tokensToSupply);
     }
 
     /*********************************************************************************************************/
@@ -132,8 +128,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         tvm.rawReserve(msg.value, 2);
         if (
             (!borrowLock) &&
-            (markets[marketId].exists) &&
-            (markets[marketId].borrowInfo.getMaxItem() < UserAccountConstants.MAX_BORROWS_PER_MARKET)
+            (markets[marketId].exists)
         ) {
             borrowLock = true;
             TvmBuilder tb;
@@ -167,9 +162,8 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     function writeBorrowInformation(uint32 marketId, uint256 toBorrow, address userTip3Wallet, fraction marketIndex) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
         if (toBorrow > 0) {
-            uint8 currentBorrowId = markets[marketId].borrowInfo.getMaxItem();
-            BorrowInfo bi = BorrowInfo(toBorrow, marketIndex);
-            markets[marketId].borrowInfo[currentBorrowId] = bi;
+            _updateMarketInfo(marketId, marketIndex);
+            markets[marketId].BorrowInfo.borrowedTokens += toBorrow;
         }
 
         borrowLock = false;
@@ -218,27 +212,19 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     // internal functions
     function _updateMarketInfo(uint32 marketId, fraction index) internal {
         fraction tmpf;
-        if (markets[marketId].borrowInfo.getMaxItem() != 0) {
-            for ((, BorrowInfo bi): markets[marketId].borrowInfo) {
-                tmpf = index.fNumMul(bi.toRepay);
-                tmpf = tmpf.fDiv(bi.index);
-                bi.toRepay = tmpf.toNum();
-                bi.index = index;
-            }
+        BorrowInfo bi = markets[marketId].borrowInfo;
+        if (markets[marketId].borrowInfo.borrowedTokens != 0) {
+            tmpf = bi.borrowedTokens.numFMul(index);
+            tmpf = tmpf.fDiv(bi.index);
         }
+        markets[marketId].borrowInfo = BorrowInfo(tmpf.toNum(), index);
     }
 
-    function _calculateBorrowSupplyInfo() internal view returns(mapping(uint32 => uint256), mapping(uint32 => uint256)) {
-        mapping(uint32 => uint256) borrowInfo;
-        mapping(uint32 => uint256) supplyInfo;
+    function _calculateBorrowSupplyInfo() internal view returns(mapping(uint32 => uint256) borrowInfo, mapping(uint32 => uint256) supplyInfo) {
         for ((uint32 marketId, UserMarketInfo umi) : markets) {
             supplyInfo[marketId] = umi.suppliedTokens;
-            for ((uint8 borrowId, BorrowInfo bi): umi.borrowInfo) {
-                borrowInfo[borrowId] += bi.toRepay;
-            }
+            borrowInfo[marketId] = umi.borrowInfo.borrowedTokens;
         }
-
-        return (borrowInfo, supplyInfo);
     }
 
     /*********************************************************************************************************/

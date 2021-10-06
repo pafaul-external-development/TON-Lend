@@ -51,14 +51,15 @@ contract SupplyModule is IModule, IContractStateCache, IContractAddressSG {
     function performAction(uint32 marketId, TvmCell args) external override onlyMarket {
         tvm.rawReserve(msg.value - msg.value / 4, 0);
         TvmSlice ts = args.toSlice();
-        (address tonWallet, address userTip3Wallet, uint128 tokenAmount) = ts.decode(address, address, uint128);
-        uint256 tokensToSupply = SupplyTokensLib.calculateSupply(tokenAmount, marketInfo[marketId]);
+        (address tonWallet, uint128 tokenAmount) = ts.decode(address, uint128);
+
+        fraction vTokensToProvide = tokenAmount.numFDiv(marketInfo[marketId].exchangeRate);
 
         MarketDelta marketDelta;
-        marketDelta.currentPoolBalance.delta = tokenAmount;
+        marketDelta.realTokenDelta.delta = tokenAmount;
         marketDelta.currentPoolBalance.positive = true;
-        marketDelta.totalSupply.delta = tokenAmount;
-        marketDelta.totalSupply.positive = true;
+        marketDelta.vTokenBalance.delta = vTokensToProvide.toNum();
+        marketDelta.vTokenBalance.positive = true;
 
         IContractStateCacheRoot(marketAddress).receiveCacheDelta{
             value: msg.value/4
@@ -66,7 +67,7 @@ contract SupplyModule is IModule, IContractStateCache, IContractAddressSG {
 
         IUAMUserAccount(userAccountManager).writeSupplyInfo{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, userTip3Wallet, marketId, tokensToSupply, marketInfo[marketId].index);
+        }(tonWallet, marketId, vTokensToProvide.toNum(), marketInfo[marketId].index);
     }
 
     modifier onlyMarket() {

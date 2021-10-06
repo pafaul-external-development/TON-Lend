@@ -70,7 +70,6 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG {
         address userTip3Wallet,
         uint256 tokensForRepay,
         uint32 marketId,
-        uint8 loanId,
         BorrowInfo borrowInfo
     ) external onlyUserAccountManager {
         tvm.rawReserve(msg.value - msg.value / 4, 0);
@@ -103,7 +102,7 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG {
 
         IUAMUserAccount(userAccountManager).writeRepayInformation{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, userTip3Wallet, marketId, loanId, tokensToReturn, borrowInfo);
+        }(tonWallet, userTip3Wallet, marketId, tokensToReturn, borrowInfo);
     }
 
     modifier onlyOwner() {

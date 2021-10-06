@@ -70,32 +70,37 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG {
     ) external onlyMarket {
         tvm.rawReserve(msg.value - msg.value / 4, 0);
         MarketDelta marketDelta;
-        (uint256 supplySum, uint256 borrowSum) = Utilities.calculateSupplyBorrow(si, bi, marketInfo, tokenPrices);
+        if (tokensToBorrow < marketInfo[marketId].realTokenBalance) {
+            (uint256 supplySum, uint256 borrowSum) = Utilities.calculateSupplyBorrow(si, bi, marketInfo, tokenPrices);
+            if (borrowSum < supplySum) {
+                uint256 tmp_ = supplySum - borrowSum;
+                fraction tmp = tmp_.numFDiv(tokenPrices[marketInfo[marketId].token]);
+                tmp_ = tmp.toNum();
+                if (tmp_ >= tokensToBorrow) {
+                    marketDelta.totalBorrowed.delta = tokensToBorrow;
+                    marketDelta.totalBorrowed.positive = true;
+                    marketDelta.realTokenBalance.delta = tokensToBorrow;
+                    marketDelta.realTokenBalance.positive = false;
 
-        if (borrowSum < supplySum) {
-            uint256 tmp_ = supplySum - borrowSum;
-            fraction tmp = tmp_.numFDiv(tokenPrices[marketInfo[marketId].token]);
-            tmp_ = tmp.toNum();
-            if (tmp_ >= tokensToBorrow) {
-                marketDelta.totalBorrowed.delta = tokensToBorrow;
-                marketDelta.totalBorrowed.positive = true;
-                marketDelta.currentPoolBalance.delta = tokensToBorrow;
-                marketDelta.currentPoolBalance.positive = false;
+                    IContractStateCacheRoot(marketAddress).receiveCacheDelta{
+                        value: msg.value / 4
+                    }(tonWallet, marketDelta, marketId);
 
-                IContractStateCacheRoot(marketAddress).receiveCacheDelta{
-                    value: msg.value / 4
-                }(tonWallet, marketDelta, marketId);
-
-                IUAMUserAccount(userAccountManager).writeBorrowInformation{
-                    flag: MsgFlag.REMAINING_GAS
-                }(tonWallet, userTip3Wallet, tokensToBorrow, marketId, marketInfo[marketId].index);
+                    IUAMUserAccount(userAccountManager).writeBorrowInformation{
+                        flag: MsgFlag.REMAINING_GAS
+                    }(tonWallet, userTip3Wallet, tokensToBorrow, marketId, marketInfo[marketId].index);
+                } else {
+                    IUAMUserAccount(userAccountManager).writeBorrowInformation{
+                        flag: MsgFlag.REMAINING_GAS
+                    }(tonWallet, userTip3Wallet, 0, marketId, marketInfo[marketId].index);
+                }
             } else {
-                IUAMUserAccount(userAccountManager).writeBorrowInformation{
+                IUAMUserAccount(userAccountManager).markForLiquidation{
                     flag: MsgFlag.REMAINING_GAS
-                }(tonWallet, userTip3Wallet, 0, marketId, marketInfo[marketId].index);
+                }(tonWallet);
             }
         } else {
-            // TODO: notify market to mark account for liquidation
+            address(tonWallet).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
         }
     }
 

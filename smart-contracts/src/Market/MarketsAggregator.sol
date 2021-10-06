@@ -174,27 +174,15 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
 
     /*********************************************************************************************************/
     // Manage markets functions
-    /**
-     * @param marketId Id of new market that will be created
-     * @param realToken Address of real token that will be used in market
-     * @param initialBalance ????
-     * @param _reserveFactor ????
-     * @param _kink ????
-     * @param _collateral ????
-     * @param _baseRate ????
-     * @param _mul ????
-     * @param _jumpMul ????
-     */
     function createNewMarket(
         uint32 marketId, 
         address realToken, 
-        uint256 initialBalance, 
-        fraction _reserveFactor, 
-        fraction _kink, 
-        fraction _collateral, 
+        uint256 initialBalance,
         fraction _baseRate,
-        fraction _mul,
-        fraction _jumpMul
+        fraction _utilizationMultiplier,
+        fraction _reserveFactor,
+        fraction _exchangeRate,
+        fraction _collateralFactor
     ) external onlyOwner {
         tvm.rawReserve(msg.value, 2);
         if (!createdMarkets[marketId]) {
@@ -204,110 +192,49 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
 
             markets[marketId] = MarketInfo({
                 token: realToken,
-                virtualToken: address.makeAddrStd(0, 0),
-                currentPoolBalance: initialBalance,
-                totalBorrowed: 1,
-                totalReserve: initialBalance,
-                totalSupply: initialBalance,
+                realTokenBalance: initialBalance,
+                vTokenBalance: 0,
+                totalBorrowed: 0,
+                totalReserve: 0,
 
                 index: one,
-                reserveFactor: _reserveFactor,
-                kink: _kink,
-                collateral: _collateral,
                 baseRate: _baseRate,
-                mul: _mul,
-                jumpMul: _jumpMul,
+                utilizationMultiplier: _utilizationMultiplier,
+                reserveFactor: _reserveFactor,
+                exchangeRate: _exchangeRate,
+                collateralFactor: _collateralFactor,
 
                 lastUpdateTime: now
             });
 
             tokensToMarkets[realToken] = marketId;
-            realTokenRoots[realToken] = true;
-
-            this.fetchTIP3Information{flag: MsgFlag.REMAINING_GAS}(realToken);
         } else {
             address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
         }
     }
 
-    /*********************************************************************************************************/
-    // functions for interfaction with TIP-3 tokens
-    /**
-     * @param realToken Address of real token root
-     */
-    function fetchTIP3Information(address realToken) external override pure onlySelf {
-        tvm.accept();
-        IRootTokenContract(realToken).getDetails{
-            value: CostConstants.FETCH_TIP3_ROOT_INFORMATION,
-            bounce: true,
-            callback: this.receiveTIP3Information
-        }();
-    }
+    function updateMarketParameters(
+        uint32 marketId,
+        fraction _baseRate,
+        fraction _utilizationMultiplier,
+        fraction _reserveFactor,
+        fraction _exchangeRate
+    ) external onlyOwner {
+        tvm.tvmrawReserve(msg.value, 2);
 
-    /**
-     * @param rootTokenDetails Received information about real token
-     */
-    function receiveTIP3Information(IRootTokenContract.IRootTokenContractDetails rootTokenDetails) external override view onlyRealTokenRoot {
-        tvm.accept();
-        TvmBuilder marketIdInfo;
-        marketIdInfo.store(tokensToMarkets[msg.sender]);
-        prepareDataForNewTIP3(rootTokenDetails, marketIdInfo.toCell());
-    }
+        MarketInfo mi = markets[marketId];
+        mi.baseRate = _baseRate;
+        mi.utilizationMultiplier = _utilizationMultiplier;
+        mi._reserveFactor = _reserveFactor;
+        if (mi.vTokenBalance == 0) {
+            mi.exchangeRate = _exchangeRate;
+        }
 
-    /**
-     * @param rootTokenDetails Received information about real token
-     * @param payloadToReturn Payload that will be received with address of new tip3 root (will contain marketId)
-     */
-    function prepareDataForNewTIP3(IRootTokenContract.IRootTokenContractDetails rootTokenDetails, TvmCell payloadToReturn) private view {
-        tvm.accept();
-        IRootTokenContract.IRootTokenContractDetails newRootInfo;
-        string initialName = "v";
-        initialName.append(string(rootTokenDetails.name));
-        newRootInfo.name = bytes(initialName);
-        string initialSymbol = "v";
-        initialSymbol.append(string(rootTokenDetails.symbol));
-        newRootInfo.symbol = bytes(initialSymbol);
-        newRootInfo.decimals = rootTokenDetails.decimals;
-        newRootInfo.root_public_key = 0;
-        newRootInfo.root_owner_address = address(this);
-        newRootInfo.total_supply = 0;
-        deployNewTIP3Token(newRootInfo, payloadToReturn);
-    }
+        markets[marketId] = mi;
 
-    /**
-     * @param newRootTokenDetails Root token information prepared for new token deployment
-     * @param payloadToReturn Payload that will be received with address of new tip3 root (will contain marketId)
-     */
-    function deployNewTIP3Token(IRootTokenContract.IRootTokenContractDetails newRootTokenDetails, TvmCell payloadToReturn) private view {
-        tvm.accept();
-        ITIP3Deployer(tip3Deployer).deployTIP3{
-            value: CostConstants.SEND_TO_TIP3_DEPLOYER,
-            bounce: false,
-            callback: this.receiveNewTIP3Address
-        }(newRootTokenDetails, CostConstants.USE_TO_DEPLOY_TIP3_ROOT, tvm.pubkey(), payloadToReturn);
-    }
+        _updateMarketState(marketId);
 
-    /**
-     * @param tip3RootAddress Received address of virtual token root
-     * @param payload Payload with marketId
-     */
-    function receiveNewTIP3Address(address tip3RootAddress, TvmCell payload) external override onlyTIP3Deployer {
-        tvm.accept();
-        TvmSlice s = payload.toSlice();
-        uint32 marketId = s.decode(uint32);
-
-        this.forceUpdatePrice{
-            value: 1 ton
-        }(markets[marketId].token);
-
-        markets[marketId].virtualToken = tip3RootAddress;
-        virtualTokenRoots[tip3RootAddress] = true;
-        emit MarketCreated(marketId, markets[marketId]);
-
-        IWalletControllerMarketManagement(walletController).addMarket{
-            value: CostConstants.NOTIFY_CONTRACT_CONTROLLER,
-            bounce: false
-        }(marketId, markets[marketId].token, markets[marketId].virtualToken);
+        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     /*********************************************************************************************************/
@@ -322,9 +249,19 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         }(owner, markets, tokenPrices);
     }
 
+    function removeModule(uint8 operationId) external onlyOwner {
+        tvm.rawReserve(msg.value, 2);
+        delete isModule[modules[operationId]];
+        delete modules[operationId];
+
+        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+    }
+
     function performOperationWalletController(uint8 operationId, address tokenRoot, TvmCell args) external override view onlyWalletController {
         uint32 marketId = tokensToMarkets[tokenRoot];
         address module = modules[operationId];
+
+        // TODO: update price info and then perform operation
         IModule(module).performAction{
             flag: MsgFlag.REMAINING_GAS
         }(marketId, args);
@@ -332,66 +269,39 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
 
     function performOperationUserAccountManager(uint8 operationId, uint32 marketId, TvmCell args) external override view onlyUserAccountManager {
         address module = modules[operationId];
+        // TODO: update price info and then perform operation
         IModule(module).performAction{
             flag: MsgFlag.REMAINING_GAS
         }(marketId, args);
     }
 
+    function performOperation(TvmCell args) internal {
+        TvmSlice ts = args.toSlice();
 
-    /*********************************************************************************************************/
-    // Supply operation part
-    // Starts at wallet controller
-
-    function mintVTokens(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toMint) external view override onlyExecutor {
-        tvm.rawReserve(msg.value, 2);
-
-        emit TokensSupplied(tonWallet, marketId, toMint, markets[marketId]);
-
-        IRootTokenContract(markets[marketId].virtualToken).mint{
-            flag: MsgFlag.REMAINING_GAS
-        }(uint128(toMint), userTip3Wallet);
-    }
-
-    /*********************************************************************************************************/
-    // Withdraw vTokens part
-    // Starts at WalletController
-
-    function transferVTokensBack(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToReturn) external override view onlyExecutor {
-        IWCMInteractions(walletController).transferTokensToWallet{
-            flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, markets[marketId].virtualToken, userTip3Wallet, tokensToReturn);
-    }
-
-    /*********************************************************************************************************/
-    // Borrow operation part
-    // Starts at UserAccount
-
-    /*********************************************************************************************************/
-    // Repay operation part
-    // Starts at wallet controller
-
-
-    /*********************************************************************************************************/
-    // Service operations
-
-    function requestTokenPayout(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toPayout) external view override onlyExecutor {
-        address tokenRoot = markets[marketId].token;
-        IWCMInteractions(walletController).transferTokensToWallet{
-            flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, tokenRoot, userTip3Wallet, toPayout);
+        uint8 operationId = ts.decode(uint8);
+        if (operationId != OperationCodes.NO_OP) {
+            uint32 marketId = ts.decode(uint32);
+            TvmCell moduleArgs = ts.loadRef();
+            IModule(modules[operationId]).performAction{
+                flag: MsgFlag.REMAINING_GAS
+            }(marketId, moduleArgs);
+        } else {
+            address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        }
     }
 
     function _updateMarketState(uint32 marketId) internal {
         MarketInfo mi = markets[marketId];
         uint256 dt = uint256(now) - mi.lastUpdateTime;
-        fraction u = MarketOperations.calculateU(mi.totalBorrowed, mi.currentPoolBalance);
-        fraction r = MarketOperations.calculateR(u, mi.baseRate, mi.mul, mi.kink, mi.jumpMul);
-        fraction totalBorrowed = MarketOperations.calculateTotalBorrowed(mi.totalBorrowed, r, dt);
-        fraction totalReserve = MarketOperations.calculateTotalReserve(mi.totalReserve, mi.totalBorrowed, mi.reserveFactor, r, dt);
-        fraction index = MarketOperations.calculateIndex(mi.index, r, dt);
-        mi.totalBorrowed = totalBorrowed.toNum();
-        mi.totalReserve = totalReserve.toNum();
-        mi.index = index;
+        if (mi.vTokenBalance > 0) {
+            mi.exchangeRate = MarketOperations.calculateExchangeRate(mi.realTokenBalance, mi.totalBorrowed, mi.totalReserve, mi.vTokenBalance);
+        }
+        fraction u = MarketOperations.calculateU(mi.totalBorrowed, mi.realTokenBalance);
+        fraction bir = MarketOperations.calculateBorrowInterestRate(mi.baseRate, u, mi.utilizationMul);
+        mi.index = MarketOperations.calculateNewIndex(mi.index, bir, dt);
+        mi.totalBorrowed = MarketOperations.calculateTotalBorrowed(mi.totalBorrowed, bir, dt);
+        mi.totalReserve = MarketOperations.calculateReserves(mi.totalReserve, mi.totalBorrowed, bir, mi.reserveFactor, dt);
+        mi.lastUpdateTime = now;
         markets[marketId] = mi;
     }
 
@@ -414,7 +324,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
      * @param nom Nominator of token's price to usd
      * @param denom Denominator of token's price to usd
      */
-    function receiveUpdatedPrice(address tokenRoot, uint128 nom, uint128 denom, TvmCell) external override onlyOracle {
+    function receiveUpdatedPrice(address tokenRoot, uint128 nom, uint128 denom, TvmCell payload) external override onlyOracle {
         tokenPrices[tokenRoot] = fraction(nom, denom);
     }
 
@@ -431,29 +341,20 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     /**
      * @param updatedPrices Updated prices of all tokens that exist in oracle
      */
-    function receiveAllUpdatedPrices(mapping(address => MarketPriceInfo) updatedPrices, TvmCell) external override onlyOracle {
+    function receiveAllUpdatedPrices(mapping(address => MarketPriceInfo) updatedPrices, TvmCell payload) external override onlyOracle {
         for((address t, MarketPriceInfo mpi): updatedPrices) {
             tokenPrices[t] = fraction(mpi.tokens, mpi.usd);
         }
     }
 
     /**
-     * @notice Anyone can call this funtion
-     * @param tokenRoot Address of token that will be updated
+     * @notice Owner can use this function to force update all prices
      */
-    function forceUpdatePrice(address tokenRoot) external override {
+    function forceUpdateAllPrices() external override onlyOwner {
         tvm.rawReserve(msg.value, 2);
-        TvmCell payload;
-        updatePrice(tokenRoot, payload);
-    }
-
-    /**
-     * @notice Anyone can call this function
-     */
-    function forceUpdateAllPrices() external override {
-        tvm.rawReserve(msg.value, 2);
-        TvmCell payload;
-        updateAllPrices(payload);
+        TvmBuilder tb;
+        tb.store(OperationCodes.NO_OP);
+        updateAllPrices(tb.toCell());
     }
 
     /*********************************************************************************************************/

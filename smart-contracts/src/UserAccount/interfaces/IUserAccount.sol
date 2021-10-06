@@ -3,7 +3,7 @@ pragma ton-solidity >= 0.43.0;
 import "../../utils/libraries/FloatingPointOperations.sol";
 
 struct BorrowInfo {
-    uint256 toRepay;
+    uint256 tokensBorrowed;
     fraction index;
 }
 
@@ -11,7 +11,8 @@ struct UserMarketInfo {
     bool exists;
     uint32 _marketId;
     uint256 suppliedTokens;
-    mapping(uint8 => BorrowInfo) borrowInfo;
+    fraction accountHealth;
+    BorrowInfo borrowInfo;
 }
 
 interface IUserAccount {
@@ -40,34 +41,4 @@ interface IUserAccountGetters {
     function getMarketInfo(uint32 marketId) external view responsible returns(UserMarketInfo);
     function getAllMarketsInfo() external view responsible returns(mapping(uint32 => UserMarketInfo));
     function getLoanInfo(uint32 marketId, uint8 loanId) external view responsible returns(BorrowInfo);
-}
-
-library UserAccountConstants {
-    uint8 constant MAX_BORROWS_PER_MARKET = 8;
-}
-
-library ManageMapping {
-    function removeItemFrom(mapping(uint8 => BorrowInfo) value, uint8 index) internal pure {
-        optional(uint8, BorrowInfo) maxItem = value.max();
-        if (!maxItem.hasValue()) {
-            return;
-        }
-        (uint8 key, ) = maxItem.get();
-        if (key == 0) {
-            delete value[0];
-            return;
-        }
-
-        value[index] = value[key];
-        delete value[key];
-    }
-
-    function getMaxItem(mapping(uint8 => BorrowInfo) value) internal pure returns (uint8) {
-        optional(uint8, BorrowInfo) maxItem = value.max();
-        if (!maxItem.hasValue()) {
-            return 0;
-        }
-        (uint8 maxIndex, ) = maxItem.get();
-        return maxIndex + 1;
-    }
 }
