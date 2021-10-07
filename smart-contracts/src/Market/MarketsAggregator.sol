@@ -276,7 +276,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
 
         mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
         mapping(uint32 => uint256) userBorrowInfo = _calculateBorrowInfo(borrowInfo, updatedIndexes);
-        fraction accountHealth = _calculateUserAccountHealth(supplyInfo, userBorrowInfo, updatedIndexes);
+        fraction accountHealth = _calculateUserAccountHealth(supplyInfo, userBorrowInfo);
 
         if (accountHealth.nom < accountHealth.denom) {
             emit LiquidationPossible(tonWallet, accountHealth);
@@ -287,33 +287,33 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         }(tonWallet, accountHealth, updatedIndexes);
     }
 
-    function _calculateUserAccountHealth(mapping(uint32 => uint256) supplyInfo, mapping(uint32 => uint256) borrowInfo, mapping(uint32 => fraction) updatedIndexes) internal returns(fraction) {
+    function _createUpdatedIndexes() internal view returns(mapping(uint32 => fraction) updatedIndexes) {
+        for ((uint32 marketId, MarketInfo mi) : markets) {
+            updatedIndexes[marketId] = mi.index;
+        }
+    }
+
+    function _calculateUserAccountHealth(mapping(uint32 => uint256) supplyInfo, mapping(uint32 => uint256) borrowInfo) internal returns(fraction) {
         fraction userAccountHealth = fraction(0, 0);
         fraction tmpf = fraction(0, 0);
         for ((uint32 marketId, uint256 tokensSupplied): supplyInfo) {
-            tmpf = tokensSupplied.fNumMul(markets[marketId].collateral);
+            tmpf = tokensSupplied.numFMul(markets[marketId].collateralFactor);
             tmpf = tmpf.fMul(tokenPrices[markets[marketId].token]);
             userAccountHealth.nom += tmpf.toNum();
         }
 
         for((uint32 marketId, uint256 tokensBorrowed): borrowInfo) {
-            tmpf = tokensBorrowed.fNumMul(tokenPrices[markets[marketId].token]);
+            tmpf = tokensBorrowed.numFMul(tokenPrices[markets[marketId].token]);
             userAccountHealth.denom += tmpf.toNum();
         }
 
         return userAccountHealth;
     }
 
-    function _createUpdatedIndexes() internal returns(mapping(uint32 => fraction) updatedIndexes) {
-        for ((uint32 marketId, MarketInfo mi) : markets) {
-            updatedIndexes[marketId] = mi.index;
-        }
-    }
-
     function _calculateBorrowInfo(mapping(uint32 => BorrowInfo) borrowInfo, mapping(uint32 => fraction) updatedIndexes) internal returns(mapping (uint32=>uint256) userBorrowInfo) {
         for ((uint32 marketId, BorrowInfo bi): borrowInfo) {
             if (bi.tokensBorrowed != 0) {
-                fraction tmpf = borrowInfo[marketId].fNumNul(updatedIndexes[marketId]);
+                fraction tmpf = borrowInfo[marketId].tokensBorrowed.numFMul(updatedIndexes[marketId]);
                 tmpf = tmpf.fDiv(bi.index);
                 userBorrowInfo[marketId] = tmpf.toNum();
             } else {

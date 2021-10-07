@@ -296,7 +296,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     /*********************************************************************************************************/
     // Liquidation
 
-    function calculateUserAccountHealth(address tonWallet, mapping(uint32 => uint256) supplyInfo, mapping(uint32 => uint256) borrowInfo) external override onlyValidUserAccount(tonWallet) {
+    function calculateUserAccountHealth(address tonWallet, mapping(uint32 => uint256) supplyInfo, mapping(uint32 => BorrowInfo) borrowInfo) external override onlyValidUserAccount(tonWallet) {
         tvm.rawReserve(msg.value, 2);
         IMarketOperations(marketAddress).calculateUserAccountHealth{
             flag: MsgFlag.REMAINING_GAS

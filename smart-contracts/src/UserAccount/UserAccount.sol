@@ -222,8 +222,8 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     function checkUserAccountHealth() external override onlyExecutor {
         tvm.rawReserve(msg.value, 2);
         mapping(uint32 => uint256) supplyInfo;
-        mapping(uint32 => uint256) borrowInfo;
-        (borrowInfo, supplyInfo) = _calculateBorrowSupplyInfo();
+        mapping(uint32 => BorrowInfo) borrowInfo;
+        (borrowInfo, supplyInfo) = _calculateFullBorrowSupplyInfo();
         IUAMUserAccount(userAccountManager).calculateUserAccountHealth{
             flag: MsgFlag.REMAINING_GAS
         }(owner, supplyInfo, borrowInfo);
@@ -258,6 +258,13 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         for ((uint32 marketId, UserMarketInfo umi) : markets) {
             supplyInfo[marketId] = umi.suppliedTokens;
             borrowInfo[marketId] = umi.borrowInfo.tokensBorrowed;
+        }
+    }
+
+    function _calculateFullBorrowSupplyInfo() internal view returns(mapping(uint32 => BorrowInfo) borrowInfo, mapping(uint32 => uint256) supplyInfo) {
+        for ((uint32 marketId, UserMarketInfo umi) : markets) {
+            supplyInfo[marketId] = umi.suppliedTokens;
+            borrowInfo[marketId] = umi.borrowInfo;
         }
     }
 

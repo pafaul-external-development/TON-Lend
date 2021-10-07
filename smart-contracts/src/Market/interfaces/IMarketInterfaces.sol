@@ -29,7 +29,6 @@ interface IMarketSetters {
     function setUserAccountManager(address _userAccountManager) external;
     function setWalletController(address _tip3WalletController) external;
     function setOracleAddress(address _oracle) external;
-    function setTip3Deployer(address _tip3Deployer) external;
 }
 
 interface IMarketGetters {
@@ -51,5 +50,5 @@ interface IMarketOperations {
     function performOperationWalletController(uint8 operationId, address tokenRoot, TvmCell args) external view;
     function performOperationUserAccountManager(uint8 operationId, uint32 marketId, TvmCell args) external view;
     function requestTokenPayout(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toPayout) external view;
-    function calculateUserAccountHealth(address tonWallet, mapping(uint32 => uint256) supplyInfo, mapping(uint32 => uint256) borrowInfo) external view;
+    function calculateUserAccountHealth(address tonWallet, mapping(uint32 => uint256) supplyInfo, mapping(uint32 => BorrowInfo) borrowInfo) external;
 }

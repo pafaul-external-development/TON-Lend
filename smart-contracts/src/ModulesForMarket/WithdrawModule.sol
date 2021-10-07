@@ -35,12 +35,12 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
         );
     }
 
-    onCodeUpgrade(
+    function onCodeUpgrade(
         address _owner,
         address _marketAddress,
         address _userAccountManager,
-        mapping(uint32 => MarketInfo) marketInfo,
-        mapping(uint32 => fraction) tokenPrices
+        mapping(uint32 => MarketInfo) _marketInfo,
+        mapping(address => fraction) _tokenPrices
     ) private {
         
     }
@@ -79,11 +79,11 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
         TvmSlice ts = args.toSlice();
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;
-        (address tonWallet, address userTip3Wallet, address originalTip3Wallet, uint128 tokensToWithdraw) = ts.decode(address, address, address, uint128);
+        (address tonWallet, address userTip3Wallet, uint128 tokensToWithdraw) = ts.decode(address, address, uint128);
         mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
         IUAMUserAccount(userAccountManager).requestWithdrawInfo{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, userTip3Wallet, originalTip3Wallet, uint256(tokensToWithdraw), marketId, updatedIndexes);
+        }(tonWallet, userTip3Wallet, uint256(tokensToWithdraw), marketId, updatedIndexes);
     }
 
     function _createUpdatedIndexes() internal view returns(mapping(uint32 => fraction) updatedIndexes) {

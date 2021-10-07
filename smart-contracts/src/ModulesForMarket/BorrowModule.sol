@@ -33,12 +33,12 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
         );
     }
 
-    onCodeUpgrade(
+    function onCodeUpgrade(
         address _owner,
         address _marketAddress,
         address _userAccountManager,
-        mapping(uint32 => MarketInfo) marketInfo,
-        mapping(uint32 => fraction) tokenPrices
+        mapping(uint32 => MarketInfo) _marketInfo,
+        mapping(address => fraction) _tokenPrices
     ) private {
         
     }

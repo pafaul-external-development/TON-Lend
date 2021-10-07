@@ -23,7 +23,7 @@ interface IUAMUserAccount {
     function writeBorrowInformation(address tonWallet, address userTip3Wallet, uint256 tokensToBorrow, uint32 marketId, fraction index) external view;
 
     // Check user account health operation
-    function calculateUserAccountHealth(address tonWallet, mapping(uint32 => uint256) supplyInfo, mapping(uint32 => uint256) borrowInfo) external;
+    function calculateUserAccountHealth(address tonWallet, mapping(uint32 => uint256) supplyInfo, mapping(uint32 => BorrowInfo) borrowInfo) external;
     function updateUserAccountHealth(address tonWallet, fraction accountHealth, mapping(uint32 => fraction) updatedIndexes) external;
 
     // Liquidation operation

@@ -10,7 +10,6 @@ const contracts = [
     'ModulesForMarket/WithdrawModule',
     'ModulesForMarket/RepayModule',
     'Oracle/Oracle',
-    'TIP3Deployer/TIP3Deployer',
     'UserAccount/UserAccount',
     'UserAccount/UserAccountManager',
     'WalletController/WalletController',

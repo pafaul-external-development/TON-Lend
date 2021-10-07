@@ -24,7 +24,7 @@
 				{"name":"_answer_id","type":"uint32"}
 			],
 			"outputs": [
-				{"components":[{"name":"exists","type":"bool"},{"name":"_marketId","type":"uint32"},{"name":"suppliedTokens","type":"uint256"},{"components":[{"name":"toRepay","type":"uint256"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"index","type":"tuple"}],"name":"borrowInfo","type":"map(uint8,tuple)"}],"name":"value0","type":"map(uint32,tuple)"}
+				{"components":[{"name":"exists","type":"bool"},{"name":"_marketId","type":"uint32"},{"name":"suppliedTokens","type":"uint256"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"accountHealth","type":"tuple"},{"components":[{"name":"tokensBorrowed","type":"uint256"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"index","type":"tuple"}],"name":"borrowInfo","type":"tuple"}],"name":"value0","type":"map(uint32,tuple)"}
 			]
 		},
 		{
@@ -34,18 +34,7 @@
 				{"name":"marketId","type":"uint32"}
 			],
 			"outputs": [
-				{"components":[{"name":"exists","type":"bool"},{"name":"_marketId","type":"uint32"},{"name":"suppliedTokens","type":"uint256"},{"components":[{"name":"toRepay","type":"uint256"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"index","type":"tuple"}],"name":"borrowInfo","type":"map(uint8,tuple)"}],"name":"value0","type":"tuple"}
-			]
-		},
-		{
-			"name": "getLoanInfo",
-			"inputs": [
-				{"name":"_answer_id","type":"uint32"},
-				{"name":"marketId","type":"uint32"},
-				{"name":"loanId","type":"uint8"}
-			],
-			"outputs": [
-				{"components":[{"name":"toRepay","type":"uint256"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"index","type":"tuple"}],"name":"value0","type":"tuple"}
+				{"components":[{"name":"exists","type":"bool"},{"name":"_marketId","type":"uint32"},{"name":"suppliedTokens","type":"uint256"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"accountHealth","type":"tuple"},{"components":[{"name":"tokensBorrowed","type":"uint256"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"index","type":"tuple"}],"name":"borrowInfo","type":"tuple"}],"name":"value0","type":"tuple"}
 			]
 		},
 		{
@@ -70,7 +59,6 @@
 		{
 			"name": "writeSupplyInfo",
 			"inputs": [
-				{"name":"userTip3Wallet","type":"address"},
 				{"name":"marketId","type":"uint32"},
 				{"name":"tokensToSupply","type":"uint256"},
 				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"index","type":"tuple"}
@@ -82,7 +70,6 @@
 			"name": "requestWithdrawInfo",
 			"inputs": [
 				{"name":"userTip3Wallet","type":"address"},
-				{"name":"originalTip3Wallet","type":"address"},
 				{"name":"marketId","type":"uint32"},
 				{"name":"tokensToWithdraw","type":"uint256"},
 				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"updatedIndexes","type":"map(uint32,tuple)"}
@@ -112,10 +99,10 @@
 			]
 		},
 		{
-			"name": "updateIndexes",
+			"name": "borrowUpdateIndexes",
 			"inputs": [
 				{"name":"marketId","type":"uint32"},
-				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"newIndexes","type":"map(uint32,tuple)"},
+				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"updatedIndexes","type":"map(uint32,tuple)"},
 				{"name":"userTip3Wallet","type":"address"},
 				{"name":"toBorrow","type":"uint256"}
 			],
@@ -138,7 +125,6 @@
 			"inputs": [
 				{"name":"userTip3Wallet","type":"address"},
 				{"name":"marketId","type":"uint32"},
-				{"name":"loanId","type":"uint8"},
 				{"name":"tokensForRepay","type":"uint256"},
 				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"updatedIndexes","type":"map(uint32,tuple)"}
 			],
@@ -150,9 +136,24 @@
 			"inputs": [
 				{"name":"userTip3Wallet","type":"address"},
 				{"name":"marketId","type":"uint32"},
-				{"name":"loanId","type":"uint8"},
 				{"name":"tokensToReturn","type":"uint256"},
-				{"components":[{"name":"toRepay","type":"uint256"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"index","type":"tuple"}],"name":"bi","type":"tuple"}
+				{"components":[{"name":"tokensBorrowed","type":"uint256"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"index","type":"tuple"}],"name":"bi","type":"tuple"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "checkUserAccountHealth",
+			"inputs": [
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "updateUserAccountHealth",
+			"inputs": [
+				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"_accountHealth","type":"tuple"},
+				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"updatedIndexes","type":"map(uint32,tuple)"}
 			],
 			"outputs": [
 			]
@@ -194,6 +195,14 @@
 			],
 			"outputs": [
 				{"name":"contractCodeVersion","type":"uint32"}
+			]
+		},
+		{
+			"name": "accountHealth",
+			"inputs": [
+			],
+			"outputs": [
+				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"accountHealth","type":"tuple"}
 			]
 		}
 	],
