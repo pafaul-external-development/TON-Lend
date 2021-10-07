@@ -7,6 +7,8 @@ import '../../UserAccount/interfaces/IUAMUserAccount.sol';
 
 import '../../WalletController/libraries/OperationCodes.sol';
 
+import '../../utils/interfaces/IUpgradableContract.sol';
+
 import '../../utils/libraries/MsgFlag.sol';
 
 import '../../Market/interfaces/IMarketInterfaces.sol';

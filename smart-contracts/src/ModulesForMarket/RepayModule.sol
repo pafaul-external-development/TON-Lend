@@ -4,7 +4,7 @@ import './interfaces/IModule.sol';
 
 import '../utils/libraries/MsgFlag.sol';
 
-contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepayModule {
+contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepayModule, IUpgradableContract {
     using UFO for uint256;
     using FPO for fraction;
 
@@ -19,6 +19,31 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepay
     constructor(address _owner) public {
         tvm.accept();
         owner = _owner;
+    }
+
+    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) external override onlyOwner {
+        tvm.rawReserve(msg.value, 2);
+
+        tvm.setcode(code);
+        tvm.setCurrentCode(code);
+
+        onCodeUpgrade (
+            owner,
+            marketAddress,
+            userAccountManager,
+            marketInfo,
+            tokenPrices
+        );
+    }
+
+    onCodeUpgrade(
+        address _owner,
+        address _marketAddress,
+        address _userAccountManager,
+        mapping(uint32 => MarketInfo) marketInfo,
+        mapping(uint32 => fraction) tokenPrices
+    ) private {
+        
     }
 
     function getModuleState() external override view returns(mapping(uint32 => MarketInfo), mapping(address => fraction)) {

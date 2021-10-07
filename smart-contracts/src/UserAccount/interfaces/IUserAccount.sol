@@ -26,19 +26,23 @@ interface IUserAccount {
 }
 
 interface IUserAccountData {
-    function updateIndexes(uint32 marketId_, mapping(uint32 => fraction) newIndexes, address userTip3Wallet, uint256 toBorrow) external;
-    function writeSupplyInfo(address userTip3Wallet, uint32 marketId_, uint256 tokensToSupply, fraction index) external;
+    function writeSupplyInfo(uint32 marketId_, uint256 tokensToSupply, fraction index) external;
+
+    function borrowUpdateIndexes(uint32 marketId_, mapping(uint32 => fraction) newIndexes, address userTip3Wallet, uint256 toBorrow) external;
     function writeBorrowInformation(uint32 marketId_, uint256 toBorrow, address userTip3Wallet, fraction marketIndex) external;
-    function sendRepayInfo(address userTip3Wallet, uint32 marketId, uint8 loanId, uint256 tokensForRepay, mapping(uint32 => fraction) updatedIndexes) external;
-    function writeRepayInformation(address userTip3Wallet, uint32 marketId_, uint8 loanId, uint256 tokensToReturn, BorrowInfo bi) external;
+
+    function sendRepayInfo(address userTip3Wallet, uint32 marketId, uint256 tokensForRepay, mapping(uint32 => fraction) updatedIndexes) external;
+    function writeRepayInformation(address userTip3Wallet, uint32 marketId_, uint256 tokensToReturn, BorrowInfo bi) external;
 
     function writeWithdrawInfo(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, uint256 tokensToSend) external;
-    function requestWithdrawInfo(address userTip3Wallet, address originalTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, mapping(uint32 => fraction) updatedIndexes) external;
+    function requestWithdrawInfo(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, mapping(uint32 => fraction) updatedIndexes) external;
+
+    function checkUserAccountHealth() external;
+    function updateUserAccountHealth(fraction _accountHealth, mapping(uint32 => fraction) updatedIndexes) external;
 }
 
 interface IUserAccountGetters {
     function getKnownMarkets() external view responsible returns(mapping(uint32 => bool));
     function getMarketInfo(uint32 marketId) external view responsible returns(UserMarketInfo);
     function getAllMarketsInfo() external view responsible returns(mapping(uint32 => UserMarketInfo));
-    function getLoanInfo(uint32 marketId, uint8 loanId) external view responsible returns(BorrowInfo);
 }

@@ -18,7 +18,6 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     address public userAccountManager;
     address public walletController;
     address public oracle;
-    address public tip3Deployer;
     mapping(uint32 => bool) createdMarkets;
     mapping(address => uint32) tokensToMarkets;
     mapping(uint32 => MarketInfo) markets;
@@ -34,11 +33,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     // Events
 
     event MarketCreated(uint32 marketId, MarketInfo marketState);
-    event MarketDeleted(uint32 marketId, MarketInfo marketState);
-    event TokensSupplied(address tonWallet, uint32 marketId, uint256 tokensSupplied, MarketInfo marketState);
-    event TokensWithdrawn(address tonWallet, uint32 marketId, uint256 tokensWithdrawn, MarketInfo marketState);
-    event TokensBorrowed(address tonWallet, uint32 marketId, uint256 tokensBorrowed, MarketInfo marketState);
-    event TokensRepayed(address tonWallet, uint32 marketId, uint256 tokensToRepay, uint256 tokensRepayed, MarketInfo marketState);
+    event LiquidationPossible(address tonWallet, fraction accountHealth);
 
     /*********************************************************************************************************/
     // Base functions - for deploying and upgrading contract
@@ -59,7 +54,6 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
             userAccountManager,
             walletController,
             oracle,
-            tip3Deployer,
             markets,
             tokenPrices,
             modules,
@@ -70,16 +64,15 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
 
     // mappings like createdMarkets, tokensToMarkets are derivatives from markets mapping and must be recreated
     function onCodeUpgrade(
-        address,
-        address,
-        address,
-        address,
-        address,
-        mapping(uint32 => MarketInfo),
-        mapping(address => fraction),
-        mapping(uint8 => address),
-        TvmCell,
-        uint32
+        address _owner,
+        address _userAccountManager,
+        address _walletController,
+        address _oracle,
+        mapping(uint32 => MarketInfo) _markets,
+        mapping(address => fraction) _tokenPrices,
+        mapping(uint8 => address) _modules,
+        TvmCell updateParams,
+        uint32 _codeVersion
     ) private {
 
     }
@@ -199,6 +192,8 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
             });
 
             tokensToMarkets[realToken] = marketId;
+
+            emit MarketCreated(marketId, markets[marketId]);
         } else {
             address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
         }
@@ -276,6 +271,57 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         }
     }
 
+    function calculateUserAccountHealth(address tonWallet, mapping(uint32 => uint256) supplyInfo, mapping(uint32 => BorrowInfo) borrowInfo) external override onlyUserAccountManager {
+        tvm.rawReserve(msg.value, 2);
+
+        mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
+        mapping(uint32 => uint256) userBorrowInfo = _calculateBorrowInfo(borrowInfo, updatedIndexes);
+        fraction accountHealth = _calculateUserAccountHealth(supplyInfo, userBorrowInfo, updatedIndexes);
+
+        if (accountHealth.nom < accountHealth.denom) {
+            emit LiquidationPossible(tonWallet, accountHealth);
+        }
+
+        IUAMUserAccount(userAccountManager).updateUserAccountHealth{
+            flag: MsgFlag.REMAINING_GAS
+        }(tonWallet, accountHealth, updatedIndexes);
+    }
+
+    function _calculateUserAccountHealth(mapping(uint32 => uint256) supplyInfo, mapping(uint32 => uint256) borrowInfo, mapping(uint32 => fraction) updatedIndexes) internal returns(fraction) {
+        fraction userAccountHealth = fraction(0, 0);
+        fraction tmpf = fraction(0, 0);
+        for ((uint32 marketId, uint256 tokensSupplied): supplyInfo) {
+            tmpf = tokensSupplied.fNumMul(markets[marketId].collateral);
+            tmpf = tmpf.fMul(tokenPrices[markets[marketId].token]);
+            userAccountHealth.nom += tmpf.toNum();
+        }
+
+        for((uint32 marketId, uint256 tokensBorrowed): borrowInfo) {
+            tmpf = tokensBorrowed.fNumMul(tokenPrices[markets[marketId].token]);
+            userAccountHealth.denom += tmpf.toNum();
+        }
+
+        return userAccountHealth;
+    }
+
+    function _createUpdatedIndexes() internal returns(mapping(uint32 => fraction) updatedIndexes) {
+        for ((uint32 marketId, MarketInfo mi) : markets) {
+            updatedIndexes[marketId] = mi.index;
+        }
+    }
+
+    function _calculateBorrowInfo(mapping(uint32 => BorrowInfo) borrowInfo, mapping(uint32 => fraction) updatedIndexes) internal returns(mapping (uint32=>uint256) userBorrowInfo) {
+        for ((uint32 marketId, BorrowInfo bi): borrowInfo) {
+            if (bi.tokensBorrowed != 0) {
+                fraction tmpf = borrowInfo[marketId].fNumNul(updatedIndexes[marketId]);
+                tmpf = tmpf.fDiv(bi.index);
+                userBorrowInfo[marketId] = tmpf.toNum();
+            } else {
+                userBorrowInfo[marketId] = 0;
+            }
+        }
+    }
+
     function _createOperationUpdatePayload(uint8 operationId, uint32 marketId, TvmCell args) internal pure returns (TvmCell payload) {
         TvmBuilder tb;
         tb.store(operationId);
@@ -299,7 +345,9 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
             mi.exchangeRate = MarketOperations.calculateExchangeRate(mi.realTokenBalance, mi.totalBorrowed, mi.totalReserve, mi.vTokenBalance);
         }
         fraction u = MarketOperations.calculateU(mi.totalBorrowed, mi.realTokenBalance);
+        u = u.simplify();
         fraction bir = MarketOperations.calculateBorrowInterestRate(mi.baseRate, u, mi.utilizationMultiplier);
+        bir = bir.simplify();
         mi.index = MarketOperations.calculateNewIndex(mi.index, bir, dt);
         mi.totalBorrowed = MarketOperations.calculateTotalBorrowed(mi.totalBorrowed, bir, dt);
         mi.totalReserve = MarketOperations.calculateReserves(mi.totalReserve, mi.totalBorrowed, bir, mi.reserveFactor, dt);
@@ -390,12 +438,6 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
-    function setTip3Deployer(address _tip3Deployer) external override onlyOwner {
-        tvm.rawReserve(msg.value, 2);
-        tip3Deployer = _tip3Deployer;
-        address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
-    }
-
     /**
      * @param newOwner Address of new contract's owner
      */
@@ -421,11 +463,6 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     modifier onlyOracle() {
         require(msg.sender == oracle, MarketErrorCodes.ERROR_MSG_SENDER_IS_NOT_ORACLE);
         tvm.rawReserve(msg.value, 2);
-        _;
-    }
-
-    modifier onlyTIP3Deployer() {
-        require(msg.sender == tip3Deployer, MarketErrorCodes.ERROR_MSG_SENDER_IS_NOT_TIP3_DEPLOYER);
         _;
     }
 

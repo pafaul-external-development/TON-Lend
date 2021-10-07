@@ -25,6 +25,8 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     // Information for update
     uint32 public contractCodeVersion;
 
+    fraction public accountHealth;
+
     mapping(uint32 => bool) knownMarkets;
     mapping(uint32 => UserMarketInfo) markets;
 
@@ -87,25 +89,34 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         tvm.rawReserve(msg.value, 2);
         markets[marketId].suppliedTokens += tokensToSupply;
         _updateMarketInfo(marketId, index);
+        this.checkUserAccountHealth{
+            flag: MsgFlag.REMAINING_GAS
+        }();
     }
 
     /*********************************************************************************************************/
     // Withdraw functions
 
-    function requestWithdrawInfo(address userTip3Wallet, address originalTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, mapping(uint32 => fraction) updatedIndexes) external override onlyUserAccountManager {
+    function requestWithdrawInfo(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, mapping(uint32 => fraction) updatedIndexes) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
-        for ((uint32 marketId_, fraction index): updatedIndexes) {
-            _updateMarketInfo(marketId_, index);
+        if (
+            accountHealth.nom > accountHealth.denom
+        ) {
+            for ((uint32 marketId_, fraction index): updatedIndexes) {
+                _updateMarketInfo(marketId_, index);
+            }
+
+            mapping(uint32 => uint256) borrowInfo;
+            mapping(uint32 => uint256) supplyInfo;
+
+            (borrowInfo, supplyInfo) = _calculateBorrowSupplyInfo();
+
+            IUAMUserAccount(userAccountManager).receiveWithdrawInfo{
+                flag: MsgFlag.REMAINING_GAS
+            }(owner, userTip3Wallet, tokensToWithdraw, marketId, supplyInfo, borrowInfo);
+        } else {
+            address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
         }
-
-        mapping(uint32 => uint256) borrowInfo;
-        mapping(uint32 => uint256) supplyInfo;
-
-        (borrowInfo, supplyInfo) = _calculateBorrowSupplyInfo();
-
-        IUAMUserAccount(userAccountManager).receiveWithdrawInfo{
-            flag: MsgFlag.REMAINING_GAS
-        }(owner, userTip3Wallet, originalTip3Wallet, tokensToWithdraw, marketId, supplyInfo, borrowInfo);
     }
 
     function writeWithdrawInfo(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, uint256 tokensToSend) external override onlyUserAccountManager{
@@ -124,7 +135,8 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         tvm.rawReserve(msg.value, 2);
         if (
             (!borrowLock) &&
-            (markets[marketId].exists)
+            (markets[marketId].exists) &&
+            (accountHealth.nom > accountHealth.denom)
         ) {
             borrowLock = true;
             TvmBuilder tb;
@@ -139,11 +151,10 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         }
     }
 
-    function updateIndexes(uint32 marketId, mapping(uint32 => fraction) newIndexes, address userTip3Wallet, uint256 toBorrow) external override onlyUserAccountManager {
+    function borrowUpdateIndexes(uint32 marketId, mapping(uint32 => fraction) updatedIndexes, address userTip3Wallet, uint256 toBorrow) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
-        for ((uint32 marketId_, fraction index): newIndexes) {
-            _updateMarketInfo(marketId_, index);
-        }
+
+        _updateIndexes(updatedIndexes);
 
         mapping(uint32 => uint256) borrowInfo;
         mapping(uint32 => uint256) supplyInfo;
@@ -159,7 +170,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         tvm.rawReserve(msg.value, 2);
         if (toBorrow > 0) {
             _updateMarketInfo(marketId, marketIndex);
-            markets[marketId].BorrowInfo.borrowedTokens += toBorrow;
+            markets[marketId].borrowInfo.tokensBorrowed += toBorrow;
         }
 
         borrowLock = false;
@@ -169,7 +180,9 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
                 flag: MsgFlag.REMAINING_GAS
             }(owner, userTip3Wallet, marketId, toBorrow);
         } else {
-            owner.transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+            this.checkUserAccountHealth{
+                flag: MsgFlag.REMAINING_GAS
+            }();
         }
     }
 
@@ -197,17 +210,45 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
                 flag: MsgFlag.REMAINING_GAS
             }(owner, userTip3Wallet, marketId, tokensToReturn);
         } else {
-            address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+            this.checkUserAccountHealth{
+                flag: MsgFlag.REMAINING_GAS
+            }();
         }
     }
 
     /*********************************************************************************************************/
+    // Check account health functions
+
+    function checkUserAccountHealth() external override onlyExecutor {
+        tvm.rawReserve(msg.value, 2);
+        mapping(uint32 => uint256) supplyInfo;
+        mapping(uint32 => uint256) borrowInfo;
+        (borrowInfo, supplyInfo) = _calculateBorrowSupplyInfo();
+        IUAMUserAccount(userAccountManager).calculateUserAccountHealth{
+            flag: MsgFlag.REMAINING_GAS
+        }(owner, supplyInfo, borrowInfo);
+    }
+
+    function updateUserAccountHealth(fraction _accountHealth, mapping(uint32 => fraction) updatedIndexes) external override onlyUserAccountManager {
+        accountHealth = _accountHealth;
+        _updateIndexes(updatedIndexes);
+        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+    }
+
+    /*********************************************************************************************************/
     // internal functions
+    
+    function _updateIndexes(mapping(uint32 => fraction) updatedIndexes) internal {
+        for ((uint32 marketId_, fraction index): updatedIndexes) {
+            _updateMarketInfo(marketId_, index);
+        }
+    }
+
     function _updateMarketInfo(uint32 marketId, fraction index) internal {
         fraction tmpf;
         BorrowInfo bi = markets[marketId].borrowInfo;
-        if (markets[marketId].borrowInfo.borrowedTokens != 0) {
-            tmpf = bi.borrowedTokens.numFMul(index);
+        if (markets[marketId].borrowInfo.tokensBorrowed != 0) {
+            tmpf = bi.tokensBorrowed.numFMul(index);
             tmpf = tmpf.fDiv(bi.index);
         }
         markets[marketId].borrowInfo = BorrowInfo(tmpf.toNum(), index);
@@ -216,7 +257,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     function _calculateBorrowSupplyInfo() internal view returns(mapping(uint32 => uint256) borrowInfo, mapping(uint32 => uint256) supplyInfo) {
         for ((uint32 marketId, UserMarketInfo umi) : markets) {
             supplyInfo[marketId] = umi.suppliedTokens;
-            borrowInfo[marketId] = umi.borrowInfo.borrowedTokens;
+            borrowInfo[marketId] = umi.borrowInfo.tokensBorrowed;
         }
     }
 
@@ -259,6 +300,15 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
 
     modifier onlySelf() {
         require(msg.sender == address(this));
+        _;
+    }
+
+    modifier onlyExecutor() {
+        require(
+            msg.sender == userAccountManager ||
+            msg.sender == owner ||
+            msg.sender == address(this)
+        );
         _;
     }
 }

@@ -50,6 +50,9 @@ library FPO {
             // using bitshift for simultaneos division
             // leaving up to 16 bits of information if nom & denom > 2^32
             // leaving up to 8 bits of information if 2^32 >nom & denom > 2^16
+            uint256 bits224 = 2**224;
+            uint256 bits192 = 2**192;
+            uint256 bits160 = 2**160;
             uint256 bits128 = 2**128;
             uint256 bits96 = 2**96;
             uint256 bits64 = 2**64;
@@ -57,23 +60,35 @@ library FPO {
             uint256 bits24 = 2**24;
             uint256 bits16 = 2**16;
             uint256 bits8 = 2**8;
-            if ( (a.nom > bits128) && (a.denom > bits128) ) {
+            if ( (a.nom >= bits224) && (a.denom >= bits224) ) {
+                return fraction(a.nom / bits192, a.denom / bits192);
+            }
+
+            if ( (a.nom >= bits192) && (a.denom >= bits192) ) {
+                return fraction(a.nom / bits160, a.denom / bits160);
+            }
+
+            if ( (a.nom >= bits160) && (a.denom >= bits160) ) {
+                return fraction(a.nom / bits128, a.denom / bits128);
+            }
+
+            if ( (a.nom >= bits128) && (a.denom >= bits128) ) {
                 return fraction(a.nom / bits96, a.denom / bits96);
             }
 
-            if ( (a.nom > bits96) && (a.denom > bits96) ) {
+            if ( (a.nom >= bits96) && (a.denom >= bits96) ) {
                 return fraction(a.nom / bits64, a.denom / bits64);
             }
 
-            if ( (a.nom > bits64) && (a.denom > bits64) ) {
+            if ( (a.nom >= bits64) && (a.denom >= bits64) ) {
                 return fraction(a.nom / bits32, a.denom / bits32);
             }
 
-            if ( (a.nom > bits32) && (a.nom > bits32) ) {
-                return fraction(a.nom / bits24, a.denom / bits24);
+            if ( (a.nom >= bits32) && (a.nom >= bits32) ) {
+                return fraction(a.nom / bits16, a.denom / bits16);
             }
 
-            if ( (a.nom > bits16) && (a.denom > bits16) ) {
+            if ( (a.nom >= bits24) && (a.denom >= bits24) ) {
                 return fraction(a.nom / bits8, a.denom / bits8);
             }
 

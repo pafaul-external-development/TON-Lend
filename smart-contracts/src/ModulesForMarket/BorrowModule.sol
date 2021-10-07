@@ -2,7 +2,7 @@ pragma ton-solidity >= 0.47.0;
 
 import './interfaces/IModule.sol';
 
-contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorrowModule {
+contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorrowModule, IUpgradableContract {
     using FPO for fraction;
     using UFO for uint256;
 
@@ -16,6 +16,31 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
     constructor(address _owner) public {
         tvm.accept();
         owner = _owner;
+    }
+
+    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) external override onlyOwner {
+        tvm.rawReserve(msg.value, 2);
+
+        tvm.setcode(code);
+        tvm.setCurrentCode(code);
+
+        onCodeUpgrade (
+            owner,
+            marketAddress,
+            userAccountManager,
+            marketInfo,
+            tokenPrices
+        );
+    }
+
+    onCodeUpgrade(
+        address _owner,
+        address _marketAddress,
+        address _userAccountManager,
+        mapping(uint32 => MarketInfo) marketInfo,
+        mapping(uint32 => fraction) tokenPrices
+    ) private {
+        
     }
 
     function sendActionId() external override view responsible returns(uint8) {
