@@ -126,7 +126,7 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
                     }(tonWallet, userTip3Wallet, 0, marketId, marketInfo[marketId].index);
                 }
             } else {
-                IUAMUserAccount(userAccountManager).markForLiquidation{
+                IUAMUserAccount(userAccountManager).requestUserAccountHealthCalculation{
                     flag: MsgFlag.REMAINING_GAS
                 }(tonWallet);
             }

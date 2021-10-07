@@ -67,6 +67,16 @@
 			]
 		},
 		{
+			"name": "withdraw",
+			"inputs": [
+				{"name":"userTip3Wallet","type":"address"},
+				{"name":"marketId","type":"uint32"},
+				{"name":"tokensToWithdraw","type":"uint256"}
+			],
+			"outputs": [
+			]
+		},
+		{
 			"name": "requestWithdrawInfo",
 			"inputs": [
 				{"name":"userTip3Wallet","type":"address"},

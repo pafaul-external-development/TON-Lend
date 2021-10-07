@@ -271,7 +271,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         }
     }
 
-    function calculateUserAccountHealth(address tonWallet, mapping(uint32 => uint256) supplyInfo, mapping(uint32 => BorrowInfo) borrowInfo) external override onlyUserAccountManager {
+    function calculateUserAccountHealth(address tonWallet, address gasTo, mapping(uint32 => uint256) supplyInfo, mapping(uint32 => BorrowInfo) borrowInfo) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
 
         mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
@@ -284,7 +284,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
 
         IUAMUserAccount(userAccountManager).updateUserAccountHealth{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, accountHealth, updatedIndexes);
+        }(tonWallet, gasTo, accountHealth, updatedIndexes);
     }
 
     function _createUpdatedIndexes() internal view returns(mapping(uint32 => fraction) updatedIndexes) {
@@ -331,7 +331,11 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     }
 
     function requestTokenPayout(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toPayout) external override view onlyUserAccountManager {
-        tvm.rawReserve(msg.value, 2);
+        tvm.rawReserve(msg.value / 2, 2);
+
+        IUAMUserAccount(userAccountManager).requestUserAccountHealthCalculation{
+            value: msg.value / 2
+        }(tonWallet);
 
         IWCMInteractions(walletController).transferTokensToWallet{
             flag: MsgFlag.REMAINING_GAS
@@ -394,6 +398,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     function receiveAllUpdatedPrices(mapping(address => MarketPriceInfo) updatedPrices, TvmCell payload) external override onlyOracle {
         for((address t, MarketPriceInfo mpi): updatedPrices) {
             tokenPrices[t] = fraction(mpi.tokens, mpi.usd);
+            tokenPrices[t] = tokenPrices[t].simplify();
         }
 
         performOperation(payload);

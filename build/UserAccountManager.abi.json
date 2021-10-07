@@ -52,6 +52,17 @@
 			]
 		},
 		{
+			"name": "requestWithdraw",
+			"inputs": [
+				{"name":"tonWallet","type":"address"},
+				{"name":"userTip3Wallet","type":"address"},
+				{"name":"marketId","type":"uint32"},
+				{"name":"tokensToWithdraw","type":"uint256"}
+			],
+			"outputs": [
+			]
+		},
+		{
 			"name": "requestWithdrawInfo",
 			"inputs": [
 				{"name":"tonWallet","type":"address"},
@@ -172,6 +183,14 @@
 			]
 		},
 		{
+			"name": "requestUserAccountHealthCalculation",
+			"inputs": [
+				{"name":"tonWallet","type":"address"}
+			],
+			"outputs": [
+			]
+		},
+		{
 			"name": "calculateUserAccountHealth",
 			"inputs": [
 				{"name":"tonWallet","type":"address"},
@@ -187,14 +206,6 @@
 				{"name":"tonWallet","type":"address"},
 				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"accountHealth","type":"tuple"},
 				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"updatedIndexes","type":"map(uint32,tuple)"}
-			],
-			"outputs": [
-			]
-		},
-		{
-			"name": "markForLiquidation",
-			"inputs": [
-				{"name":"tonWallet","type":"address"}
 			],
 			"outputs": [
 			]

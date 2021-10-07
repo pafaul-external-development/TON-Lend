@@ -69,6 +69,10 @@ interface IRepayModule {
     ) external view;
 }
 
+interface ILiquidationModule {
+    
+}
+
 library Utilities {
     using UFO for uint256;
     using FPO for fraction;

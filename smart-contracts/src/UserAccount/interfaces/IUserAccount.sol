@@ -34,11 +34,12 @@ interface IUserAccountData {
     function sendRepayInfo(address userTip3Wallet, uint32 marketId, uint256 tokensForRepay, mapping(uint32 => fraction) updatedIndexes) external;
     function writeRepayInformation(address userTip3Wallet, uint32 marketId_, uint256 tokensToReturn, BorrowInfo bi) external;
 
+    function withdraw(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw) external view;
     function writeWithdrawInfo(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, uint256 tokensToSend) external;
     function requestWithdrawInfo(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, mapping(uint32 => fraction) updatedIndexes) external;
 
-    function checkUserAccountHealth() external;
-    function updateUserAccountHealth(fraction _accountHealth, mapping(uint32 => fraction) updatedIndexes) external;
+    function checkUserAccountHealth(address gasTo) external;
+    function updateUserAccountHealth(address gasTo, fraction _accountHealth, mapping(uint32 => fraction) updatedIndexes) external;
 }
 
 interface IUserAccountGetters {

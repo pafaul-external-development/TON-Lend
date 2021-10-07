@@ -2,15 +2,13 @@ pragma ton-solidity >= 0.47.0;
 
 import './interfaces/IModule.sol';
 
-import '../utils/libraries/MsgFlag.sol';
-
-contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWithdrawModule, IUpgradableContract {
-    using UFO for uint256;
+contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, ILiquidationModule, IUpgradableContract {
     using FPO for fraction;
+    using UFO for uint256;
 
+    address owner;
     address marketAddress;
     address userAccountManager;
-    address owner;
 
     mapping (uint32 => MarketInfo) marketInfo;
     mapping (address => fraction) tokenPrices;
@@ -46,7 +44,7 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
     }
 
     function sendActionId() external override view responsible returns(uint8) {
-        return {flag: MsgFlag.REMAINING_GAS} OperationCodes.WITHDRAW_TOKENS;
+        return {flag: MsgFlag.REMAINING_GAS} OperationCodes.BORROW_TOKENS;
     }
 
     function getModuleState() external override view returns(mapping(uint32 => MarketInfo), mapping(address => fraction)) {
@@ -76,14 +74,15 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
     }
 
     function performAction(uint32 marketId, TvmCell args, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
-        TvmSlice ts = args.toSlice();
+        tvm.rawReserve(msg.value, 2);
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;
-        (address tonWallet, address userTip3Wallet, uint256 tokensToWithdraw) = ts.decode(address, address, uint256);
+        TvmSlice ts = args.toSlice();
+        (address tonWallet, address targetUser, uint256 tokenAmount) = ts.decode(address, address, uint256);
         mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
-        IUAMUserAccount(userAccountManager).requestWithdrawInfo{
+        IUAMUserAccount(userAccountManager).requestLiquidationInformation{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, userTip3Wallet, tokensToWithdraw, marketId, updatedIndexes);
+        }(tonWallet, targetUser, tokenAmount);
     }
 
     function _createUpdatedIndexes() internal view returns(mapping(uint32 => fraction) updatedIndexes) {
@@ -92,67 +91,16 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
         }
     }
 
-    function withdrawTokensFromMarket(
-        address tonWallet, 
-        address userTip3Wallet,
-        uint256 tokensToWithdraw, 
-        uint32 marketId, 
-        mapping(uint32 => uint256) si,
-        mapping(uint32 => uint256) bi
-    ) external override onlyUserAccountManager {
-        tvm.rawReserve(msg.value - msg.value / 4, 0);
-        MarketDelta marketDelta;
 
-        MarketInfo mi = marketInfo[marketId];
 
-        (uint256 supplySum, uint256 borrowSum) = Utilities.calculateSupplyBorrow(si, bi, marketInfo, tokenPrices);
-
-        fraction fTokensToSend = tokensToWithdraw.numFMul(mi.exchangeRate);
-        fTokensToSend = fTokensToSend.fMul(tokenPrices[marketInfo[marketId].token]);
-        uint256 tokensToSend = fTokensToSend.toNum();
-        if (supplySum > borrowSum) {
-            if (supplySum - borrowSum > tokensToSend) {
-                fTokensToSend = tokensToWithdraw.numFMul(mi.exchangeRate);
-                tokensToSend = fTokensToSend.toNum();
-
-                marketDelta.realTokenBalance.delta = tokensToSend;
-                marketDelta.realTokenBalance.positive = false;
-                marketDelta.vTokenBalance.delta = tokensToWithdraw;
-                marketDelta.vTokenBalance.positive = false;
-
-                IContractStateCacheRoot(marketAddress).receiveCacheDelta{
-                    value: msg.value / 4
-                }(tonWallet, marketDelta, marketId);
-
-                IUAMUserAccount(userAccountManager).writeWithdrawInfo{
-                    flag: MsgFlag.REMAINING_GAS
-                }(tonWallet, userTip3Wallet, marketId, tokensToWithdraw, tokensToSend);
-            } else {
-                // TODO: transfer tokens back
-                IUAMUserAccount(userAccountManager).requestUserAccountHealthCalculation{
-                flag: MsgFlag.REMAINING_GAS
-            }(tonWallet);
-            }
-        } else {
-            IUAMUserAccount(userAccountManager).requestUserAccountHealthCalculation{
-                flag: MsgFlag.REMAINING_GAS
-            }(tonWallet);
-        }
+    modifier onlyOwner() {
+        require(msg.sender == owner);
+        _;
     }
 
     modifier onlyMarket() {
         require(msg.sender == marketAddress);
         tvm.rawReserve(msg.value, 2);
-        _;
-    }
-
-    modifier onlyUserAccountManager() {
-        require(msg.sender == userAccountManager);
-        _;
-    }
-
-    modifier onlyOwner() {
-        require(msg.sender == owner);
         _;
     }
 }

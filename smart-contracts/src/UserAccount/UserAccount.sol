@@ -97,6 +97,15 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     /*********************************************************************************************************/
     // Withdraw functions
 
+    function withdraw(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw) external override view onlyOwner {
+        require(tokensToWithdraw >= markets[marketId].suppliedTokens);
+        tvm.rawReserve(msg.value, 2);
+        
+        IUAMUserAccount(userAccountManager).requestWithdraw{
+            flag: MsgFlag.REMAINING_GAS
+        }(owner, userTip3Wallet, marketId, tokensToWithdraw);
+    }
+
     function requestWithdrawInfo(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, mapping(uint32 => fraction) updatedIndexes) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
         if (
@@ -122,6 +131,8 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     function writeWithdrawInfo(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, uint256 tokensToSend) external override onlyUserAccountManager{
         tvm.rawReserve(msg.value, 2);
         markets[marketId].suppliedTokens -= tokensToWithdraw;
+
+        // TODO: add account health check
 
         IUAMUserAccount(userAccountManager).requestTokenPayout{
             flag: MsgFlag.REMAINING_GAS
@@ -219,21 +230,26 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     /*********************************************************************************************************/
     // Check account health functions
 
-    function checkUserAccountHealth() external override onlyExecutor {
+    function checkUserAccountHealth(address gasTo) external override onlyExecutor {
         tvm.rawReserve(msg.value, 2);
         mapping(uint32 => uint256) supplyInfo;
         mapping(uint32 => BorrowInfo) borrowInfo;
         (borrowInfo, supplyInfo) = _calculateFullBorrowSupplyInfo();
         IUAMUserAccount(userAccountManager).calculateUserAccountHealth{
             flag: MsgFlag.REMAINING_GAS
-        }(owner, supplyInfo, borrowInfo);
+        }(owner, gasTo, supplyInfo, borrowInfo);
     }
 
-    function updateUserAccountHealth(fraction _accountHealth, mapping(uint32 => fraction) updatedIndexes) external override onlyUserAccountManager {
+    function updateUserAccountHealth(address gasTo, fraction _accountHealth, mapping(uint32 => fraction) updatedIndexes) external override onlyUserAccountManager {
         accountHealth = _accountHealth;
         _updateIndexes(updatedIndexes);
-        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        address(gasTo).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
+
+    /*********************************************************************************************************/
+    // Check account health functions
+
+    
 
     /*********************************************************************************************************/
     // internal functions
