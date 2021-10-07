@@ -4,7 +4,7 @@ import './interfaces/IModule.sol';
 
 import '../utils/libraries/MsgFlag.sol';
 
-contract RepayModule is IModule, IContractStateCache, IContractAddressSG {
+contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepayModule {
     using UFO for uint256;
     using FPO for fraction;
 
@@ -19,6 +19,10 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG {
     constructor(address _owner) public {
         tvm.accept();
         owner = _owner;
+    }
+
+    function getModuleState() external override view returns(mapping(uint32 => MarketInfo), mapping(address => fraction)) {
+        return(marketInfo, tokenPrices);
     }
 
     function sendActionId() external override view responsible returns(uint8) {
@@ -48,15 +52,17 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG {
         tonWallet.transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
-    function performAction(uint32 marketId, TvmCell args) external override onlyMarket {
+    function performAction(uint32 marketId, TvmCell args, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
         tvm.rawReserve(msg.value, 2);
+        marketInfo = _marketInfo;
+        tokenPrices = _tokenPrices;
         TvmSlice ts = args.toSlice();
-        (address tonWallet, address userTip3Wallet, uint256 tokensReceived, uint8 loanId) = ts.decode(address, address, uint256, uint8);
+        (address tonWallet, address userTip3Wallet, uint256 tokensReceived) = ts.decode(address, address, uint256);
         mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
 
         IUAMUserAccount(userAccountManager).requestRepayInfo{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, userTip3Wallet, tokensReceived, marketId, loanId, updatedIndexes);
+        }(tonWallet, userTip3Wallet, tokensReceived, marketId, updatedIndexes);
     }
 
     function _createUpdatedIndexes() internal view returns(mapping(uint32 => fraction) updatedIndexes) {
@@ -71,30 +77,29 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG {
         uint256 tokensForRepay,
         uint32 marketId,
         BorrowInfo borrowInfo
-    ) external onlyUserAccountManager {
+    ) external override view onlyUserAccountManager {
         tvm.rawReserve(msg.value - msg.value / 4, 0);
         MarketDelta marketDelta;
 
-        fraction newRepayInfo = marketInfo[marketId].index.fNumMul(borrowInfo.toRepay);
-        newRepayInfo = newRepayInfo.fDiv(borrowInfo.index);
-        uint256 tokensToRepay = newRepayInfo.toNum();
+        uint256 tokensToRepay = borrowInfo.tokensBorrowed;
         uint256 tokensToReturn;
-
         uint256 tokenDelta;
+
         if (tokensToRepay <= tokensForRepay) {
             tokensToReturn = tokensForRepay - tokensToRepay;
-            borrowInfo.toRepay = 0;
+            borrowInfo.tokensBorrowed = 0;
             tokenDelta = tokensToRepay;
         } else {
             tokensToReturn = 0;
-            borrowInfo.toRepay = tokensToRepay - tokensForRepay;
+            borrowInfo.tokensBorrowed = tokensToRepay - tokensForRepay;
             borrowInfo.index = marketInfo[marketId].index;
-        } 
+            tokenDelta = tokensForRepay;
+        }
 
         marketDelta.totalBorrowed.delta = tokenDelta;
         marketDelta.totalBorrowed.positive = false;
-        marketDelta.currentPoolBalance.delta = tokenDelta;
-        marketDelta.currentPoolBalance.positive = true;
+        marketDelta.realTokenBalance.delta = tokenDelta;
+        marketDelta.realTokenBalance.positive = true;
 
         IContractStateCacheRoot(marketAddress).receiveCacheDelta{
             value: msg.value / 4

@@ -26,7 +26,7 @@ library FPO {
         return fraction (a.nom * b.denom + b.nom * a.denom, a.denom * b.denom);
     }
 
-    function fAddNum(fraction a, uint256 b) internal pure returns (fraction) {
+    function fNumAdd(fraction a, uint256 b) internal pure returns (fraction) {
         return fraction (a.nom + b*a.denom, a.denom);
     }
 

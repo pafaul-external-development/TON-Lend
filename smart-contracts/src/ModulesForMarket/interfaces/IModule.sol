@@ -12,8 +12,9 @@ import '../../utils/libraries/MsgFlag.sol';
 import '../../Market/interfaces/IMarketInterfaces.sol';
 
 interface IModule {
-    function performAction(uint32 marketId, TvmCell args) external;
+    function performAction(uint32 marketId, TvmCell args, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external;
     function sendActionId() external view responsible returns(uint8);
+    function getModuleState() external view returns (mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices);
 }
 
 interface IContractAddressSG {
@@ -37,8 +38,7 @@ interface ISupplyModule {
 interface IWithdrawModule {
     function withdrawTokensFromMarket(
         address tonWallet, 
-        address userTip3Wallet, 
-        address originalTip3Wallet, 
+        address userTip3Wallet,
         uint256 tokensToWithdraw, 
         uint32 marketId, 
         mapping(uint32 => uint256) si,
@@ -63,9 +63,8 @@ interface IRepayModule {
         address userTip3Wallet,
         uint256 tokensForRepay,
         uint32 marketId,
-        uint8 loanId,
         BorrowInfo borrowInfo
-    ) external;
+    ) external view;
 }
 
 library Utilities {

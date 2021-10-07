@@ -4,7 +4,7 @@ import './interfaces/IModule.sol';
 
 import '../utils/libraries/MsgFlag.sol';
 
-contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG {
+contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWithdrawModule {
     using UFO for uint256;
     using FPO for fraction;
 
@@ -24,6 +24,10 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG {
         return {flag: MsgFlag.REMAINING_GAS} OperationCodes.WITHDRAW_TOKENS;
     }
 
+    function getModuleState() external override view returns(mapping(uint32 => MarketInfo), mapping(address => fraction)) {
+        return(marketInfo, tokenPrices);
+    }
+
     function setMarketAddress(address _marketAddress) external override onlyOwner {
         tvm.rawReserve(msg.value, 2);
         marketAddress = _marketAddress;
@@ -40,14 +44,16 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG {
         return {flag: MsgFlag.REMAINING_GAS} (owner, marketAddress, userAccountManager);
     }
 
-    function updateCache(address tonWallet, mapping(uint32 => MarketInfo) _marketInfo, mapping(address => fraction) _tokenPrices) external override onlyMarket {
+    function updateCache(address tonWallet, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;
         tonWallet.transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
-    function performAction(uint32 marketId, TvmCell args) external override onlyMarket {
+    function performAction(uint32 marketId, TvmCell args, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
         TvmSlice ts = args.toSlice();
+        marketInfo = _marketInfo;
+        tokenPrices = _tokenPrices;
         (address tonWallet, address userTip3Wallet, address originalTip3Wallet, uint128 tokensToWithdraw) = ts.decode(address, address, address, uint128);
         mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
         IUAMUserAccount(userAccountManager).requestWithdrawInfo{
@@ -63,39 +69,31 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG {
 
     function withdrawTokensFromMarket(
         address tonWallet, 
-        address userTip3Wallet, 
-        address originalTip3Wallet, 
+        address userTip3Wallet,
         uint256 tokensToWithdraw, 
         uint32 marketId, 
         mapping(uint32 => uint256) si,
         mapping(uint32 => uint256) bi
-    ) external onlyUserAccountManager {
+    ) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value - msg.value / 4, 0);
         MarketDelta marketDelta;
 
         MarketInfo mi = marketInfo[marketId];
 
-        fraction exchangeRate = MarketOperations.calculateExchangeRate({
-            currentPoolBalance: mi.currentPoolBalance,
-            totalBorrowed: mi.totalBorrowed,
-            totalReserve: mi.totalReserve,
-            totalSupply: mi.totalSupply
-        });
-
         (uint256 supplySum, uint256 borrowSum) = Utilities.calculateSupplyBorrow(si, bi, marketInfo, tokenPrices);
 
-        fraction fTokensToSend = tokensToWithdraw.numFMul(exchangeRate);
+        fraction fTokensToSend = tokensToWithdraw.numFMul(mi.exchangeRate);
         fTokensToSend = fTokensToSend.fMul(tokenPrices[marketInfo[marketId].token]);
         uint256 tokensToSend = fTokensToSend.toNum();
         if (supplySum > borrowSum) {
             if (supplySum - borrowSum > tokensToSend) {
-                fTokensToSend = tokensToWithdraw.numFMul(exchangeRate);
+                fTokensToSend = tokensToWithdraw.numFMul(mi.exchangeRate);
                 tokensToSend = fTokensToSend.toNum();
 
-                marketDelta.currentPoolBalance.delta = tokensToSend;
-                marketDelta.currentPoolBalance.positive = false;
-                marketDelta.totalSupply.delta = tokensToSend;
-                marketDelta.totalSupply.positive = false;
+                marketDelta.realTokenBalance.delta = tokensToSend;
+                marketDelta.realTokenBalance.positive = false;
+                marketDelta.vTokenBalance.delta = tokensToWithdraw;
+                marketDelta.vTokenBalance.positive = false;
 
                 IContractStateCacheRoot(marketAddress).receiveCacheDelta{
                     value: msg.value / 4
@@ -105,9 +103,8 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG {
                     flag: MsgFlag.REMAINING_GAS
                 }(tonWallet, userTip3Wallet, marketId, tokensToWithdraw, tokensToSend);
             } else {
-                IMarketOperations(marketAddress).transferVTokensBack{
-                    flag: MsgFlag.REMAINING_GAS
-                }(tonWallet, originalTip3Wallet, marketId, tokensToWithdraw);
+                // TODO: transfer tokens back
+                address(tonWallet).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
             }
         } else {
             IUAMUserAccount(userAccountManager).markForLiquidation{

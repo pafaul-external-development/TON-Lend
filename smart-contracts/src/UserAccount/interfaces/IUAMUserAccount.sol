@@ -4,12 +4,12 @@ import './IUserAccount.sol';
 
 interface IUAMUserAccount {
     // Supply operation, starts at wallet controller
-    function writeSupplyInfo(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToSupply, fraction index) external view;
+    function writeSupplyInfo(address tonWallet, uint32 marketId, uint256 tokensToSupply, fraction index) external view;
 
     // Repay operation, starts at wallet controller
-    function requestRepayInfo(address tonWallet, address userTip3Wallet, uint256 tokensForRepay, uint32 marketId, uint8 loanId, mapping(uint32 => fraction) updatedIndexes) external view;
-    function receiveRepayInfo(address tonWallet, address userTip3Wallet, uint256 tokensForRepay, uint32 marketId, uint8 loanId, BorrowInfo borrowInfo) external view;
-    function writeRepayInformation(address tonWallet, address userTip3Wallet, uint32 marketId, uint8 loanId, uint256 tokensToReturn, BorrowInfo borrowInfo) external view;
+    function requestRepayInfo(address tonWallet, address userTip3Wallet, uint256 tokensForRepay, uint32 marketId, mapping(uint32 => fraction) updatedIndexes) external view;
+    function receiveRepayInfo(address tonWallet, address userTip3Wallet, uint256 tokensForRepay, uint32 marketId, BorrowInfo borrowInfo) external view;
+    function writeRepayInformation(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToReturn, BorrowInfo borrowInfo) external view;
 
     // Withdraw operation, starts at wallet controller
     function requestWithdrawInfo(address tonWallet, address userTip3Wallet, address originalTip3Wallet, uint256 tokensToWithdraw, uint32 marketId, mapping(uint32 => fraction) updatedIndexes) external view;

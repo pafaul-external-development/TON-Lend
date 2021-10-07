@@ -2,7 +2,7 @@ pragma ton-solidity >= 0.47.0;
 
 import './interfaces/IModule.sol';
 
-contract BorrowModule is IModule, IContractStateCache, IContractAddressSG {
+contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorrowModule {
     using FPO for fraction;
     using UFO for uint256;
 
@@ -20,6 +20,10 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG {
 
     function sendActionId() external override view responsible returns(uint8) {
         return {flag: MsgFlag.REMAINING_GAS} OperationCodes.BORROW_TOKENS;
+    }
+
+    function getModuleState() external override view returns(mapping(uint32 => MarketInfo), mapping(address => fraction)) {
+        return(marketInfo, tokenPrices);
     }
 
     function setMarketAddress(address _marketAddress) external override onlyOwner {
@@ -44,8 +48,10 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG {
         tonWallet.transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
-    function performAction(uint32 marketId, TvmCell args) external override onlyMarket {
+    function performAction(uint32 marketId, TvmCell args, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
         tvm.rawReserve(msg.value, 2);
+        marketInfo = _marketInfo;
+        tokenPrices = _tokenPrices;
         TvmSlice ts = args.toSlice();
         (address tonWallet, address userTip3Wallet, uint256 tokensToBorrow) = ts.decode(address, address, uint256);
         mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
@@ -67,7 +73,7 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG {
         uint32 marketId,
         mapping (uint32 => uint256) si,
         mapping (uint32 => uint256) bi
-    ) external onlyMarket {
+    ) external override onlyMarket {
         tvm.rawReserve(msg.value - msg.value / 4, 0);
         MarketDelta marketDelta;
         if (tokensToBorrow < marketInfo[marketId].realTokenBalance) {
@@ -76,7 +82,7 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG {
                 uint256 tmp_ = supplySum - borrowSum;
                 fraction tmp = tmp_.numFDiv(tokenPrices[marketInfo[marketId].token]);
                 tmp_ = tmp.toNum();
-                if (tmp_ >= tokensToBorrow) {
+                if (tmp_ > tokensToBorrow) {
                     marketDelta.totalBorrowed.delta = tokensToBorrow;
                     marketDelta.totalBorrowed.positive = true;
                     marketDelta.realTokenBalance.delta = tokensToBorrow;

@@ -40,10 +40,6 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         return {flag: MsgFlag.REMAINING_GAS} markets[marketId];
     }
 
-    function getLoanInfo(uint32 marketId, uint8 loanId) external override view responsible returns(BorrowInfo) {
-        return {flag: MsgFlag.REMAINING_GAS} markets[marketId].borrowInfo[loanId];
-    }
-
     // Contract is deployed via platform
     constructor() public { 
         tvm.accept();
@@ -180,7 +176,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     /*********************************************************************************************************/
     // repay functions
 
-    function sendRepayInfo(address userTip3Wallet, uint32 marketId, uint8 loanId, uint256 tokensForRepay, mapping(uint32 => fraction) updatedIndexes) external override onlyUserAccountManager {
+    function sendRepayInfo(address userTip3Wallet, uint32 marketId, uint256 tokensForRepay, mapping(uint32 => fraction) updatedIndexes) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
         for ((uint32 marketId_, fraction index): updatedIndexes) {
             _updateMarketInfo(marketId_, index);
@@ -188,17 +184,14 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
 
         IUAMUserAccount(userAccountManager).receiveRepayInfo{
             flag: MsgFlag.REMAINING_GAS
-        }(owner, userTip3Wallet, tokensForRepay, marketId, loanId, markets[marketId].borrowInfo[loanId]);
+        }(owner, userTip3Wallet, tokensForRepay, marketId, markets[marketId].borrowInfo);
     }
 
-    function writeRepayInformation(address userTip3Wallet, uint32 marketId, uint8 loanId, uint256 tokensToReturn, BorrowInfo bi) external override onlyUserAccountManager {
+    function writeRepayInformation(address userTip3Wallet, uint32 marketId, uint256 tokensToReturn, BorrowInfo bi) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
-        if (bi.toRepay == 0) {
-            markets[marketId].borrowInfo.removeItemFrom(loanId);
-        } else {
-            markets[marketId].borrowInfo[loanId] = bi;
-        }
 
+        markets[marketId].borrowInfo = bi;
+        
         if (tokensToReturn != 0) { 
             IUAMUserAccount(userAccountManager).requestTokenPayout{
                 flag: MsgFlag.REMAINING_GAS

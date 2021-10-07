@@ -10,7 +10,7 @@ library MarketOperations {
         return fraction(totalBorrowed, totalBorrowed + realTokens);
     }
 
-    function calculateBorrowInterestRate(fraction baseRate, fraction u, fraction utilizationMul) internal pure returns (fraction) {
+    function calculateBorrowInterestRate(fraction baseRate, fraction u, fraction utilizationMul) internal returns (fraction) {
         fraction bir;
 
         bir = u.fMul(utilizationMul);
@@ -28,14 +28,14 @@ library MarketOperations {
         tr = r.fNumMul(t);
         tr = tr.fMul(reserveFactor);
         tr = tr.fNumMul(totalBorrowed);
-        tr = tr.fAddNum(totalReserve);
+        tr = tr.fNumAdd(totalReserve);
         return tr;
     }
 
     function calculateNewIndex(fraction index, fraction bir, uint256 dt) internal returns (fraction) {
         fraction index_;
         index_ = bir.fNumMul(dt);
-        index_ = index_.fAddNum(1);
+        index_ = index_.fNumAdd(1);
         index_ = index_.fAdd(index);
         return index_;
     }
@@ -43,12 +43,12 @@ library MarketOperations {
     function calculateTotalBorrowed(uint256 totalBorrowed, fraction bir, uint256 t) internal returns (uint256) {
         fraction tb_;
         tb_ = bir.fNumMul(t);
-        tb_ = tb_.fAddNum(1);
+        tb_ = tb_.fNumAdd(1);
         tb_ = tb_.fNumMul(totalBorrowed);
         return tb_.toNum();
     }
 
-    function calculateReserves(uint256 reserve, uint256 totalBorrowed, fraction bir, fraction reserveFactor, uint256 dt) internal pure returns (uint256) {
+    function calculateReserves(uint256 reserve, uint256 totalBorrowed, fraction bir, fraction reserveFactor, uint256 dt) internal returns (uint256) {
         fraction res = bir;
         res = res.fNumMul(dt);
         res = res.fMul(reserveFactor);

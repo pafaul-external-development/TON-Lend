@@ -23,8 +23,6 @@ import "../../utils/libraries/FloatingPointOperations.sol";
 interface IMarketOracle {
     function receiveUpdatedPrice(address tokenRoot, uint128 nom, uint128 denom, TvmCell payload) external;
     function receiveAllUpdatedPrices(mapping(address => MarketPriceInfo) updatedPrices, TvmCell payload) external;
-    function forceUpdatePrice(address tokenRoot) external;
-    function forceUpdateAllPrices() external; 
 }
 
 interface IMarketSetters {
@@ -45,18 +43,12 @@ interface IMarketGetters {
 interface IMarketOwnerFunctions {
     function transferOwnership(address newOwner) external;
     function withdrawExtraTons(uint128 amount) external;
-}
-
-interface IMarketTIP3Root {
-    function fetchTIP3Information(address realToken) external pure;
-    function receiveTIP3Information(IRootTokenContract.IRootTokenContractDetails rootTokenDetails) external view;
-    function receiveNewTIP3Address(address tip3RootAddress, TvmCell payload) external;
+    function updateModulesCache() external view;
+    function forceUpdateAllPrices() external; 
 }
 
 interface IMarketOperations {
     function performOperationWalletController(uint8 operationId, address tokenRoot, TvmCell args) external view;
     function performOperationUserAccountManager(uint8 operationId, uint32 marketId, TvmCell args) external view;
-    function mintVTokens(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toMint) external view;
     function requestTokenPayout(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toPayout) external view;
-    function transferVTokensBack(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToReturn) external view;
 }

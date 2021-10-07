@@ -25,6 +25,10 @@ contract SupplyModule is IModule, IContractStateCache, IContractAddressSG {
         return {flag: MsgFlag.REMAINING_GAS} OperationCodes.SUPPLY_TOKENS;
     }
 
+    function getModuleState() external override view returns(mapping(uint32 => MarketInfo), mapping(address => fraction)) {
+        return(marketInfo, tokenPrices);
+    }
+
     function setMarketAddress(address _marketAddress) external override onlyOwner {
         tvm.rawReserve(msg.value, 2);
         marketAddress = _marketAddress;
@@ -48,16 +52,18 @@ contract SupplyModule is IModule, IContractStateCache, IContractAddressSG {
         tonWallet.transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
-    function performAction(uint32 marketId, TvmCell args) external override onlyMarket {
+    function performAction(uint32 marketId, TvmCell args, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
         tvm.rawReserve(msg.value - msg.value / 4, 0);
+        marketInfo = _marketInfo;
+        tokenPrices = _tokenPrices;
         TvmSlice ts = args.toSlice();
-        (address tonWallet, uint128 tokenAmount) = ts.decode(address, uint128);
+        (address tonWallet, uint256 tokenAmount) = ts.decode(address, uint256);
 
         fraction vTokensToProvide = tokenAmount.numFDiv(marketInfo[marketId].exchangeRate);
 
         MarketDelta marketDelta;
-        marketDelta.realTokenDelta.delta = tokenAmount;
-        marketDelta.currentPoolBalance.positive = true;
+        marketDelta.realTokenBalance.delta = tokenAmount;
+        marketDelta.realTokenBalance.positive = true;
         marketDelta.vTokenBalance.delta = vTokensToProvide.toNum();
         marketDelta.vTokenBalance.positive = true;
 
