@@ -41,16 +41,14 @@ class WalletController extends ContractTemplate {
      * @param {Object} param0 
      * @param {Number} param0.marketId
      * @param {String} param0.realTokenRoot
-     * @param {String} param0.virtualTokenRoot
      */
-    async addMarket({marketId, realTokenRoot, virtualTokenRoot}) {
+    async addMarket({marketId, realTokenRoot}) {
         return await encodeMessageBody({
             contract: this,
             functionName: 'addMarket',
             input: {
                 marketId,
-                realTokenRoot,
-                virtualTokenRoot
+                realTokenRoot
             }
         });
     }
@@ -73,14 +71,6 @@ class WalletController extends ContractTemplate {
     async getRealTokenRoots() {
         return await this.call({
             method: 'getRealTokenRoots',
-            params: {},
-            keyPair: this.keyPair
-        });
-    }
-
-    async getVirtualTokenRoots() {
-        return await this.call({
-            method: 'getVirtualTokenRoots',
             params: {},
             keyPair: this.keyPair
         });
@@ -150,13 +140,13 @@ class WalletController extends ContractTemplate {
     /**
      * 
      * @param {Object} param0 
-     * @param {String} param0.userTip3Wallet
+     * @param {String} param0.targetUser
      */
-    async createWithdrawPayload({userTip3Wallet}) {
+    async createLiquidationPayload({targetUser}) {
         return await this.call({
-            method: 'createWithdrawPayload',
+            method: 'createLiquidationPayload',
             params: {
-                userTip3Wallet
+                targetUser
             },
             keyPair: this.keyPair
         });

@@ -42,6 +42,10 @@ library FPO {
         return a.nom / a.denom;
     }
 
+    function eq(fraction a, fraction b) internal pure returns(bool) {
+        return ((a.nom == b.nom) && (a.denom == b.denom));
+    }
+
     function simplify(fraction a) internal pure returns(fraction) {
         // loosing 0.5% of presicion at most
         if (a.nom / a.denom > 500) {

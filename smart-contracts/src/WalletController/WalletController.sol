@@ -247,6 +247,7 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
                 TvmBuilder tb;
                 tb.store(sender_address);
                 tb.store(targetUser);
+                tb.store(sender_wallet);
                 tb.store(uint256(amount));
                 MarketAggregator(marketAddress).performOperationWalletController{
                     flag: MsgFlag.REMAINING_GAS

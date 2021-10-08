@@ -4,14 +4,13 @@ const { fraction } = require("../../../utils/common");
 
 const marketToAdd = {
     marketId: 0,
-    realToken: '0:22851129f9d892ea040d8eac15e0cf1568986f01da45e8bac9538b0e0c9e8ba7',
-    initialBalance: 100e9,
-    _reserveFactor: fraction(1, 100),
-    _kink: fraction(20, 100),
-    _collateral: fraction(50, 100),
-    _baseRate: fraction(20, 100),
-    _mul: fraction(110, 100),
-    _jumpMul: fraction(110, 100)
+    realToken: '0:6713c872168b18f18fbceb6e47857010cc829f19d06ade1c1cb1a2c04f5dce0f',
+    _baseRate: fraction(5, 100),
+    _utilizationMultiplier: fraction(2, 1),
+    _reserveFactor: fraction(2, 100),
+    _exchangeRate: fraction(1, 1),
+    _collateralFactor: fraction(50, 100),
+    _liquidationMultiplier: fraction(105, 100)
 }
 
 module.exports = marketToAdd;

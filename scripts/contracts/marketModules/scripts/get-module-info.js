@@ -1,3 +1,4 @@
+const { pp } = require("../../../utils/common");
 const { loadEssentialContracts } = require("../../../utils/contracts");
 const { Module } = require("../modules/moduleWrapper");
 
@@ -16,6 +17,7 @@ async function main() {
         let module = contracts.modules[moduleName];
         console.log(`Module: ${moduleName}`);
         console.log(await module.getContractAddresses());
+        console.log(pp(await module.getModuleState()));
     }
 
 }

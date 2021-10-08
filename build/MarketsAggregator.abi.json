@@ -64,7 +64,7 @@
 				{"name":"marketId","type":"uint32"}
 			],
 			"outputs": [
-				{"components":[{"name":"token","type":"address"},{"name":"realTokenBalance","type":"uint256"},{"name":"vTokenBalance","type":"uint256"},{"name":"totalBorrowed","type":"uint256"},{"name":"totalReserve","type":"uint256"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"index","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"baseRate","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"utilizationMultiplier","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"reserveFactor","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"exchangeRate","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"collateralFactor","type":"tuple"},{"name":"lastUpdateTime","type":"uint256"}],"name":"value0","type":"tuple"}
+				{"components":[{"name":"token","type":"address"},{"name":"realTokenBalance","type":"uint256"},{"name":"vTokenBalance","type":"uint256"},{"name":"totalBorrowed","type":"uint256"},{"name":"totalReserve","type":"uint256"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"index","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"baseRate","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"utilizationMultiplier","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"reserveFactor","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"exchangeRate","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"collateralFactor","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"liquidationMultiplier","type":"tuple"},{"name":"lastUpdateTime","type":"uint256"}],"name":"value0","type":"tuple"}
 			]
 		},
 		{
@@ -73,7 +73,7 @@
 				{"name":"_answer_id","type":"uint32"}
 			],
 			"outputs": [
-				{"components":[{"name":"token","type":"address"},{"name":"realTokenBalance","type":"uint256"},{"name":"vTokenBalance","type":"uint256"},{"name":"totalBorrowed","type":"uint256"},{"name":"totalReserve","type":"uint256"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"index","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"baseRate","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"utilizationMultiplier","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"reserveFactor","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"exchangeRate","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"collateralFactor","type":"tuple"},{"name":"lastUpdateTime","type":"uint256"}],"name":"value0","type":"map(uint32,tuple)"}
+				{"components":[{"name":"token","type":"address"},{"name":"realTokenBalance","type":"uint256"},{"name":"vTokenBalance","type":"uint256"},{"name":"totalBorrowed","type":"uint256"},{"name":"totalReserve","type":"uint256"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"index","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"baseRate","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"utilizationMultiplier","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"reserveFactor","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"exchangeRate","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"collateralFactor","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"liquidationMultiplier","type":"tuple"},{"name":"lastUpdateTime","type":"uint256"}],"name":"value0","type":"map(uint32,tuple)"}
 			]
 		},
 		{
@@ -98,12 +98,12 @@
 			"inputs": [
 				{"name":"marketId","type":"uint32"},
 				{"name":"realToken","type":"address"},
-				{"name":"initialBalance","type":"uint256"},
 				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"_baseRate","type":"tuple"},
 				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"_utilizationMultiplier","type":"tuple"},
 				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"_reserveFactor","type":"tuple"},
 				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"_exchangeRate","type":"tuple"},
-				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"_collateralFactor","type":"tuple"}
+				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"_collateralFactor","type":"tuple"},
+				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"_liquidationMultiplier","type":"tuple"}
 			],
 			"outputs": [
 			]
@@ -115,7 +115,9 @@
 				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"_baseRate","type":"tuple"},
 				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"_utilizationMultiplier","type":"tuple"},
 				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"_reserveFactor","type":"tuple"},
-				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"_exchangeRate","type":"tuple"}
+				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"_exchangeRate","type":"tuple"},
+				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"_collateralFactor","type":"tuple"},
+				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"_liquidationMultiplier","type":"tuple"}
 			],
 			"outputs": [
 			]
@@ -161,6 +163,7 @@
 			"name": "calculateUserAccountHealth",
 			"inputs": [
 				{"name":"tonWallet","type":"address"},
+				{"name":"gasTo","type":"address"},
 				{"name":"supplyInfo","type":"map(uint32,uint256)"},
 				{"components":[{"name":"tokensBorrowed","type":"uint256"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"index","type":"tuple"}],"name":"borrowInfo","type":"map(uint32,tuple)"}
 			],
@@ -285,7 +288,7 @@
 			"name": "MarketCreated",
 			"inputs": [
 				{"name":"marketId","type":"uint32"},
-				{"components":[{"name":"token","type":"address"},{"name":"realTokenBalance","type":"uint256"},{"name":"vTokenBalance","type":"uint256"},{"name":"totalBorrowed","type":"uint256"},{"name":"totalReserve","type":"uint256"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"index","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"baseRate","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"utilizationMultiplier","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"reserveFactor","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"exchangeRate","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"collateralFactor","type":"tuple"},{"name":"lastUpdateTime","type":"uint256"}],"name":"marketState","type":"tuple"}
+				{"components":[{"name":"token","type":"address"},{"name":"realTokenBalance","type":"uint256"},{"name":"vTokenBalance","type":"uint256"},{"name":"totalBorrowed","type":"uint256"},{"name":"totalReserve","type":"uint256"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"index","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"baseRate","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"utilizationMultiplier","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"reserveFactor","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"exchangeRate","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"collateralFactor","type":"tuple"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"liquidationMultiplier","type":"tuple"},{"name":"lastUpdateTime","type":"uint256"}],"name":"marketState","type":"tuple"}
 			],
 			"outputs": [
 			]

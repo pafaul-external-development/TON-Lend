@@ -20,6 +20,7 @@ struct MarketInfo {
     fraction reserveFactor;
     fraction exchangeRate;
     fraction collateralFactor;
+    fraction liquidationMultiplier;
 
     uint256 lastUpdateTime;
 }

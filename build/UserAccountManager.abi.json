@@ -194,6 +194,7 @@
 			"name": "calculateUserAccountHealth",
 			"inputs": [
 				{"name":"tonWallet","type":"address"},
+				{"name":"gasTo","type":"address"},
 				{"name":"supplyInfo","type":"map(uint32,uint256)"},
 				{"components":[{"name":"tokensBorrowed","type":"uint256"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"index","type":"tuple"}],"name":"borrowInfo","type":"map(uint32,tuple)"}
 			],
@@ -204,6 +205,7 @@
 			"name": "updateUserAccountHealth",
 			"inputs": [
 				{"name":"tonWallet","type":"address"},
+				{"name":"gasTo","type":"address"},
 				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"accountHealth","type":"tuple"},
 				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"updatedIndexes","type":"map(uint32,tuple)"}
 			],

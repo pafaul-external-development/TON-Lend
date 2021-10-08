@@ -48,6 +48,14 @@ class Module extends ContractTemplate {
             keyPair: this.keyPair
         });
     }
+
+    async getModuleState() {
+        return await this.call({
+            method: 'getModuleState',
+            params: {},
+            keyPair: this.keyPair
+        });
+    }
 }
 
 module.exports = {

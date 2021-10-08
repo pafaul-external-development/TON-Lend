@@ -9,8 +9,7 @@ async function main() {
         oracle: true,
         userAM: true,
         walletC: true,
-        marketModules: true,
-        deployer: true
+        marketModules: true
     });
 
     /**
@@ -28,10 +27,6 @@ async function main() {
     payloads.push(await contracts.marketsAggregator.setWalletController({
         _tip3WalletController: contracts.walletController.address
     }));
-
-    payloads.push(await contracts.marketsAggregator.setTip3DeployerAddress({
-        _tip3Deployer: contracts.tip3Deployer.address
-    }))
 
     let i = 1;
     for (let payload of payloads) {

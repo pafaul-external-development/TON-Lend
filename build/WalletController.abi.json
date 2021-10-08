@@ -143,6 +143,15 @@
 			]
 		},
 		{
+			"name": "createLiquidationPayload",
+			"inputs": [
+				{"name":"targetUser","type":"address"}
+			],
+			"outputs": [
+				{"name":"value0","type":"cell"}
+			]
+		},
+		{
 			"name": "contractCodeVersion",
 			"inputs": [
 			],

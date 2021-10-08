@@ -44,15 +44,6 @@ class MarketsAggregator extends ContractTemplate {
         });
     }
 
-    async tip3Deployer() {
-        return await this.call({
-            method: 'tip3Deployer',
-            params: {},
-            keyPair: this.keyPair
-        });
-    }
-
-
     async getTokenPrices() {
         return await this.call({
             method: 'getTokenPrices',
@@ -105,24 +96,22 @@ class MarketsAggregator extends ContractTemplate {
      * @param {Object} p
      * @param {Number} p.marketId
      * @param {String} p.realToken
-     * @param {Number} p.initialBalance
-     * @param {Fraction} p._reserveFactor
-     * @param {Fraction} p._kink
-     * @param {Fraction} p._collateral
      * @param {Fraction} p._baseRate
-     * @param {Fraction} p._mul
-     * @param {Fraction} p._jumpMul
+     * @param {Fraction} p._utilizationMultiplier
+     * @param {Fraction} p._reserveFactor
+     * @param {Fraction} p._exchangeRate
+     * @param {Fraction} p._collateralFactor
+     * @param {Fraction} p._liquidationMultiplier
      */
     async createNewMarket({
         marketId,
         realToken,
-        initialBalance, 
-        _reserveFactor,
-        _kink,
-        _collateral,
         _baseRate,
-        _mul,
-        _jumpMul
+        _utilizationMultiplier,
+        _reserveFactor,
+        _exchangeRate,
+        _collateralFactor,
+        _liquidationMultiplier
     }) {
         return await encodeMessageBody({
             contract: this,
@@ -130,13 +119,12 @@ class MarketsAggregator extends ContractTemplate {
             input: {
                 marketId,
                 realToken,
-                initialBalance,
-                _reserveFactor,
-                _kink,
-                _collateral,
                 _baseRate,
-                _mul,
-                _jumpMul
+                _utilizationMultiplier,
+                _reserveFactor,
+                _exchangeRate,
+                _collateralFactor,
+                _liquidationMultiplier
             }
         });
     }
@@ -154,21 +142,6 @@ class MarketsAggregator extends ContractTemplate {
             input: {
                 operationId,
                 module
-            }
-        });
-    }
-
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {String} param0.tokenRoot
-     */
-    async forceUpdatePrice({tokenRoot}) {
-        return await encodeMessageBody({
-            contract: this,
-            functionName: 'forceUpdatePrice',
-            input: {
-                tokenRoot
             }
         });
     }
@@ -229,21 +202,6 @@ class MarketsAggregator extends ContractTemplate {
     /**
      * 
      * @param {Object} param0 
-     * @param {String} param0._tip3Deployer
-     */
-    async setTip3DeployerAddress({_tip3Deployer}) {
-        return await encodeMessageBody({
-            contract: this,
-            functionName: 'setTip3Deployer',
-            input: {
-                _tip3Deployer
-            }
-        });
-    }
-
-    /**
-     * 
-     * @param {Object} param0 
      * @param {String} param0.newOwner
      */
     async transferOwnership({newOwner}) {
@@ -253,6 +211,14 @@ class MarketsAggregator extends ContractTemplate {
             input: {
                 newOwner
             }
+        });
+    }
+
+    async contractCodeVersion() {
+        return this.call({
+            method: 'contractCodeVersion',
+            params: {},
+            keyPair: this.keyPair
         });
     }
 }

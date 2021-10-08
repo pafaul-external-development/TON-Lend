@@ -78,11 +78,33 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;
         TvmSlice ts = args.toSlice();
-        (address tonWallet, address targetUser, uint256 tokenAmount) = ts.decode(address, address, uint256);
+        (address tonWallet, address targetUser, address tip3UserWallet, uint256 tokenAmount) = ts.decode(address, address, address, uint256);
         mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
         IUAMUserAccount(userAccountManager).requestLiquidationInformation{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, targetUser, tokenAmount);
+        }(tonWallet, targetUser, tip3UserWallet, marketId, tokenAmount, updatedIndexes);
+    }
+
+    function liquidate(
+        address tonWallet, 
+        address targetUser, 
+        address tip3UserWallet, 
+        uint32 marketId, 
+        uint256 tokensProvided, 
+        mapping(uint32 => uint256) supplyInfo, 
+        mapping(uint32 => BorrowInfo) borrowInfo
+    ) external override view onlyUserAccountManager {
+        tvm.rawReserve(msg.value - msg.value / 4, 2);
+        MarketDelta marketDelta;
+        fraction health = Utilities.calculateSupplyBorrowFull(supplyInfo, borrowInfo, marketInfo, tokenPrices);
+        if (health.nom < health.denom) {
+            uint256 deltaHeath = health.denom - health.nom;
+            fraction ftokensForLiquidation = deltaHealth.numFDiv(tokenPrices[marketInfo[marketId].token]);
+            uint256 tokensForLiquidation = ftokensForLiquidation.toNum();
+            fraction ftokensForLiquidationMultiplier = tokensForLiquidation.numFMul(marketInfo[marketId].liquidationMultiplier);
+            uint256 tokensForLiquidationMultiplier = ftokensForLiquidationMultiplier;
+            
+        }
     }
 
     function _createUpdatedIndexes() internal view returns(mapping(uint32 => fraction) updatedIndexes) {
@@ -91,10 +113,13 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
         }
     }
 
-
-
     modifier onlyOwner() {
         require(msg.sender == owner);
+        _;
+    }
+
+    modifier onlyUserAccountManager() {
+        require(msg.sender == userAccountManager);
         _;
     }
 

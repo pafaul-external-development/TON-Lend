@@ -43,18 +43,21 @@ class UserAccount extends ContractTemplate {
 
     /**
      * 
-     * @param {Object} param0 
+     * @param {Object} param0
+     * @param {String} param0.userTip3Wallet
      * @param {Number} param0.marketId
-     * @param {Number} param0.loanId
+     * @param {Number} param0.tokensToWithdraw
+     * @returns {Promise<Object>}
      */
-    async getLoanInfo({marketId, loanId}) {
-        return await this.call({
-            method: 'getLoanInfo',
-            params: {
+    async withdraw({userTip3Wallet, marketId, tokensToWithdraw}) {
+        return await encodeMessageBody({
+            contract: this,
+            functionName: 'withdraw',
+            input: {
+                userTip3Wallet,
                 marketId,
-                loanId
-            },
-            keyPair: this.keyPair
+                tokensToWithdraw
+            }
         });
     }
 
@@ -75,6 +78,22 @@ class UserAccount extends ContractTemplate {
                 userTip3Wallet
             }
         });
+    }
+
+    /**
+     * 
+     * @param {Object} param0 
+     * @param {String} param0.gasTo
+     * @returns 
+     */
+    async checkUserAccountHealth({gasTo}) {
+        return await encodeMessageBody({
+            contract: this,
+            functionName: 'checkUserAccountHealth',
+            input: {
+                gasTo
+            }
+        })
     }
 
     /**
@@ -108,6 +127,14 @@ class UserAccount extends ContractTemplate {
     async userAccountManager() {
         return await this.call({
             method: 'userAccountManager',
+            params: {},
+            keyPair: this.keyPair
+        });
+    }
+
+    async contractCodeVersion() {
+        return await this.call({
+            method: 'contractCodeVersion',
             params: {},
             keyPair: this.keyPair
         });

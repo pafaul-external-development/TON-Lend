@@ -11,8 +11,6 @@ import '../../utils/interfaces/IUpgradableContract.sol';
 
 import '../../utils/libraries/MsgFlag.sol';
 
-import '../../Market/interfaces/IMarketInterfaces.sol';
-
 interface IModule {
     function performAction(uint32 marketId, TvmCell args, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external;
     function sendActionId() external view responsible returns(uint8);
@@ -102,12 +100,59 @@ library Utilities {
             tmp = tmp.fMul(tokenPrices[marketInfo[marketId].token]);
             tmp = tmp.fMul(marketInfo[marketId].collateralFactor);
             supplySum += tmp.toNum();
+        }
 
+        for ((uint32 marketId, ): bi) {
+            exchangeRate = marketInfo[marketId].exchangeRate;
             tmp = exchangeRate.fNumMul(bi[marketId]);
             tmp = tmp.fMul(tokenPrices[marketInfo[marketId].token]);
             borrowSum += tmp.toNum();
         }
 
         return (supplySum, borrowSum);
+    }
+
+    function calculateSupplyBorrowFull(
+        mapping(uint32 => uint256) si,
+        mapping(uint32 => BorrowInfo) bi,
+        mapping(uint32 => MarketInfo) marketInfo,
+        mapping(address => fraction) tokenPrices
+    ) internal returns (fraction) {
+        fraction accountHealth;
+        fraction tmp;
+        fraction exchangeRate;
+
+         // For supply:
+        // 1. Calculate real tokens
+        // 2. Calculate real tokens cost in usd
+        // 3. Multiply by collateral factor
+
+        // For borrow:
+        // 1. Update indexes
+        // 2. Calculate real tokens
+        // 3. Calculate real tokens cost in usd
+        for ((uint32 marketId, ): si) {
+            exchangeRate = marketInfo[marketId].exchangeRate;
+            tmp = si[marketId].numFMul(exchangeRate);
+            tmp = tmp.fMul(tokenPrices[marketInfo[marketId].token]);
+            tmp = tmp.fMul(marketInfo[marketId].collateralFactor);
+            accountHealth.nom += tmp.toNum();
+        }
+
+        for ((uint32 marketId, BorrowInfo _bi): bi) {
+            if (_bi.tokensBorrowed != 0) {
+                if (!_bi.index.eq(marketInfo[marketId].index)) {
+                    tmp = bi[marketId].tokensBorrowed.numFMul(marketInfo[marketId].index);
+                    tmp = tmp.fDiv(bi[marketId].index);
+                } else {
+                    tmp = bi[marketId].tokensBorrowed.toF();
+                }
+                tmp = tmp.fMul(exchangeRate);
+                tmp = tmp.fMul(tokenPrices[marketInfo[marketId].token]);
+                accountHealth.denom += tmp.toNum();
+            }
+        }
+
+        return accountHealth;
     }
 }

@@ -73,9 +73,9 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         mapping(uint32 => bool),
         mapping(uint32 => UserMarketInfo),
         TvmCell,
-        uint32
+        uint32 codeVersion
     ) private {
-
+        contractCodeVersion = codeVersion;
     }
 
     function getOwner() external override responsible view returns(address) {
@@ -89,9 +89,9 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         tvm.rawReserve(msg.value, 2);
         markets[marketId].suppliedTokens += tokensToSupply;
         _updateMarketInfo(marketId, index);
-        this.checkUserAccountHealth{
-            flag: MsgFlag.REMAINING_GAS
-        }();
+        // this.checkUserAccountHealth{
+        //     flag: MsgFlag.REMAINING_GAS
+        // }(owner);
     }
 
     /*********************************************************************************************************/
@@ -193,7 +193,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         } else {
             this.checkUserAccountHealth{
                 flag: MsgFlag.REMAINING_GAS
-            }();
+            }(owner);
         }
     }
 
@@ -223,7 +223,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         } else {
             this.checkUserAccountHealth{
                 flag: MsgFlag.REMAINING_GAS
-            }();
+            }(owner);
         }
     }
 
@@ -266,6 +266,8 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         if (markets[marketId].borrowInfo.tokensBorrowed != 0) {
             tmpf = bi.tokensBorrowed.numFMul(index);
             tmpf = tmpf.fDiv(bi.index);
+        } else {
+            tmpf = fraction(0, 1);
         }
         markets[marketId].borrowInfo = BorrowInfo(tmpf.toNum(), index);
     }

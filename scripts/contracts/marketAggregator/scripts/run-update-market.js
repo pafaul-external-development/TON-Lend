@@ -7,16 +7,16 @@ async function main() {
         market: true
     });
 
-    let marketInfo = await contracts.marketsAggregator.getMarketInformation({
-        marketId: 0
+    let updatePayload = await contracts.marketsAggregator.upgradeContractCode({
+        code: contracts.marketsAggregator.code,
+        updateParams: '',
+        codeVersion: 2
     });
-
-    let updateTokenPayload = await contracts.marketsAggregator.forceUpdateAllPrices();
 
     await contracts.msigWallet.transfer({
         destination: contracts.marketsAggregator.address,
-        value: convertCrystal(2, 'nano'),
-        payload: updateTokenPayload
+        value: convertCrystal(3, 'nano'),
+        payload: updatePayload
     });
 }
 

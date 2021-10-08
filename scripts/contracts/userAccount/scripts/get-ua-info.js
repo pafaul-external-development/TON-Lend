@@ -13,6 +13,8 @@ async function main() {
     console.log(`Market info: ${pp(await contracts.userAccount.getAllMarketsInfo())}`);
 
     console.log(`UAM: ${await contracts.userAccount.userAccountManager()}`);
+
+    console.log(`Code version: ${await contracts.userAccount.contractCodeVersion()}`);
 }
 
 main().then(

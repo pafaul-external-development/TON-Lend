@@ -98,7 +98,7 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
         uint32 marketId,
         mapping (uint32 => uint256) si,
         mapping (uint32 => uint256) bi
-    ) external override onlyMarket {
+    ) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value - msg.value / 4, 0);
         MarketDelta marketDelta;
         if (tokensToBorrow < marketInfo[marketId].realTokenBalance) {
@@ -137,6 +137,11 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
 
     modifier onlyOwner() {
         require(msg.sender == owner);
+        _;
+    }
+
+    modifier onlyUserAccountManager() {
+        require(msg.sender == userAccountManager);
         _;
     }
 

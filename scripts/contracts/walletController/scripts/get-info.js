@@ -6,8 +6,6 @@ async function main() {
 
     console.log(`Real token roots: ${pp(await contracts.walletController.getRealTokenRoots())}`);
 
-    console.log(`Virtual token roots: ${pp(await contracts.walletController.getVirtualTokenRoots())}`);
-
     console.log(`Wallets: ${pp(await contracts.walletController.getWallets())}`);
 
     console.log(`Market addresses: ${pp(await contracts.walletController.getMarketAddresses({marketId: 0}))}`);
