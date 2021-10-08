@@ -10,15 +10,12 @@ async function main() {
     });
 
     let realTip3 = new Tip3Wallet(await loadContractData(contracts.locklift, 'RealTip3'));
-    let virtualTip3 = new Tip3Wallet(await loadContractData(contracts.locklift, 'VirtualTip3'));
 
     let supllyModuleInfo = await contracts.walletController.getMarketAddresses({
         marketId: 0
     });
 
-    let supplyPayload = await contracts.walletController.createSupplyPayload({
-        userVTokenWallet: virtualTip3.address
-    });
+    let supplyPayload = await contracts.walletController.createSupplyPayload();
 
     let transferPayload = await realTip3.transfer({
         to: supllyModuleInfo.realTokenWallet,

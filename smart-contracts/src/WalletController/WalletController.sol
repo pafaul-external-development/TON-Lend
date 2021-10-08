@@ -97,9 +97,9 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
         mapping(address => bool), 
         mapping(uint32 => MarketTokenAddresses), 
         TvmCell, 
-        uint32
+        uint32 _codeVersion
     ) private {
-
+        contractCodeVersion = _codeVersion;
     }
 
     /*********************************************************************************************************/
@@ -227,7 +227,6 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
             uint8 operation = ts.decode(uint8);
             TvmSlice args = ts.loadRefAsSlice();
             if (operation == OperationCodes.SUPPLY_TOKENS) {
-                (address userTip3Wallet) = args.decode(address);
                 TvmBuilder tb;
                 tb.store(sender_address);
                 tb.store(uint256(amount));
@@ -319,11 +318,10 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
     /*********************************************************************************************************/
     // Functions for payload creation
 
-    function createSupplyPayload(address userVTokenWallet) external override pure returns(TvmCell) {
+    function createSupplyPayload() external override pure returns(TvmCell) {
         TvmBuilder tb;
         tb.store(OperationCodes.SUPPLY_TOKENS);
         TvmBuilder op;
-        op.store(userVTokenWallet);
         tb.store(op.toCell());
 
         return tb.toCell();

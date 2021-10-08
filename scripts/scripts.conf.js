@@ -12,7 +12,7 @@
  * @type {ScriptConfiguration}
  */
 const configuration = {
-    network: 'local',
+    network: 'devnet',
     buildDirectory: './build/',
     pathToLockliftConfig: './scripts/l.conf.js',
     deployedContractsDir: './deployed/'

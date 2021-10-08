@@ -107,17 +107,10 @@ class WalletController extends ContractTemplate {
         });
     }
 
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {String} param0.userVTokenWallet
-     */
-    async createSupplyPayload({userVTokenWallet}) {
+    async createSupplyPayload() {
         return await this.call({
             method: 'createSupplyPayload',
-            params: {
-                userVTokenWallet
-            },
+            params: {},
             keyPair: this.keyPair
         });
     }
@@ -148,6 +141,14 @@ class WalletController extends ContractTemplate {
             params: {
                 targetUser
             },
+            keyPair: this.keyPair
+        });
+    }
+
+    async contractCodeVersion() {
+        return await this.call({
+            method: 'contractCodeVersion',
+            params: {},
             keyPair: this.keyPair
         });
     }

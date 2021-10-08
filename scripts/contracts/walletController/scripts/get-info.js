@@ -11,6 +11,8 @@ async function main() {
     console.log(`Market addresses: ${pp(await contracts.walletController.getMarketAddresses({marketId: 0}))}`);
 
     console.log(`All markets: ${pp(await contracts.walletController.getAllMarkets())}`);
+
+    console.log(`Code version: ${await contracts.walletController.contractCodeVersion()}`);
 }
 
 main().then(

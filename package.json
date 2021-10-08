@@ -49,6 +49,7 @@
         "run:user-enter-market": "node ./scripts/contracts/userAccount/scripts/run-ua-enter-market.js",
         "run:wallet-controller-add-market": "node ./scripts/contracts/walletController/scripts/run-add-market.js",
         "run:wallet-controller-remove-market": "node ./scripts/contracts/walletController/scripts/run-delete-market.js",
+        "run:wallet-controller-update": "node ./scripts/contracts/walletController/scripts/run-update-wallet-controller.js",
         "run:user-supply-tokens": "node ./scripts/contracts/wallet/scripts/run-supply-tokens.js",
         "run:user-update": "node ./scripts/contracts/userAccount/scripts/run-upgrade-user-account.js",
         "run:wallet-get-tokens": "node scripts/contracts/wallet/scripts/run-get-tokens.js"

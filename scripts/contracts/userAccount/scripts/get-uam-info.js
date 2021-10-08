@@ -15,7 +15,7 @@ async function main() {
 
     console.log(`Existing modules: ${pp(await contracts.userAccountManager.existingModules())}`);
 
-    console.log(`Existing codes: ${pp(await contracts.userAccountManager.getUserAccountCode({version: 2}))}`);
+    console.log(`Existing codes: ${pp(await contracts.userAccountManager.getUserAccountCode({version: 0}))}`);
 }
 
 main().then(
