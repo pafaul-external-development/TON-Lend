@@ -14,6 +14,8 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
     mapping (uint32 => MarketInfo) marketInfo;
     mapping (address => fraction) tokenPrices;
 
+    event TokenBorrow(uint32 marketId, MarketDelta marketDelta, address tonWallet, uint256 tokensToBorrow);
+
     constructor(address _owner) public {
         tvm.accept();
         owner = _owner;
@@ -115,7 +117,7 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
         mapping (uint32 => uint256) si,
         mapping (uint32 => uint256) bi
     ) external override onlyUserAccountManager {
-        tvm.rawReserve(msg.value - msg.value / 4, 0);
+        tvm.rawReserve(msg.value, 0);
         MarketDelta marketDelta;
         if (tokensToBorrow < marketInfo[marketId].realTokenBalance) {
             (uint256 supplySum, uint256 borrowSum) = Utilities.calculateSupplyBorrow(si, bi, marketInfo, tokenPrices);
@@ -129,13 +131,16 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
                     marketDelta.realTokenBalance.delta = tokensToBorrow;
                     marketDelta.realTokenBalance.positive = false;
 
-                    IContractStateCacheRoot(marketAddress).receiveCacheDelta{
-                        value: msg.value / 4
-                    }(tonWallet, marketDelta, marketId);
+                    TvmBuilder tb;
+                    tb.store(tonWallet);
+                    tb.store(userTip3Wallet);
+                    tb.store(tokensToBorrow);
 
-                    IUAMUserAccount(userAccountManager).writeBorrowInformation{
+                    emit TokenBorrow(marketId, marketDelta, tonWallet, tokensToBorrow);
+
+                    IContractStateCacheRoot(marketAddress).receiveCacheDelta{
                         flag: MsgFlag.REMAINING_GAS
-                    }(tonWallet, userTip3Wallet, tokensToBorrow, marketId, marketInfo[marketId].index);
+                    }(marketId, marketDelta, tb.toCell());
                 } else {
                     IUAMUserAccount(userAccountManager).writeBorrowInformation{
                         flag: MsgFlag.REMAINING_GAS
@@ -149,6 +154,17 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
         } else {
             address(tonWallet).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
         }
+    }
+
+    function resumeOperation(uint32 marketId, TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) onlyMarket {
+        tvm.rawReserve(msg.value, 2);
+        marketInfo = _marketInfo;
+        tokenPrices = _tokenPrices;
+        TvmSlice ts = args.toSlice();
+        (address tonWallet, address userTip3Wallet, uint256 tokensToBorrow) = ts.decode(address, address, uint256);
+        IUAMUserAccount(userAccountManager).writeBorrowInformation{
+            flag: MsgFlag.REMAINING_GAS
+        }(tonWallet, userTip3Wallet, tokensToBorrow, marketId, marketInfo[marketId].index);
     }
 
     modifier onlyOwner() {

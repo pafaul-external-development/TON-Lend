@@ -80,7 +80,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     /*********************************************************************************************************/
     // Cache update functions
 
-    function receiveCacheDelta(address sendGasTo, MarketDelta marketDelta, uint32 marketId) external override onlyModule {
+    function receiveCacheDelta(uint32 marketId, MarketDelta marketDelta, TvmCell args) external override onlyModule {
         tvm.rawReserve(msg.value, 2);
         if (
             marketDelta.realTokenBalance.delta != 0 &&
@@ -111,12 +111,9 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
 
         _updateMarketState(marketId);
 
-        uint128 valueToTransfer = msg.value / (moduleAmount + 1);
-        for ((, address module) : modules) {
-            IContractStateCache(module).updateCache{
-                value: valueToTransfer
-            }(sendGasTo, markets, tokenPrices);
-        }
+        IModule(msg.sender).resumeOperation{
+            flag: MsgFlag.REMAINING_GAS
+        }(marketId, args, markets, tokenPrices);
     }
 
     function updateModulesCache() external view override onlyOwner {

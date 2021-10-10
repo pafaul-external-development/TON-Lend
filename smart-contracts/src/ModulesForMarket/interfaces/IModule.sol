@@ -13,6 +13,7 @@ import '../../utils/libraries/MsgFlag.sol';
 
 interface IModule {
     function performAction(uint32 marketId, TvmCell args, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external;
+    function resumeOperation(uint32 marketId, TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external;
     function sendActionId() external view responsible returns(uint8);
     function getModuleState() external view returns (mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices);
 }
@@ -28,7 +29,7 @@ interface IContractStateCache {
 }
 
 interface IContractStateCacheRoot {
-    function receiveCacheDelta(address tonWallet, MarketDelta marketDelta, uint32 marketId) external;
+    function receiveCacheDelta(uint32 marketId, MarketDelta marketDelta, TvmCell args) external;
 }
 
 interface ISupplyModule {

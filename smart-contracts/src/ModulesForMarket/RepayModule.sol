@@ -16,6 +16,8 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepay
     mapping (uint32 => MarketInfo) marketInfo;
     mapping (address => fraction) tokenPrices;
 
+    event RepayBorrow(uint32 marketId, MarketDelta marketDelta, address tonWallet, uint256 tokensRepaid);
+
     constructor(address _owner) public {
         tvm.accept();
         owner = _owner;
@@ -112,7 +114,7 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepay
         uint32 marketId,
         BorrowInfo borrowInfo
     ) external override view onlyUserAccountManager {
-        tvm.rawReserve(msg.value - msg.value / 4, 0);
+        tvm.rawReserve(msg.value, 0);
         MarketDelta marketDelta;
 
         uint256 tokensToRepay = borrowInfo.tokensBorrowed;
@@ -135,10 +137,25 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepay
         marketDelta.realTokenBalance.delta = tokenDelta;
         marketDelta.realTokenBalance.positive = true;
 
-        IContractStateCacheRoot(marketAddress).receiveCacheDelta{
-            value: msg.value / 4
-        }(tonWallet, marketDelta, marketId);
+        emit RepayBorrow(marketId, marketDelta, tonWallet, tokenDelta);
 
+        TvmBuilder tb;
+        tb.store(tonWallet);
+        tb.store(userTip3Wallet);
+        tb.store(tokensToReturn);
+        tb.store(borrowInfo);
+
+        IContractStateCacheRoot(marketAddress).receiveCacheDelta{
+            flag: MsgFlag.REMAINING_GAS
+        }(marketId, marketDelta, tb.toCell());
+    }
+
+    function resumeOperation(uint32 marketId, TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) onlyMarket {
+        tvm.rawReserve(msg.value, 2);
+        marketInfo = _marketInfo;
+        tokenPrices = _tokenPrices;
+        TvmSlice ts = args.toSlice();
+        (address tonWallet, address userTip3Wallet, uint256 tokensToReturn, BorrowInfo borrowInfo) = ts.decode(address, address, uint256, BorrowInfo);
         IUAMUserAccount(userAccountManager).writeRepayInformation{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, userTip3Wallet, marketId, tokensToReturn, borrowInfo);

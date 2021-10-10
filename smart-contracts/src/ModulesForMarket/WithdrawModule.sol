@@ -130,15 +130,16 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
                 marketDelta.vTokenBalance.delta = tokensToWithdraw;
                 marketDelta.vTokenBalance.positive = false;
 
+                emit TokenWithdraw(marketId, marketDelta, tonWallet, tokensToWithdraw, tokensToSend);
+
+                TvmBuilder tb;
+                tb.store(tonWallet);
+                tb.store(tokensToWithdraw);
+                tb.store(tokensToSend);
+
                 IContractStateCacheRoot(marketAddress).receiveCacheDelta{
-                    value: msg.value / 4
-                }(tonWallet, marketDelta, marketId);
-
-                emit TokenWithdraw(marketId , marketDelta, tonWallet, tokensToWithdraw, tokensToSend);
-
-                IUAMUserAccount(userAccountManager).writeWithdrawInfo{
                     flag: MsgFlag.REMAINING_GAS
-                }(tonWallet, userTip3Wallet, marketId, tokensToWithdraw, tokensToSend);
+                }(marketId, marketDelta, tb.toCell());
             } else {
                 IUAMUserAccount(userAccountManager).requestUserAccountHealthCalculation{
                     flag: MsgFlag.REMAINING_GAS
@@ -149,6 +150,17 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
                 flag: MsgFlag.REMAINING_GAS
             }(tonWallet);
         }
+    }
+
+    function resumeOperation(uint32 marketId, TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) onlyMarket {
+        tvm.rawReserve(msg.value, 2);
+        marketInfo = _marketInfo;
+        tokenPrices = _tokenPrices;
+        TvmSlice ts = args.toSlice();
+        (address tonWallet, uint256 tokensToWithdraw, uint256 tokensToSend) = ts.decode(address, uint256, uint256);
+        IUAMUserAccount(userAccountManager).writeWithdrawInfo{
+            flag: MsgFlag.REMAINING_GAS
+        }(tonWallet, userTip3Wallet, marketId, tokensToWithdraw, tokensToSend);
     }
 
     modifier onlyMarket() {
