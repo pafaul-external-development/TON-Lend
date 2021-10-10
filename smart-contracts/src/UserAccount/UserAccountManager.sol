@@ -196,7 +196,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     ) external override view onlyValidUserAccount(tonWallet) {
         IWithdrawModule(modules[OperationCodes.WITHDRAW_TOKENS]).withdrawTokensFromMarket{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, userTip3Wallet, tokensToWithdraw, marketId, bi, si);
+        }(tonWallet, userTip3Wallet, tokensToWithdraw, marketId, si, bi);
     }
 
     function writeWithdrawInfo(
@@ -470,6 +470,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     /*********************************************************************************************************/
     // Functions to add/remove modules info
     function addModule(uint8 operationId, address module) external override onlyTrusted {
+        delete existingModules[module];
         modules[operationId] = module;
         existingModules[module] = true;
     }

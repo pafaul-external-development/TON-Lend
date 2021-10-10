@@ -98,10 +98,30 @@
 			],
 			"outputs": [
 			]
+		},
+		{
+			"name": "contractCodeVersion",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"contractCodeVersion","type":"uint32"}
+			]
 		}
 	],
 	"data": [
 	],
 	"events": [
+		{
+			"name": "TokenWithdraw",
+			"inputs": [
+				{"name":"marketId","type":"uint32"},
+				{"components":[{"components":[{"name":"positive","type":"bool"},{"name":"delta","type":"uint256"}],"name":"realTokenBalance","type":"tuple"},{"components":[{"name":"positive","type":"bool"},{"name":"delta","type":"uint256"}],"name":"vTokenBalance","type":"tuple"},{"components":[{"name":"positive","type":"bool"},{"name":"delta","type":"uint256"}],"name":"totalBorrowed","type":"tuple"}],"name":"marketDelta","type":"tuple"},
+				{"name":"tonWallet","type":"address"},
+				{"name":"vTokens","type":"uint256"},
+				{"name":"tokensWithdrawn","type":"uint256"}
+			],
+			"outputs": [
+			]
+		}
 	]
 }

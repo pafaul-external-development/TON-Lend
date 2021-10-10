@@ -9,6 +9,7 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
     address owner;
     address marketAddress;
     address userAccountManager;
+    uint32 public contractCodeVersion;
 
     mapping (uint32 => MarketInfo) marketInfo;
     mapping (address => fraction) tokenPrices;
@@ -21,15 +22,22 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
     function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) external override onlyOwner {
         tvm.rawReserve(msg.value, 2);
 
+        address _owner = owner;
+        address _marketAddress = marketAddress;
+        address _userAccountManager = userAccountManager;
+        mapping(uint32 => MarketInfo) _marketInfo = marketInfo;
+        mapping(address => fraction) _tokenPrices = tokenPrices;
+
         tvm.setcode(code);
         tvm.setCurrentCode(code);
 
         onCodeUpgrade (
-            owner,
-            marketAddress,
-            userAccountManager,
-            marketInfo,
-            tokenPrices
+            _owner,
+            _marketAddress,
+            _userAccountManager,
+            _marketInfo,
+            _tokenPrices,
+            codeVersion
         );
     }
 
@@ -38,9 +46,17 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
         address _marketAddress,
         address _userAccountManager,
         mapping(uint32 => MarketInfo) _marketInfo,
-        mapping(address => fraction) _tokenPrices
+        mapping(address => fraction) _tokenPrices,
+        uint32 _codeVersion
     ) private {
-        
+        tvm.accept();
+        tvm.resetStorage();
+        owner = _owner;
+        marketAddress = _marketAddress;
+        userAccountManager = _userAccountManager;
+        marketInfo = _marketInfo;
+        userAccountManager = _userAccountManager;
+        contractCodeVersion = _codeVersion;
     }
 
     function sendActionId() external override view responsible returns(uint8) {

@@ -97,7 +97,7 @@ library Utilities {
         for ((uint32 marketId, ): si) {
             exchangeRate = marketInfo[marketId].exchangeRate;
             tmp = exchangeRate.fNumMul(si[marketId]);
-            tmp = tmp.fMul(tokenPrices[marketInfo[marketId].token]);
+            tmp = tmp.fDiv(tokenPrices[marketInfo[marketId].token]);
             tmp = tmp.fMul(marketInfo[marketId].collateralFactor);
             supplySum += tmp.toNum();
         }
@@ -105,7 +105,7 @@ library Utilities {
         for ((uint32 marketId, ): bi) {
             exchangeRate = marketInfo[marketId].exchangeRate;
             tmp = exchangeRate.fNumMul(bi[marketId]);
-            tmp = tmp.fMul(tokenPrices[marketInfo[marketId].token]);
+            tmp = tmp.fDiv(tokenPrices[marketInfo[marketId].token]);
             borrowSum += tmp.toNum();
         }
 

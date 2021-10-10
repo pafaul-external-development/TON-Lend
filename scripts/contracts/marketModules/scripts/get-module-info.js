@@ -16,8 +16,9 @@ async function main() {
          */
         let module = contracts.modules[moduleName];
         console.log(`Module: ${moduleName}`);
-        console.log(await module.getContractAddresses());
-        console.log(pp(await module.getModuleState()));
+        console.log(`Known contract addresses: ${await module.getContractAddresses()}`);
+        console.log(`Module state: ${pp(await module.getModuleState())}`);
+        console.log(`Contract code version: ${await module.contractCodeVersion()}`);
     }
 
 }

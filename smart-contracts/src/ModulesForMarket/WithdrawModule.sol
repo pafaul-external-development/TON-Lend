@@ -8,12 +8,15 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
     using UFO for uint256;
     using FPO for fraction;
 
+    address owner;
     address marketAddress;
     address userAccountManager;
-    address owner;
+    uint32 public contractCodeVersion;
 
     mapping (uint32 => MarketInfo) marketInfo;
     mapping (address => fraction) tokenPrices;
+
+    event TokenWithdraw(uint32 marketId, MarketDelta marketDelta, address tonWallet, uint256 vTokens, uint256 tokensWithdrawn);
 
     constructor(address _owner) public {
         tvm.accept();
@@ -31,7 +34,8 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
             marketAddress,
             userAccountManager,
             marketInfo,
-            tokenPrices
+            tokenPrices,
+            codeVersion
         );
     }
 
@@ -40,9 +44,17 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
         address _marketAddress,
         address _userAccountManager,
         mapping(uint32 => MarketInfo) _marketInfo,
-        mapping(address => fraction) _tokenPrices
+        mapping(address => fraction) _tokenPrices,
+        uint32 _codeVersion
     ) private {
-        
+        tvm.accept();
+        tvm.resetStorage();
+        owner = _owner;
+        marketAddress = _marketAddress;
+        userAccountManager = _userAccountManager;
+        marketInfo = _marketInfo;
+        userAccountManager = _userAccountManager;
+        contractCodeVersion = _codeVersion;
     }
 
     function sendActionId() external override view responsible returns(uint8) {
@@ -108,12 +120,10 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
         (uint256 supplySum, uint256 borrowSum) = Utilities.calculateSupplyBorrow(si, bi, marketInfo, tokenPrices);
 
         fraction fTokensToSend = tokensToWithdraw.numFMul(mi.exchangeRate);
-        fTokensToSend = fTokensToSend.fMul(tokenPrices[marketInfo[marketId].token]);
-        uint256 tokensToSend = fTokensToSend.toNum();
+        fraction fTokensToSendUSD = fTokensToSend.fDiv(tokenPrices[marketInfo[marketId].token]);
         if (supplySum > borrowSum) {
-            if (supplySum - borrowSum > tokensToSend) {
-                fTokensToSend = tokensToWithdraw.numFMul(mi.exchangeRate);
-                tokensToSend = fTokensToSend.toNum();
+            if (supplySum - borrowSum > fTokensToSendUSD.toNum()) {
+                uint256 tokensToSend = fTokensToSend.toNum();
 
                 marketDelta.realTokenBalance.delta = tokensToSend;
                 marketDelta.realTokenBalance.positive = false;
@@ -124,14 +134,15 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
                     value: msg.value / 4
                 }(tonWallet, marketDelta, marketId);
 
+                emit TokenWithdraw(marketId , marketDelta, tonWallet, tokensToWithdraw, tokensToSend);
+
                 IUAMUserAccount(userAccountManager).writeWithdrawInfo{
                     flag: MsgFlag.REMAINING_GAS
                 }(tonWallet, userTip3Wallet, marketId, tokensToWithdraw, tokensToSend);
             } else {
-                // TODO: transfer tokens back
                 IUAMUserAccount(userAccountManager).requestUserAccountHealthCalculation{
-                flag: MsgFlag.REMAINING_GAS
-            }(tonWallet);
+                    flag: MsgFlag.REMAINING_GAS
+                }(tonWallet);
             }
         } else {
             IUAMUserAccount(userAccountManager).requestUserAccountHealthCalculation{

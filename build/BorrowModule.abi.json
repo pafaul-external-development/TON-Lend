@@ -98,6 +98,14 @@
 			],
 			"outputs": [
 			]
+		},
+		{
+			"name": "contractCodeVersion",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"contractCodeVersion","type":"uint32"}
+			]
 		}
 	],
 	"data": [

@@ -56,6 +56,34 @@ class Module extends ContractTemplate {
             keyPair: this.keyPair
         });
     }
+
+    /**
+     * 
+     * @param {Object} param0 
+     * @param {String} param0.code
+     * @param {String} param0.updateParams
+     * @param {Number} param0.codeVersion
+     * @returns 
+     */
+    async upgradeContractCode({code, updateParams, codeVersion}) {
+        return await encodeMessageBody({
+            contract: this,
+            functionName: 'upgradeContractCode',
+            input: {
+                code,
+                updateParams,
+                codeVersion
+            }
+        });
+    }
+
+    async contractCodeVersion() {
+        return await this.call({
+            method: 'contractCodeVersion',
+            params: {},
+            keyPair: this.keyPair
+        });
+    }
 }
 
 module.exports = {

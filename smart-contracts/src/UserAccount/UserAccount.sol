@@ -89,16 +89,15 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         tvm.rawReserve(msg.value, 2);
         markets[marketId].suppliedTokens += tokensToSupply;
         _updateMarketInfo(marketId, index);
-        // this.checkUserAccountHealth{
-        //     flag: MsgFlag.REMAINING_GAS
-        // }(owner);
+
+        _checkUserAccountHealth(owner);
     }
 
     /*********************************************************************************************************/
     // Withdraw functions
 
     function withdraw(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw) external override view onlyOwner {
-        require(tokensToWithdraw >= markets[marketId].suppliedTokens);
+        require(tokensToWithdraw <= markets[marketId].suppliedTokens);
         tvm.rawReserve(msg.value, 2);
         
         IUAMUserAccount(userAccountManager).requestWithdraw{
@@ -131,8 +130,6 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     function writeWithdrawInfo(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, uint256 tokensToSend) external override onlyUserAccountManager{
         tvm.rawReserve(msg.value, 2);
         markets[marketId].suppliedTokens -= tokensToWithdraw;
-
-        // TODO: add account health check
 
         IUAMUserAccount(userAccountManager).requestTokenPayout{
             flag: MsgFlag.REMAINING_GAS
@@ -191,9 +188,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
                 flag: MsgFlag.REMAINING_GAS
             }(owner, userTip3Wallet, marketId, toBorrow);
         } else {
-            this.checkUserAccountHealth{
-                flag: MsgFlag.REMAINING_GAS
-            }(owner);
+            _checkUserAccountHealth(owner);
         }
     }
 
@@ -221,9 +216,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
                 flag: MsgFlag.REMAINING_GAS
             }(owner, userTip3Wallet, marketId, tokensToReturn);
         } else {
-            this.checkUserAccountHealth{
-                flag: MsgFlag.REMAINING_GAS
-            }(owner);
+            _checkUserAccountHealth(owner);
         }
     }
 
@@ -232,6 +225,10 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
 
     function checkUserAccountHealth(address gasTo) external override onlyExecutor {
         tvm.rawReserve(msg.value, 2);
+        _checkUserAccountHealth(gasTo);
+    }
+
+    function _checkUserAccountHealth(address gasTo) internal {
         mapping(uint32 => uint256) supplyInfo;
         mapping(uint32 => BorrowInfo) borrowInfo;
         (borrowInfo, supplyInfo) = _calculateFullBorrowSupplyInfo();

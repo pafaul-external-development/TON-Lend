@@ -14,6 +14,8 @@ async function main() {
 
     console.log(`UAM: ${await contracts.userAccount.userAccountManager()}`);
 
+    console.log(`Health: ${pp(await contracts.userAccount.accountHealth())}`);
+
     console.log(`Code version: ${await contracts.userAccount.contractCodeVersion()}`);
 }
 

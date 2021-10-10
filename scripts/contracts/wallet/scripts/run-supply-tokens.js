@@ -19,7 +19,7 @@ async function main() {
 
     let transferPayload = await realTip3.transfer({
         to: supllyModuleInfo.realTokenWallet,
-        tokens: 100e9,
+        tokens: 500e9,
         grams: 0,
         send_gas_to: zeroAddress,
         notify_receiver: true,

@@ -26,8 +26,14 @@
         "deploy:wallet-controller": "node scripts/contracts/walletController/scripts/deploy-wallet-controller.js",
         "deploy:test-swap-pair": "node scripts/contracts/oracle/scripts/deploy-test-swap-pair.js",
 
+        "update:market": "node ./scripts/contracts/marketAggregator/scripts/run-update-market.js",
+        "update:modules": "node ./scripts/contracts/marketModules/scripts/run-update-modules.js",
+        "update:user": "npm run setup:user-account-manager-code && node ./scripts/contracts/userAccount/scripts/run-upgrade-user-account.js",
+        "update:wallet-controller": "node ./scripts/contracts/walletController/scripts/run-update-wallet-controller.js",
+        "update:user-account-manager": "node ./scripts/contracts/userAccount/scripts/update-user-account-manager.js",
+
         "get:market": "node scripts/contracts/marketAggregator/scripts/get-full-info.js",
-        "get:modules-info": "node scripts/contracts/marketModules/scripts/get-module-info.js",
+        "get:modules": "node scripts/contracts/marketModules/scripts/get-module-info.js",
         "get:user-account-manager": "node scripts/contracts/userAccount/scripts/get-uam-info.js",
         "get:user-account": "node scripts/contracts/userAccount/scripts/get-ua-info.js",
         "get:wallet-controller": "node scripts/contracts/walletController/scripts/get-info.js",
@@ -45,13 +51,12 @@
         "run:market-add-market": "node ./scripts/contracts/marketAggregator/scripts/add-new-market.js",
         "run:market-update-price": "node ./scripts/contracts/marketAggregator/scripts/run-update-price.js",
         "run:market-update-cache": "node ./scripts/contracts/marketAggregator/scripts/run-update-module-cache.js", 
-        "run:market-update": "node ./scripts/contracts/marketAggregator/scripts/run-update-market.js",
         "run:user-enter-market": "node ./scripts/contracts/userAccount/scripts/run-ua-enter-market.js",
         "run:wallet-controller-add-market": "node ./scripts/contracts/walletController/scripts/run-add-market.js",
         "run:wallet-controller-remove-market": "node ./scripts/contracts/walletController/scripts/run-delete-market.js",
-        "run:wallet-controller-update": "node ./scripts/contracts/walletController/scripts/run-update-wallet-controller.js",
         "run:user-supply-tokens": "node ./scripts/contracts/wallet/scripts/run-supply-tokens.js",
-        "run:user-update": "node ./scripts/contracts/userAccount/scripts/run-upgrade-user-account.js",
+        "run:user-update-health": "node ./scripts/contracts/userAccount/scripts/run-check-account-health.js",
+        "run:user-withdraw-tokens": "node ./scripts/contracts/userAccount/scripts/run-withdraw-tokens.js",
         "run:wallet-get-tokens": "node scripts/contracts/wallet/scripts/run-get-tokens.js"
     },
     "repository": {

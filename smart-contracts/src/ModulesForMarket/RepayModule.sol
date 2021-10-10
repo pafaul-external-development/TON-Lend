@@ -8,13 +8,13 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepay
     using UFO for uint256;
     using FPO for fraction;
 
-    address userAccountManager;
-    address marketAddress;
     address owner;
+    address marketAddress;
+    address userAccountManager;
+    uint32 public contractCodeVersion;
 
-    mapping(uint32 => MarketInfo) marketInfo;
-    mapping(address => fraction) tokenPrices;
-
+    mapping (uint32 => MarketInfo) marketInfo;
+    mapping (address => fraction) tokenPrices;
 
     constructor(address _owner) public {
         tvm.accept();
@@ -32,7 +32,8 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepay
             marketAddress,
             userAccountManager,
             marketInfo,
-            tokenPrices
+            tokenPrices,
+            codeVersion
         );
     }
 
@@ -41,9 +42,17 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepay
         address _marketAddress,
         address _userAccountManager,
         mapping(uint32 => MarketInfo) _marketInfo,
-        mapping(address => fraction) _tokenPrices
+        mapping(address => fraction) _tokenPrices,
+        uint32 _codeVersion
     ) private {
-        
+        tvm.accept();
+        tvm.resetStorage();
+        owner = _owner;
+        marketAddress = _marketAddress;
+        userAccountManager = _userAccountManager;
+        marketInfo = _marketInfo;
+        userAccountManager = _userAccountManager;
+        contractCodeVersion = _codeVersion;
     }
 
     function getModuleState() external override view returns(mapping(uint32 => MarketInfo), mapping(address => fraction)) {

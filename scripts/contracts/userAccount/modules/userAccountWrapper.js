@@ -95,7 +95,7 @@ class UserAccount extends ContractTemplate {
             }
         })
     }
-
+    
     /**
      * 
      * @param {Object} param0 
@@ -127,6 +127,14 @@ class UserAccount extends ContractTemplate {
     async userAccountManager() {
         return await this.call({
             method: 'userAccountManager',
+            params: {},
+            keyPair: this.keyPair
+        });
+    }
+
+    async accountHealth() {
+        return await this.call({
+            method: 'accountHealth',
             params: {},
             keyPair: this.keyPair
         });

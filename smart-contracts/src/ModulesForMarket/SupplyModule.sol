@@ -9,13 +9,16 @@ contract SupplyModule is IModule, IContractStateCache, IContractAddressSG, IUpgr
     using UFO for uint256;
     using FPO for fraction;
 
+    address owner;
     address marketAddress;
     address userAccountManager;
-    address owner;
+    uint32 public contractCodeVersion;
 
     mapping (uint32 => MarketInfo) marketInfo;
     mapping (address => fraction) tokenPrices;
-    
+
+    event TokensSupplied(uint32 marketId, MarketDelta marketDelta, address tonWallet, uint256 tokensSupplied);
+
     constructor(address _owner) public {
         tvm.accept();
         owner = _owner;
@@ -32,7 +35,8 @@ contract SupplyModule is IModule, IContractStateCache, IContractAddressSG, IUpgr
             marketAddress,
             userAccountManager,
             marketInfo,
-            tokenPrices
+            tokenPrices,
+            codeVersion
         );
     }
 
@@ -41,9 +45,17 @@ contract SupplyModule is IModule, IContractStateCache, IContractAddressSG, IUpgr
         address _marketAddress,
         address _userAccountManager,
         mapping(uint32 => MarketInfo) _marketInfo,
-        mapping(address => fraction) _tokenPrices
+        mapping(address => fraction) _tokenPrices,
+        uint32 _codeVersion
     ) private {
-        
+        tvm.accept();
+        tvm.resetStorage();
+        owner = _owner;
+        marketAddress = _marketAddress;
+        userAccountManager = _userAccountManager;
+        marketInfo = _marketInfo;
+        userAccountManager = _userAccountManager;
+        contractCodeVersion = _codeVersion;
     }
 
     function sendActionId() external override view responsible returns(uint8) {
@@ -78,7 +90,7 @@ contract SupplyModule is IModule, IContractStateCache, IContractAddressSG, IUpgr
     }
 
     function performAction(uint32 marketId, TvmCell args, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
-        tvm.rawReserve(msg.value - msg.value / 4, 0);
+        tvm.rawReserve(msg.value * 3 / 4, 0);
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;
         TvmSlice ts = args.toSlice();
@@ -95,6 +107,8 @@ contract SupplyModule is IModule, IContractStateCache, IContractAddressSG, IUpgr
         IContractStateCacheRoot(marketAddress).receiveCacheDelta{
             value: msg.value/4
         }(tonWallet, marketDelta, marketId);
+
+        emit TokensSupplied(marketId, marketDelta, tonWallet, tokenAmount);
 
         IUAMUserAccount(userAccountManager).writeSupplyInfo{
             flag: MsgFlag.REMAINING_GAS
