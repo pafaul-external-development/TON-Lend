@@ -94,7 +94,16 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
         mapping(uint32 => uint256) supplyInfo, 
         mapping(uint32 => BorrowInfo) borrowInfo
     ) external override view onlyUserAccountManager {
-        tvm.rawReserve(msg.value - msg.value / 4, 2);
+        tvm.rawReserve(msg.value, 2);
+        // Liquidation:
+        // 1. Calculate user account health
+        // 2. Calculate how much tokens of marketId is required to fully liquidate debt
+        // 3. Calculate how much tokens liquidator provided with liquidation multiplier
+        // 4. Calculate how much real tokens in vTokens does user have
+        // 5. Choose max(userVRealTokens, tokensForLiquidation) = forLiquidationTokens
+        // 6. Calculate how many tokens to return (tokensForReturn) = tokensProvided - forLiquidationTokens
+        // 7. Calculate vTokens that will be transferred to liquidator
+
         MarketDelta marketDelta;
         fraction health = Utilities.calculateSupplyBorrowFull(supplyInfo, borrowInfo, marketInfo, tokenPrices);
         if (health.nom < health.denom) {

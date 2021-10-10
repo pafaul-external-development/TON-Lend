@@ -130,10 +130,10 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
         if (tokensToBorrow < marketInfo[marketId].realTokenBalance) {
             fraction accountHealth = Utilities.calculateSupplyBorrowFull(supplyInfo, borrowInfo, marketInfo, tokenPrices);
             if (accountHealth.nom > accountHealth.denom) {
-                uint256 tmp_ = accountHealth.nom - accountHealth.denom;
-                fraction tmp = tmp_.numFDiv(tokenPrices[marketInfo[marketId].token]);
-                tmp_ = tmp.toNum();
-                if (tmp_ > tokensToBorrow) {
+                uint256 healthDelta = accountHealth.nom - accountHealth.denom;
+                fraction tmp = healthDelta.numFDiv(tokenPrices[marketInfo[marketId].token]);
+                possibleTokenWithdraw = tmp.toNum();
+                if (possibleTokenWithdraw > tokensToBorrow) {
                     marketDelta.totalBorrowed.delta = tokensToBorrow;
                     marketDelta.totalBorrowed.positive = true;
                     marketDelta.realTokenBalance.delta = tokensToBorrow;
