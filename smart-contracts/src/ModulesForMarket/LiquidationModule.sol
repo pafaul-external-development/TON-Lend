@@ -108,11 +108,18 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
         fraction health = Utilities.calculateSupplyBorrowFull(supplyInfo, borrowInfo, marketInfo, tokenPrices);
         if (health.nom < health.denom) {
             uint256 deltaHeath = health.denom - health.nom;
-            fraction ftokensForLiquidation = deltaHealth.numFDiv(tokenPrices[marketInfo[marketId].token]);
-            uint256 tokensForLiquidation = ftokensForLiquidation.toNum();
-            fraction ftokensForLiquidationMultiplier = tokensForLiquidation.numFMul(marketInfo[marketId].liquidationMultiplier);
-            uint256 tokensForLiquidationMultiplier = ftokensForLiquidationMultiplier;
-            
+            fraction ftokensForLiquidation = deltaHealth.numFMul(tokenPrices[marketInfo[marketId].token]);
+            uint256 maxTokensForLiquidation = ftokensForLiquidation.toNum();
+            fraction ftokensProvided = tokensProvided.numFMul(tokenPrices[marketId].liquidationMultiplier);
+            uint256 tokensProvidedForLiquidation = ftokensForLiquidation.toNum();
+            uint256 tokensToLiquidate = math.max(tokensForLiquidation, maxTokensForLiquidation);
+            // Delta = (tokensForLiquidation - tokensProvided*mul)
+            if (tokensProvidedForLiquidation >= maxTokensForLiquidation) {
+
+            } else {
+                
+                uint256 tokensForLiquidation = ;
+            }
         }
     }
 
