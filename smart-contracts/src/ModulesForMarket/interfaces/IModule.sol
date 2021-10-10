@@ -42,8 +42,8 @@ interface IWithdrawModule {
         address userTip3Wallet,
         uint256 tokensToWithdraw, 
         uint32 marketId, 
-        mapping(uint32 => uint256) si,
-        mapping(uint32 => uint256) bi
+        mapping(uint32 => uint256) supplyInfo,
+        mapping (uint32 => BorrowInfo) borrowInfo
     ) external;
 }
 
@@ -53,8 +53,8 @@ interface IBorrowModule {
         address userTip3Wallet,
         uint256 tokensToBorrow,
         uint32 marketId,
-        mapping (uint32 => uint256) si,
-        mapping (uint32 => uint256) bi
+        mapping (uint32 => uint256) supplyInfo,
+        mapping (uint32 => BorrowInfo) borrowInfo
     ) external;
 }
 
@@ -77,8 +77,8 @@ library Utilities {
     using FPO for fraction;
 
     function calculateSupplyBorrow(
-        mapping(uint32 => uint256) si, 
-        mapping(uint32 => uint256) bi, 
+        mapping(uint32 => uint256) supplyInfo, 
+        mapping(uint32 => uint256) borrowInfo, 
         mapping(uint32 => MarketInfo) marketInfo, 
         mapping(address => fraction) tokenPrices
     ) internal returns (uint256, uint256) {
@@ -87,26 +87,22 @@ library Utilities {
         fraction tmp;
         fraction exchangeRate;
 
-        // For supply:
-        // 1. Calculate real tokens
-        // 2. Calculate real tokens cost in usd
-        // 3. Multiply by collateral factor
-
-        // For borrow:
-        // 1. Calculate real tokens
-        // 2. Calculate real tokens cost in usd
-        for ((uint32 marketId, ): si) {
-            exchangeRate = marketInfo[marketId].exchangeRate;
-            tmp = exchangeRate.fNumMul(si[marketId]);
-            tmp = tmp.fDiv(tokenPrices[marketInfo[marketId].token]);
+        // Supply:
+        // 1. Calculate real token amount: vToken*exchangeRate
+        // 2. Calculate real token amount in USD: realTokens/tokenPrice
+        // 3. Multiply by collateral factor: usdValue*collateralFactor
+        for ((uint32 marketId, uint256 supplied): supplyInfo) {
+            tmp = supplied.fNumMul(marketInfo[marketId].exchangeRate);
+            tmp = tmp.fDiv(tokenPrices(marketInfo[marketId].token));
             tmp = tmp.fMul(marketInfo[marketId].collateralFactor);
             supplySum += tmp.toNum();
         }
 
-        for ((uint32 marketId, ): bi) {
-            exchangeRate = marketInfo[marketId].exchangeRate;
-            tmp = exchangeRate.fNumMul(bi[marketId]);
-            tmp = tmp.fDiv(tokenPrices[marketInfo[marketId].token]);
+        // Borrow:
+        // 1. Recalculate amount of borrowed tokens (update index)
+        // 2. Calculate borrow USD amount 
+        for ((uint32 marketId, ): borrowInfo) {
+            tmp = 
             borrowSum += tmp.toNum();
         }
 
@@ -114,41 +110,39 @@ library Utilities {
     }
 
     function calculateSupplyBorrowFull(
-        mapping(uint32 => uint256) si,
-        mapping(uint32 => BorrowInfo) bi,
+        mapping(uint32 => uint256) supplyInfo,
+        mapping(uint32 => BorrowInfo) borrowInfo,
         mapping(uint32 => MarketInfo) marketInfo,
         mapping(address => fraction) tokenPrices
     ) internal returns (fraction) {
-        fraction accountHealth;
+        // TODO: use calculateSupplyBorrowFull instead of calculteSupplyBorrow 
+        // TODO: rename later
+        fraction accountHealth = fraction(0, 0);
         fraction tmp;
-        fraction exchangeRate;
 
-         // For supply:
-        // 1. Calculate real tokens
-        // 2. Calculate real tokens cost in usd
-        // 3. Multiply by collateral factor
-
-        // For borrow:
-        // 1. Update indexes
-        // 2. Calculate real tokens
-        // 3. Calculate real tokens cost in usd
-        for ((uint32 marketId, ): si) {
-            exchangeRate = marketInfo[marketId].exchangeRate;
-            tmp = si[marketId].numFMul(exchangeRate);
-            tmp = tmp.fMul(tokenPrices[marketInfo[marketId].token]);
+        // Supply:
+        // 1. Calculate real token amount: vToken*exchangeRate
+        // 2. Calculate real token amount in USD: realTokens/tokenPrice
+        // 3. Multiply by collateral factor: usdValue*collateralFactor
+        for ((uint32 marketId, uint256 supplied): supplyInfo) {
+            tmp = supplied.fNumMul(marketInfo[marketId].exchangeRate);
+            tmp = tmp.fDiv(tokenPrices(marketInfo[marketId].token));
             tmp = tmp.fMul(marketInfo[marketId].collateralFactor);
             accountHealth.nom += tmp.toNum();
         }
 
-        for ((uint32 marketId, BorrowInfo _bi): bi) {
+        // Borrow:
+        // 1. Recalculate borrow amount according to new index
+        // 2. Calculate borrow value in USD
+        // NOTE: no conversion from vToken to real tokens required, as value is stored in real tokens
+        for ((uint32 marketId, BorrowInfo _bi): borrowInfo) {
             if (_bi.tokensBorrowed != 0) {
                 if (!_bi.index.eq(marketInfo[marketId].index)) {
-                    tmp = bi[marketId].tokensBorrowed.numFMul(marketInfo[marketId].index);
-                    tmp = tmp.fDiv(bi[marketId].index);
+                    tmp = borrowInfo[marketId].tokensBorrowed.numFMul(marketInfo[marketId].index);
+                    tmp = tmp.fDiv(borrowInfo[marketId].index);
                 } else {
-                    tmp = bi[marketId].tokensBorrowed.toF();
+                    tmp = borrowInfo[marketId].tokensBorrowed.toF();
                 }
-                tmp = tmp.fMul(exchangeRate);
                 tmp = tmp.fMul(tokenPrices[marketInfo[marketId].token]);
                 accountHealth.denom += tmp.toNum();
             }

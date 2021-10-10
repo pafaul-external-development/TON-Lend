@@ -114,15 +114,23 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
         address userTip3Wallet,
         uint256 tokensToBorrow,
         uint32 marketId,
-        mapping (uint32 => uint256) si,
-        mapping (uint32 => uint256) bi
+        mapping (uint32 => uint256) supplyInfo,
+        mapping (uint32 => BorrowInfo) borrowInfo
     ) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value, 0);
         MarketDelta marketDelta;
+        
+        // Borrow:
+        // 1. Check that market has enough tokens for lending
+        // 2. Calculate user account health
+        // 3. Calculate USD value of tokens to borrow
+        // 4. Check if there is enough (collateral - borrowed) for new token borrow
+        // 5. Increase user's borrowed amount
+
         if (tokensToBorrow < marketInfo[marketId].realTokenBalance) {
-            (uint256 supplySum, uint256 borrowSum) = Utilities.calculateSupplyBorrow(si, bi, marketInfo, tokenPrices);
-            if (borrowSum < supplySum) {
-                uint256 tmp_ = supplySum - borrowSum;
+            fraction accountHealth = Utilities.calculateSupplyBorrowFull(supplyInfo, borrowInfo, marketInfo, tokenPrices);
+            if (accountHealth.nom > accountHealth.denom) {
+                uint256 tmp_ = accountHealth.nom - accountHealth.denom;
                 fraction tmp = tmp_.numFDiv(tokenPrices[marketInfo[marketId].token]);
                 tmp_ = tmp.toNum();
                 if (tmp_ > tokensToBorrow) {

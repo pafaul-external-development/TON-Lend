@@ -109,20 +109,34 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
         address userTip3Wallet,
         uint256 tokensToWithdraw, 
         uint32 marketId, 
-        mapping(uint32 => uint256) si,
-        mapping(uint32 => uint256) bi
+        mapping(uint32 => uint256) supplyInfo,
+        mapping(uint32 => BorrowInfo) borrowInfo
     ) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value - msg.value / 4, 0);
         MarketDelta marketDelta;
 
         MarketInfo mi = marketInfo[marketId];
 
-        (uint256 supplySum, uint256 borrowSum) = Utilities.calculateSupplyBorrow(si, bi, marketInfo, tokenPrices);
+        // For token withdraw:
+        // 1. Calculate account health
+        // 2. Calculate USD amount for withdraw token
+        // 3. Check if user can afford to withdraw required amount of real tokens
+        // TODO: add lock for withdraw operation, can create some trouble ???
+
+        fraction accountHealth = Utilities.calculateSupplyBorrowFull(supplyInfo, borrowInfo, marketInfo, tokenPrices);
 
         fraction fTokensToSend = tokensToWithdraw.numFMul(mi.exchangeRate);
         fraction fTokensToSendUSD = fTokensToSend.fDiv(tokenPrices[marketInfo[marketId].token]);
-        if (supplySum > borrowSum) {
-            if (supplySum - borrowSum > fTokensToSendUSD.toNum()) {
+
+        // Check user balance in tokens just in case
+        // There will be lock at user account for operation, unified for all operations
+        // As all operations are finished with account health check, account will unlock after
+        // Updating indexes
+        if (
+            (accountHealth.nom > accountHealth.denom) &&
+            (supplyInfo[marketId] >= tokensToWithdraw)
+        ) {
+            if (accountHealth.nom - accountHealth.denom > fTokensToSendUSD.toNum()) {
                 uint256 tokensToSend = fTokensToSend.toNum();
 
                 marketDelta.realTokenBalance.delta = tokensToSend;

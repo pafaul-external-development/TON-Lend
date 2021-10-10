@@ -96,6 +96,8 @@ contract SupplyModule is IModule, IContractStateCache, IContractAddressSG, IUpgr
         TvmSlice ts = args.toSlice();
         (address tonWallet, uint256 tokenAmount) = ts.decode(address, uint256);
 
+        // Supply process:
+        // 1. Convert real tokens to vTokens by dividing real token amount by exchange rate
         fraction vTokensToProvide = tokenAmount.numFDiv(marketInfo[marketId].exchangeRate);
 
         MarketDelta marketDelta;
