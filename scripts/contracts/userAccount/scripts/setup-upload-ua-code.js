@@ -1,17 +1,16 @@
-const configuration = require("../../../scripts.conf");
 const { loadEssentialContracts } = require("../../../utils/contracts");
-const {userCodeToUpload} = require("../modules/config");
 
 async function main() {
     let contracts = await loadEssentialContracts({
         wallet: true,
-        userAM: true
+        userAM: true,
+        user: true
     });
 
-    let userAccount = await contracts.locklift.factory.getContract('UserAccount', configuration.buildDirectory);
-
-    userCodeToUpload.code = userAccount.code;
-    let codeUploadPayload = await contracts.userAccountManager.uploadUserAccountCode({...userCodeToUpload});
+    let codeUploadPayload = await contracts.userAccountManager.uploadUserAccountCode({
+        code: contracts.userAccount.code,
+        version: 0 //Number(await contracts.userAccount.contractCodeVersion()) + 1
+    });
 
     await contracts.msigWallet.transfer({
         destination: contracts.userAccountManager.address,

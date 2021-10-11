@@ -16,7 +16,7 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepay
     mapping (uint32 => MarketInfo) marketInfo;
     mapping (address => fraction) tokenPrices;
 
-    event RepayBorrow(uint32 marketId, MarketDelta marketDelta, address tonWallet, uint256 tokensRepaid);
+    event RepayBorrow(uint32 marketId, MarketDelta marketDelta, address tonWallet, uint256 tokenDelta);
 
     constructor(address _owner) public {
         tvm.accept();
@@ -53,7 +53,7 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepay
         marketAddress = _marketAddress;
         userAccountManager = _userAccountManager;
         marketInfo = _marketInfo;
-        userAccountManager = _userAccountManager;
+        tokenPrices = _tokenPrices;
         contractCodeVersion = _codeVersion;
     }
 
@@ -150,7 +150,7 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepay
         }(marketId, marketDelta, tb.toCell());
     }
 
-    function resumeOperation(uint32 marketId, TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) onlyMarket {
+    function resumeOperation(uint32 marketId, TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
         tvm.rawReserve(msg.value, 2);
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;

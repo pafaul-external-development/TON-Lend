@@ -77,46 +77,11 @@ library Utilities {
     using FPO for fraction;
 
     function calculateSupplyBorrow(
-        mapping(uint32 => uint256) supplyInfo, 
-        mapping(uint32 => uint256) borrowInfo, 
-        mapping(uint32 => MarketInfo) marketInfo, 
-        mapping(address => fraction) tokenPrices
-    ) internal returns (uint256, uint256) {
-        uint256 supplySum = 0;
-        uint256 borrowSum = 0;
-        fraction tmp;
-        fraction exchangeRate;
-
-        // Supply:
-        // 1. Calculate real token amount: vToken*exchangeRate
-        // 2. Calculate real token amount in USD: realTokens/tokenPrice
-        // 3. Multiply by collateral factor: usdValue*collateralFactor
-        for ((uint32 marketId, uint256 supplied): supplyInfo) {
-            tmp = supplied.fNumMul(marketInfo[marketId].exchangeRate);
-            tmp = tmp.fDiv(tokenPrices(marketInfo[marketId].token));
-            tmp = tmp.fMul(marketInfo[marketId].collateralFactor);
-            supplySum += tmp.toNum();
-        }
-
-        // Borrow:
-        // 1. Recalculate amount of borrowed tokens (update index)
-        // 2. Calculate borrow USD amount 
-        for ((uint32 marketId, ): borrowInfo) {
-            tmp = 
-            borrowSum += tmp.toNum();
-        }
-
-        return (supplySum, borrowSum);
-    }
-
-    function calculateSupplyBorrowFull(
         mapping(uint32 => uint256) supplyInfo,
         mapping(uint32 => BorrowInfo) borrowInfo,
         mapping(uint32 => MarketInfo) marketInfo,
         mapping(address => fraction) tokenPrices
     ) internal returns (fraction) {
-        // TODO: use calculateSupplyBorrowFull instead of calculteSupplyBorrow 
-        // TODO: rename later
         fraction accountHealth = fraction(0, 0);
         fraction tmp;
 
@@ -125,8 +90,8 @@ library Utilities {
         // 2. Calculate real token amount in USD: realTokens/tokenPrice
         // 3. Multiply by collateral factor: usdValue*collateralFactor
         for ((uint32 marketId, uint256 supplied): supplyInfo) {
-            tmp = supplied.fNumMul(marketInfo[marketId].exchangeRate);
-            tmp = tmp.fDiv(tokenPrices(marketInfo[marketId].token));
+            tmp = supplied.numFMul(marketInfo[marketId].exchangeRate);
+            tmp = tmp.fDiv(tokenPrices[marketInfo[marketId].token]);
             tmp = tmp.fMul(marketInfo[marketId].collateralFactor);
             accountHealth.nom += tmp.toNum();
         }

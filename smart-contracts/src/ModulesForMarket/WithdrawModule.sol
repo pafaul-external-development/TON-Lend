@@ -16,7 +16,7 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
     mapping (uint32 => MarketInfo) marketInfo;
     mapping (address => fraction) tokenPrices;
 
-    event TokenWithdraw(uint32 marketId, MarketDelta marketDelta, address tonWallet, uint256 vTokens, uint256 tokensWithdrawn);
+    event TokenWithdraw(uint32 marketId, MarketDelta marketDelta, address tonWallet, uint256 vTokensWithdrawn, uint256 realTokensWithdrawn);
 
     constructor(address _owner) public {
         tvm.accept();
@@ -53,7 +53,7 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
         marketAddress = _marketAddress;
         userAccountManager = _userAccountManager;
         marketInfo = _marketInfo;
-        userAccountManager = _userAccountManager;
+        tokenPrices = _tokenPrices;
         contractCodeVersion = _codeVersion;
     }
 
@@ -112,7 +112,7 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
         mapping(uint32 => uint256) supplyInfo,
         mapping(uint32 => BorrowInfo) borrowInfo
     ) external override onlyUserAccountManager {
-        tvm.rawReserve(msg.value - msg.value / 4, 0);
+        tvm.rawReserve(msg.value, 0);
         MarketDelta marketDelta;
 
         MarketInfo mi = marketInfo[marketId];
@@ -123,7 +123,7 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
         // 3. Check if user can afford to withdraw required amount of real tokens
         // TODO: add lock for withdraw operation, can create some trouble ???
 
-        fraction accountHealth = Utilities.calculateSupplyBorrowFull(supplyInfo, borrowInfo, marketInfo, tokenPrices);
+        fraction accountHealth = Utilities.calculateSupplyBorrow(supplyInfo, borrowInfo, marketInfo, tokenPrices);
 
         fraction fTokensToSend = tokensToWithdraw.numFMul(mi.exchangeRate);
         fraction fTokensToSendUSD = fTokensToSend.fDiv(tokenPrices[marketInfo[marketId].token]);
@@ -148,8 +148,11 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
 
                 TvmBuilder tb;
                 tb.store(tonWallet);
-                tb.store(tokensToWithdraw);
-                tb.store(tokensToSend);
+                tb.store(userTip3Wallet);
+                TvmBuilder valueStorate;
+                valueStorate.store(tokensToWithdraw);
+                valueStorate.store(tokensToSend);
+                tb.store(valueStorate.toCell());
 
                 IContractStateCacheRoot(marketAddress).receiveCacheDelta{
                     flag: MsgFlag.REMAINING_GAS
@@ -166,12 +169,14 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
         }
     }
 
-    function resumeOperation(uint32 marketId, TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) onlyMarket {
+    function resumeOperation(uint32 marketId, TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
         tvm.rawReserve(msg.value, 2);
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;
         TvmSlice ts = args.toSlice();
-        (address tonWallet, uint256 tokensToWithdraw, uint256 tokensToSend) = ts.decode(address, uint256, uint256);
+        (address tonWallet, address userTip3Wallet) = ts.decode(address, address);
+        TvmSlice values = ts.loadRefAsSlice();
+        (uint256 tokensToWithdraw, uint256 tokensToSend) = values.decode(uint256, uint256);
         IUAMUserAccount(userAccountManager).writeWithdrawInfo{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, userTip3Wallet, marketId, tokensToWithdraw, tokensToSend);

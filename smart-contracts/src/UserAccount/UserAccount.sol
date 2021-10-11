@@ -114,10 +114,10 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
                 _updateMarketInfo(marketId_, index);
             }
 
-            mapping(uint32 => uint256) borrowInfo;
+            mapping(uint32 => BorrowInfo) borrowInfo;
             mapping(uint32 => uint256) supplyInfo;
 
-            (borrowInfo, supplyInfo) = _calculateBorrowSupplyInfo();
+            (borrowInfo, supplyInfo) = _getBorrowSupplyInfo();
 
             IUAMUserAccount(userAccountManager).receiveWithdrawInfo{
                 flag: MsgFlag.REMAINING_GAS
@@ -164,14 +164,14 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
 
         _updateIndexes(updatedIndexes);
 
-        mapping(uint32 => uint256) borrowInfo;
+        mapping(uint32 => BorrowInfo) borrowInfo;
         mapping(uint32 => uint256) supplyInfo;
 
-        (borrowInfo, supplyInfo) = _calculateBorrowSupplyInfo();
+        (borrowInfo, supplyInfo) = _getBorrowSupplyInfo();
 
         IUAMUserAccount(userAccountManager).passBorrowInformation{
             flag: MsgFlag.REMAINING_GAS
-        }(owner, userTip3Wallet, marketId, toBorrow, borrowInfo, supplyInfo);
+        }(owner, userTip3Wallet, marketId, toBorrow, supplyInfo, borrowInfo);
     }
 
     function writeBorrowInformation(uint32 marketId, uint256 toBorrow, address userTip3Wallet, fraction marketIndex) external override onlyUserAccountManager {
@@ -228,10 +228,10 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         _checkUserAccountHealth(gasTo);
     }
 
-    function _checkUserAccountHealth(address gasTo) internal {
+    function _checkUserAccountHealth(address gasTo) internal view {
         mapping(uint32 => uint256) supplyInfo;
         mapping(uint32 => BorrowInfo) borrowInfo;
-        (borrowInfo, supplyInfo) = _calculateFullBorrowSupplyInfo();
+        (borrowInfo, supplyInfo) = _getBorrowSupplyInfo();
         IUAMUserAccount(userAccountManager).calculateUserAccountHealth{
             flag: MsgFlag.REMAINING_GAS
         }(owner, gasTo, supplyInfo, borrowInfo);
@@ -269,14 +269,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         markets[marketId].borrowInfo = BorrowInfo(tmpf.toNum(), index);
     }
 
-    function _calculateBorrowSupplyInfo() internal view returns(mapping(uint32 => uint256) borrowInfo, mapping(uint32 => uint256) supplyInfo) {
-        for ((uint32 marketId, UserMarketInfo umi) : markets) {
-            supplyInfo[marketId] = umi.suppliedTokens;
-            borrowInfo[marketId] = umi.borrowInfo.tokensBorrowed;
-        }
-    }
-
-    function _calculateFullBorrowSupplyInfo() internal view returns(mapping(uint32 => BorrowInfo) borrowInfo, mapping(uint32 => uint256) supplyInfo) {
+    function _getBorrowSupplyInfo() internal view returns(mapping(uint32 => BorrowInfo) borrowInfo, mapping(uint32 => uint256) supplyInfo) {
         for ((uint32 marketId, UserMarketInfo umi) : markets) {
             supplyInfo[marketId] = umi.suppliedTokens;
             borrowInfo[marketId] = umi.borrowInfo;

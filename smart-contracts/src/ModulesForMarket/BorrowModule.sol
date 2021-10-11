@@ -14,7 +14,7 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
     mapping (uint32 => MarketInfo) marketInfo;
     mapping (address => fraction) tokenPrices;
 
-    event TokenBorrow(uint32 marketId, MarketDelta marketDelta, address tonWallet, uint256 tokensToBorrow);
+    event TokenBorrow(uint32 marketId, MarketDelta marketDelta, address tonWallet, uint256 tokensBorrowed);
 
     constructor(address _owner) public {
         tvm.accept();
@@ -24,21 +24,15 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
     function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) external override onlyOwner {
         tvm.rawReserve(msg.value, 2);
 
-        address _owner = owner;
-        address _marketAddress = marketAddress;
-        address _userAccountManager = userAccountManager;
-        mapping(uint32 => MarketInfo) _marketInfo = marketInfo;
-        mapping(address => fraction) _tokenPrices = tokenPrices;
-
         tvm.setcode(code);
         tvm.setCurrentCode(code);
 
         onCodeUpgrade (
-            _owner,
-            _marketAddress,
-            _userAccountManager,
-            _marketInfo,
-            _tokenPrices,
+            owner,
+            marketAddress,
+            userAccountManager,
+            marketInfo,
+            tokenPrices,
             codeVersion
         );
     }
@@ -57,7 +51,7 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
         marketAddress = _marketAddress;
         userAccountManager = _userAccountManager;
         marketInfo = _marketInfo;
-        userAccountManager = _userAccountManager;
+        tokenPrices = _tokenPrices;
         contractCodeVersion = _codeVersion;
     }
 
@@ -128,11 +122,11 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
         // 5. Increase user's borrowed amount
 
         if (tokensToBorrow < marketInfo[marketId].realTokenBalance) {
-            fraction accountHealth = Utilities.calculateSupplyBorrowFull(supplyInfo, borrowInfo, marketInfo, tokenPrices);
+            fraction accountHealth = Utilities.calculateSupplyBorrow(supplyInfo, borrowInfo, marketInfo, tokenPrices);
             if (accountHealth.nom > accountHealth.denom) {
                 uint256 healthDelta = accountHealth.nom - accountHealth.denom;
                 fraction tmp = healthDelta.numFDiv(tokenPrices[marketInfo[marketId].token]);
-                possibleTokenWithdraw = tmp.toNum();
+                uint256 possibleTokenWithdraw = tmp.toNum();
                 if (possibleTokenWithdraw > tokensToBorrow) {
                     marketDelta.totalBorrowed.delta = tokensToBorrow;
                     marketDelta.totalBorrowed.positive = true;
@@ -164,7 +158,7 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
         }
     }
 
-    function resumeOperation(uint32 marketId, TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) onlyMarket {
+    function resumeOperation(uint32 marketId, TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
         tvm.rawReserve(msg.value, 2);
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;

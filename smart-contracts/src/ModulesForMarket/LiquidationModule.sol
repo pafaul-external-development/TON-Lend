@@ -9,9 +9,12 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
     address owner;
     address marketAddress;
     address userAccountManager;
+    uint32 public contractCodeVersion;
 
     mapping (uint32 => MarketInfo) marketInfo;
     mapping (address => fraction) tokenPrices;
+
+    event TokensSupplied(uint32 marketId, MarketDelta marketDelta, address tonWallet, uint256 tokensSupplied);
 
     constructor(address _owner) public {
         tvm.accept();
@@ -29,7 +32,8 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
             marketAddress,
             userAccountManager,
             marketInfo,
-            tokenPrices
+            tokenPrices,
+            codeVersion
         );
     }
 
@@ -38,9 +42,17 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
         address _marketAddress,
         address _userAccountManager,
         mapping(uint32 => MarketInfo) _marketInfo,
-        mapping(address => fraction) _tokenPrices
+        mapping(address => fraction) _tokenPrices,
+        uint32 _codeVersion
     ) private {
-        
+        tvm.accept();
+        tvm.resetStorage();
+        owner = _owner;
+        marketAddress = _marketAddress;
+        userAccountManager = _userAccountManager;
+        marketInfo = _marketInfo;
+        tokenPrices = _tokenPrices;
+        contractCodeVersion = _codeVersion;
     }
 
     function sendActionId() external override view responsible returns(uint8) {
@@ -105,7 +117,7 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
         // 7. Calculate vTokens that will be transferred to liquidator
 
         MarketDelta marketDelta;
-        fraction health = Utilities.calculateSupplyBorrowFull(supplyInfo, borrowInfo, marketInfo, tokenPrices);
+        fraction health = Utilities.calculateSupplyBorrow(supplyInfo, borrowInfo, marketInfo, tokenPrices);
         if (health.nom < health.denom) {
             uint256 deltaHeath = health.denom - health.nom;
             fraction ftokensForLiquidation = deltaHealth.numFMul(tokenPrices[marketInfo[marketId].token]);

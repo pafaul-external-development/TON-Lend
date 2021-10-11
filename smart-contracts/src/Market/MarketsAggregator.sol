@@ -4,6 +4,7 @@ pragma AbiHeader expire;
 pragma AbiHeader pubkey;
 
 import './interfaces/IMarketInterfaces.sol';
+import "../ModulesForMarket/interfaces/IModule.sol";
 
 contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters, IMarketOwnerFunctions, IMarketGetters, IMarketOperations, IContractStateCacheRoot {
     using UFO for uint256;
@@ -13,7 +14,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     uint32 public contractCodeVersion;
     
     // owner info
-    address owner;
+    address public owner;
 
     address public userAccountManager;
     address public walletController;
@@ -23,7 +24,6 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     mapping(uint32 => MarketInfo) markets;
     mapping(address => fraction) tokenPrices;
     mapping(address => bool) realTokenRoots;
-    mapping(address => bool) virtualTokenRoots;
 
     mapping(uint8 => address) public modules;
     uint128 moduleAmount;
@@ -74,7 +74,26 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         TvmCell updateParams,
         uint32 _codeVersion
     ) private {
+        tvm.resetStorage();
         contractCodeVersion = _codeVersion;
+        owner = _owner;
+        userAccountManager = _userAccountManager;
+        walletController = _walletController;
+        oracle = _oracle;
+        markets = _markets;
+        tokenPrices = _tokenPrices;
+        modules = _modules;
+        moduleAmount = 0;
+        for ((, address module): modules) {
+            moduleAmount += 1;
+            isModule[module] = true;
+        }
+
+        for ((uint32 marketId, MarketInfo market): markets) {
+            createdMarkets[marketId] = true;
+            tokensToMarkets[market.token] = marketId;
+            realTokenRoots[market.token] = true;
+        }
     }
 
     /*********************************************************************************************************/

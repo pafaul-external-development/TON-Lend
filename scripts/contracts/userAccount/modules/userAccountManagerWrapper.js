@@ -185,6 +185,14 @@ class UserAccountManager extends Contract {
             keyPair: this.keyPair
         });
     }
+
+    async contractCodeVersion() {
+        return await this.call({
+            method: 'contractCodeVersion',
+            params: {},
+            keyPair: this.keyPair
+        });
+    }
 }
 
 module.exports = {

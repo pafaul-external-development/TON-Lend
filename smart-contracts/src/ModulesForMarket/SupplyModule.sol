@@ -54,7 +54,7 @@ contract SupplyModule is IModule, IContractStateCache, IContractAddressSG, IUpgr
         marketAddress = _marketAddress;
         userAccountManager = _userAccountManager;
         marketInfo = _marketInfo;
-        userAccountManager = _userAccountManager;
+        tokenPrices = _tokenPrices;
         contractCodeVersion = _codeVersion;
     }
 
@@ -117,7 +117,7 @@ contract SupplyModule is IModule, IContractStateCache, IContractAddressSG, IUpgr
         }(marketId, marketDelta, tb.toCell());
     }
 
-    function resumeOperation(uint32 marketId, TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) onlyMarket {
+    function resumeOperation(uint32 marketId, TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
         tvm.rawReserve(msg.value, 2);
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;

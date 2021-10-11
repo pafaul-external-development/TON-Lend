@@ -19,6 +19,8 @@ import "../utils/libraries/MsgFlag.sol";
 
 import './UserAccount.sol';
 
+import '../ModulesForMarket/WithdrawModule.sol';
+
 contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUserAccount, IUAMMarket {
     // Information for update
     uint32 public contractCodeVersion;
@@ -58,6 +60,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         tvm.setCurrentCode(code);
 
         onCodeUpgrade(
+            owner,
             marketAddress,
             modules,
             existingModules,
@@ -67,25 +70,23 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         );
     }
 
-    /*  Upgrade Data for version 0 (from Platform):
-        bits:
-            address root
-            uint8 platformType
-        refs:
-            1. platformCode
-            2. initialData
-            bits:
-                1. marketAddress
-     */
     function onCodeUpgrade(
-        address,
-        mapping(uint8 => address),
-        mapping(address => bool),
-        mapping(uint32 => TvmCell),
+        address _owner,
+        address _marketAddress,
+        mapping(uint8 => address) _modules,
+        mapping(address => bool) _existingModules,
+        mapping(uint32 => TvmCell) _userAccountCodes,
         TvmCell,
-        uint32
+        uint32 _codeVersion
     ) private {
         tvm.accept();
+        tvm.resetStorage();
+        contractCodeVersion = _codeVersion;
+        owner = _owner;
+        marketAddress = _marketAddress;
+        modules = _modules;
+        existingModules = _existingModules;
+        userAccountCodes = _userAccountCodes;
     }
 
     /*********************************************************************************************************/
@@ -191,12 +192,12 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         address userTip3Wallet,
         uint256 tokensToWithdraw,
         uint32 marketId,
-        mapping(uint32 => uint256) si,
-        mapping(uint32 => uint256) bi
+        mapping(uint32 => uint256) supplyInfo,
+        mapping(uint32 => BorrowInfo) borrowInfo
     ) external override view onlyValidUserAccount(tonWallet) {
-        IWithdrawModule(modules[OperationCodes.WITHDRAW_TOKENS]).withdrawTokensFromMarket{
+        WithdrawModule(modules[OperationCodes.WITHDRAW_TOKENS]).withdrawTokensFromMarket{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, userTip3Wallet, tokensToWithdraw, marketId, si, bi);
+        }(tonWallet, userTip3Wallet, tokensToWithdraw, marketId, supplyInfo, borrowInfo);
     }
 
     function writeWithdrawInfo(
@@ -243,8 +244,8 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         address userTip3Wallet, 
         uint32 marketId, 
         uint256 tokensToBorrow, 
-        mapping(uint32 => uint256) borrowInfo, 
-        mapping(uint32 => uint256) supplyInfo
+        mapping(uint32 => uint256) supplyInfo, 
+        mapping(uint32 => BorrowInfo) borrowInfo
     ) external override view onlyValidUserAccount(tonWallet) {
         IBorrowModule(modules[OperationCodes.BORROW_TOKENS]).borrowTokensFromMarket{
             flag: MsgFlag.REMAINING_GAS

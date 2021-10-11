@@ -10,7 +10,7 @@ async function main() {
     let updatePayload = await contracts.walletController.upgradeContractCode({
         code: contracts.walletController.code,
         updateParams: '',
-        codeVersion: 2
+        codeVersion: Number(await contracts.walletController.contractCodeVersion()) + 1
     });
 
     await contracts.msigWallet.transfer({

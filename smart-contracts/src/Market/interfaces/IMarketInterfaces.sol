@@ -8,7 +8,6 @@ import "../libraries/MarketOperations.sol";
 
 import "../../WalletController/interfaces/IWalletControllerMarketInteractions.sol";
 import '../../WalletController/interfaces/IWalletControllerMarketManagement.sol';
-import "../../ModulesForMarket/interfaces/IModule.sol";
 import "../../UserAccount/interfaces/IUserAccount.sol";
 import "../../UserAccount/interfaces/IUAMUserAccount.sol";
 import "../../Oracle/interfaces/IOracleReturnPrices.sol";

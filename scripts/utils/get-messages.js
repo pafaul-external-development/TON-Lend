@@ -48,6 +48,7 @@ async function main() {
         userAM: true,
         walletC: true,
         testSP: true,
+        user: true
     });
 
     let modules = (await loadEssentialContracts({
@@ -71,7 +72,7 @@ async function main() {
             filter: createMessagesFilter(incoming, contractAddress),
             order: [{
                 path: 'created_lt',
-                direction: 'ASC'
+                direction: 'DESC'
             }],
             result: "id created_lt msg_type status src dst value boc body"
         });
@@ -90,7 +91,7 @@ async function main() {
                     value: contractToUse.abi
                 }
             });
-
+            console.log(`Time: ${Number(message.created_lt)}`);
             console.log(pp(result));
         } catch(err) {
             console.log(err);

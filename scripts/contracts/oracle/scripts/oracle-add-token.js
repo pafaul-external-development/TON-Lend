@@ -11,7 +11,7 @@ async function main() {
 
     tokenToAdd.swapPairAddress = contracts.testSwapPair.address;
     tokenToAdd.tokenRoot = (await contracts.marketsAggregator.getMarketInformation({
-        marketId: 0
+        marketId: 1
     })).token;
     let addPayload = await contracts.oracle.addToken({...tokenToAdd});
 

@@ -10,7 +10,6 @@ async function main() {
 
     for (let moduleName in contracts.modules) {
         console.log(`Updating module: ${moduleName}`);
-        let contractCodeVersion = 1;
 
         /**
          * @type {Module}
@@ -19,7 +18,7 @@ async function main() {
         let payload = await module.upgradeContractCode({
             code: module.code,
             updateParams: '',
-            codeVersion: contractCodeVersion
+            codeVersion: Number(await module.contractCodeVersion()) + 1
         });
 
         await contracts.msigWallet.transfer({

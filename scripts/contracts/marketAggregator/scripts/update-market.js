@@ -10,7 +10,7 @@ async function main() {
     let updatePayload = await contracts.marketsAggregator.upgradeContractCode({
         code: contracts.marketsAggregator.code,
         updateParams: '',
-        codeVersion: 2
+        codeVersion: Number(await contracts.marketsAggregator.contractCodeVersion()) + 1
     });
 
     await contracts.msigWallet.transfer({
