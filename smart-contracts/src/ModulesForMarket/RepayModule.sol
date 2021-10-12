@@ -113,7 +113,7 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepay
         uint256 tokensForRepay,
         uint32 marketId,
         BorrowInfo borrowInfo
-    ) external override view onlyUserAccountManager {
+    ) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value, 0);
         MarketDelta marketDelta;
 
@@ -121,9 +121,14 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepay
         uint256 tokensToReturn;
         uint256 tokenDelta;
 
+        fraction ftokensToRepay = borrowInfo.tokensBorrowed.numFMul(marketInfo[marketId].index);
+        ftokensToRepay = ftokensToRepay.fDiv(borrowInfo.index);
+        tokensToRepay = ftokensToRepay.toNum();
+
         if (tokensToRepay <= tokensForRepay) {
             tokensToReturn = tokensForRepay - tokensToRepay;
             borrowInfo.tokensBorrowed = 0;
+            borrowInfo.index = marketInfo[marketId].index;
             tokenDelta = tokensToRepay;
         } else {
             tokensToReturn = 0;
@@ -143,7 +148,9 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepay
         tb.store(tonWallet);
         tb.store(userTip3Wallet);
         tb.store(tokensToReturn);
-        tb.store(borrowInfo);
+        TvmBuilder borrowInfoStorage;
+        borrowInfoStorage.store(borrowInfo);
+        tb.store(borrowInfoStorage.toCell());
 
         IContractStateCacheRoot(marketAddress).receiveCacheDelta{
             flag: MsgFlag.REMAINING_GAS
@@ -155,7 +162,9 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepay
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;
         TvmSlice ts = args.toSlice();
-        (address tonWallet, address userTip3Wallet, uint256 tokensToReturn, BorrowInfo borrowInfo) = ts.decode(address, address, uint256, BorrowInfo);
+        (address tonWallet, address userTip3Wallet, uint256 tokensToReturn) = ts.decode(address, address, uint256);
+        TvmSlice borrowInfoStorage = ts.loadRefAsSlice();
+        (BorrowInfo borrowInfo) = borrowInfoStorage.decode(BorrowInfo);
         IUAMUserAccount(userAccountManager).writeRepayInformation{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, userTip3Wallet, marketId, tokensToReturn, borrowInfo);

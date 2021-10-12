@@ -193,6 +193,24 @@ class UserAccountManager extends Contract {
             keyPair: this.keyPair
         });
     }
+
+    /**
+     * 
+     * @param {Object} param0 
+     * @param {String} tonWallet
+     * @param {Number} marketId
+     * @returns 
+     */
+    async removeMarket({tonWallet, marketId}) {
+        return await encodeMessageBody({
+            contract: this,
+            functionName: 'removeMarket',
+            input: {
+                tonWallet,
+                marketId
+            }
+        })
+    }
 }
 
 module.exports = {

@@ -9,28 +9,28 @@ async function main() {
         walletC: true
     });
 
+    /**
+     * @type {Tip3Wallet}
+     */
     let realTip3 = new Tip3Wallet(await loadContractData(contracts.locklift, 'RealTip3'));
+
+    let payload = await contracts.walletController.createRepayPayload();
 
     let supllyModuleInfo = await contracts.walletController.getMarketAddresses({
         marketId: 0
     });
 
-    let supplyPayload = await contracts.walletController.createSupplyPayload();
-
-    let transferPayload = await realTip3.transfer({
+    let tip3Payload = await realTip3.transfer({
         to: supllyModuleInfo.realTokenWallet,
-        tokens: 10000e9,
-        grams: 0,
+        tokens: 1000e9,
         send_gas_to: zeroAddress,
-        notify_receiver: true,
-        payload: supplyPayload
+        payload
     });
 
     await contracts.msigWallet.transfer({
         destination: realTip3.address,
         value: convertCrystal(10, 'nano'),
-        bounce: false,
-        payload: transferPayload
+        payload: tip3Payload
     });
 }
 

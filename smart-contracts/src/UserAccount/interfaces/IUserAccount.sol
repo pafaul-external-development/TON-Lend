@@ -39,7 +39,10 @@ interface IUserAccountData {
     function requestWithdrawInfo(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, mapping(uint32 => fraction) updatedIndexes) external;
 
     function checkUserAccountHealth(address gasTo) external;
-    function updateUserAccountHealth(address gasTo, fraction _accountHealth, mapping(uint32 => fraction) updatedIndexes) external;
+    function updateUserAccountHealth(address gasTo, fraction _accountHealth, mapping(uint32 => fraction) updatedIndexes, TvmCell dataToTransfer) external;
+
+    function disableBorrowLock() external;
+    function removeMarket(uint32 marketId) external;
 }
 
 interface IUserAccountGetters {

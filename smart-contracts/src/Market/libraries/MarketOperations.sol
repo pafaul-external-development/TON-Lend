@@ -23,7 +23,7 @@ library MarketOperations {
         return fraction(currentPoolBalance + totalBorrowed - totalReserve, vTokenSupply);
     }
 
-    function calculateTotalReserve(uint256 totalReserve, uint256 totalBorrowed, fraction r, fraction reserveFactor, uint256 t) internal returns (fraction) {
+    function calculateTotalReserves(uint256 totalReserve, uint256 totalBorrowed, fraction r, fraction reserveFactor, uint256 t) internal returns (fraction) {
         fraction tr;
         tr = r.fNumMul(t);
         tr = tr.fMul(reserveFactor);
@@ -40,11 +40,10 @@ library MarketOperations {
         return index_;
     }
 
-    function calculateTotalBorrowed(uint256 totalBorrowed, fraction bir, uint256 t) internal returns (uint256) {
+    function calculateTotalBorrowed(uint256 totalBorrowed, fraction oldIndex, fraction newIndex) internal returns (uint256) {
         fraction tb_;
-        tb_ = bir.fNumMul(t);
-        tb_ = tb_.fNumAdd(1);
-        tb_ = tb_.fNumMul(totalBorrowed);
+        tb_ = totalBorrowed.numFDiv(oldIndex);
+        tb_ = tb_.fMul(newIndex);
         return tb_.toNum();
     }
 

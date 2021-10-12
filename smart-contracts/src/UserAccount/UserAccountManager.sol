@@ -19,7 +19,7 @@ import "../utils/libraries/MsgFlag.sol";
 
 import './UserAccount.sol';
 
-import '../ModulesForMarket/WithdrawModule.sol';
+import '../ModulesForMarket/interfaces/IModule.sol';
 
 contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUserAccount, IUAMMarket {
     // Information for update
@@ -195,7 +195,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         mapping(uint32 => uint256) supplyInfo,
         mapping(uint32 => BorrowInfo) borrowInfo
     ) external override view onlyValidUserAccount(tonWallet) {
-        WithdrawModule(modules[OperationCodes.WITHDRAW_TOKENS]).withdrawTokensFromMarket{
+        IWithdrawModule(modules[OperationCodes.WITHDRAW_TOKENS]).withdrawTokensFromMarket{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, userTip3Wallet, tokensToWithdraw, marketId, supplyInfo, borrowInfo);
     }
@@ -397,25 +397,27 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         address tonWallet, 
         address gasTo,
         mapping(uint32 => uint256) supplyInfo,
-        mapping(uint32 => BorrowInfo) borrowInfo
+        mapping(uint32 => BorrowInfo) borrowInfo,
+        TvmCell dataToTransfer
     ) external override view onlyValidUserAccount(tonWallet) {
         tvm.rawReserve(msg.value, 2);
         IMarketOperations(marketAddress).calculateUserAccountHealth{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, gasTo, supplyInfo, borrowInfo);
+        }(tonWallet, gasTo, supplyInfo, borrowInfo, dataToTransfer);
     }
 
     function updateUserAccountHealth(
         address tonWallet, 
         address gasTo,
         fraction accountHealth, 
-        mapping(uint32 => fraction) updatedIndexes
+        mapping(uint32 => fraction) updatedIndexes,
+        TvmCell dataToTransfer
     ) external override view onlyMarket {
         tvm.rawReserve(msg.value, 2);
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).updateUserAccountHealth{
             flag: MsgFlag.REMAINING_GAS
-        }(gasTo, accountHealth, updatedIndexes);
+        }(gasTo, accountHealth, updatedIndexes, dataToTransfer);
     }
 
     /*********************************************************************************************************/
@@ -441,9 +443,6 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     /*********************************************************************************************************/
     // Function for userAccountCode
     function uploadUserAccountCode(uint32 version, TvmCell code) external override {
-        require(
-            !userAccountCodes.exists(version)
-        );
         userAccountCodes[version] = code;
         
         address(msg.sender).transfer({flag: MsgFlag.REMAINING_GAS, value: 0});
@@ -466,6 +465,22 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
 
     function getUserAccountCode(uint32 version) external override view responsible returns(TvmCell) {
         return {flag: MsgFlag.REMAINING_GAS} userAccountCodes[version];
+    }
+
+    function disableUserAccountLock(address tonWallet) external view onlyOwner {
+        tvm.rawReserve(msg.value, 2);
+        address userAccount = _calculateUserAccountAddress(tonWallet);
+        IUserAccountData(userAccount).disableBorrowLock{
+            flag: MsgFlag.REMAINING_GAS
+        }();
+    }
+
+    function removeMarket(address tonWallet, uint32 marketId) external view onlyOwner {
+        tvm.rawReserve(msg.value, 2);
+        address userAccount = _calculateUserAccountAddress(tonWallet);
+        IUserAccountData(userAccount).removeMarket{
+            flag: MsgFlag.REMAINING_GAS
+        }(marketId);
     }
 
     /*********************************************************************************************************/

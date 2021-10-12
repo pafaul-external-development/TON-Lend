@@ -47,5 +47,5 @@ interface IMarketOperations {
     function performOperationWalletController(uint8 operationId, address tokenRoot, TvmCell args) external view;
     function performOperationUserAccountManager(uint8 operationId, uint32 marketId, TvmCell args) external view;
     function requestTokenPayout(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toPayout) external view;
-    function calculateUserAccountHealth(address tonWallet, address gasTo, mapping(uint32 => uint256) supplyInfo, mapping(uint32 => BorrowInfo) borrowInfo) external;
+    function calculateUserAccountHealth(address tonWallet, address gasTo, mapping(uint32 => uint256) supplyInfo, mapping(uint32 => BorrowInfo) borrowInfo, TvmCell payload) external;
 }

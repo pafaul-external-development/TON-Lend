@@ -140,6 +140,14 @@ class UserAccount extends ContractTemplate {
         });
     }
 
+    async borrowLock() {
+        return await this.call({
+            method: 'borrowLock',
+            params: {},
+            keyPair: this.keyPair
+        });
+    }
+
     async contractCodeVersion() {
         return await this.call({
             method: 'contractCodeVersion',

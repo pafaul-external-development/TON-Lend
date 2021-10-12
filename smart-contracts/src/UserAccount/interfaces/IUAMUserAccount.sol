@@ -23,17 +23,17 @@ interface IUAMUserAccount {
     function passBorrowInformation(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToBorrow, mapping(uint32 => uint256) supplyInfo, mapping(uint32 => BorrowInfo) borrowInfo) external view;
     function writeBorrowInformation(address tonWallet, address userTip3Wallet, uint256 tokensToBorrow, uint32 marketId, fraction index) external view;
 
-    // Check user account health operation
-    function requestUserAccountHealthCalculation(address tonWallet) external view;
-    function calculateUserAccountHealth(address tonWallet, address gasTo, mapping(uint32 => uint256) supplyInfo, mapping(uint32 => BorrowInfo) borrowInfo) external view;
-    function updateUserAccountHealth(address tonWallet, address gasTo, fraction accountHealth, mapping(uint32 => fraction) updatedIndexes) external view;
-
     // Liquidation operation
     // function requestLiquidationInformation(address tonWallet, address targetUser, address tip3UserWallet, uint32 marketId, uint256 tokensProvided, mapping(uint32 => fraction) updatedIndexes) external view;
     // function receiveLiquidationInformation(address tonWallet, address targetUser, address tip3UserWallet, uint32 marketId, uint256 tokensProvided, mapping(uint32 => uint256) supplyInfo, mapping(uint32 => BorrowInfo) borrowInfo) external view;
     // function liquidateVTokens(address tonWallet, address targetuser, address tip3UserWallet, uint256 tokensProvided, uint256 vTokensToLiquidate, uint256 tokensToReturn) external view;
     // function grantVTokens(address tonWallet, address tip3UserWallet, uint256 vTokensToGrant, uint256 tokensToReturn) external view;
     // function externalHealthUpdate(address tonWallet, address targetuser, address tip3userWallet, uint256 tokensToReturn) external view;
+
+    // Check user account health operation
+    function requestUserAccountHealthCalculation(address tonWallet) external view;
+    function calculateUserAccountHealth(address tonWallet, address gasTo, mapping(uint32 => uint256) supplyInfo, mapping(uint32 => BorrowInfo) borrowInfo, TvmCell dataToTransfer) external view;
+    function updateUserAccountHealth(address tonWallet, address gasTo, fraction accountHealth, mapping(uint32 => fraction) updatedIndexes, TvmCell dataToTransfer) external view;
 
     // Service operations
     function requestTokenPayout(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToSend) external view;

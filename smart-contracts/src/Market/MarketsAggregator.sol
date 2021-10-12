@@ -33,6 +33,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     // Events
 
     event MarketCreated(uint32 marketId, MarketInfo marketState);
+    event MarketDeleted(uint32 marketId, MarketInfo marketState);
     event LiquidationPossible(address tonWallet, fraction accountHealth);
 
     /*********************************************************************************************************/
@@ -127,8 +128,6 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         } else {
             markets[marketId].vTokenBalance -= marketDelta.vTokenBalance.delta;
         }
-
-        _updateMarketState(marketId);
 
         IModule(msg.sender).resumeOperation{
             flag: MsgFlag.REMAINING_GAS
@@ -244,6 +243,20 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
+    function removeMarket(
+        uint32 marketId
+    ) external onlyOwner {
+        tvm.rawReserve(msg.value, 2);
+
+        emit MarketDeleted(marketId, markets[marketId]);
+
+        delete tokensToMarkets[markets[marketId].token];
+        delete createdMarkets[marketId];
+        delete markets[marketId];
+
+        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+    }
+
     /*********************************************************************************************************/
     // Operations with modules
 
@@ -291,7 +304,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         }
     }
 
-    function calculateUserAccountHealth(address tonWallet, address gasTo, mapping(uint32 => uint256) supplyInfo, mapping(uint32 => BorrowInfo) borrowInfo) external override onlyUserAccountManager {
+    function calculateUserAccountHealth(address tonWallet, address gasTo, mapping(uint32 => uint256) supplyInfo, mapping(uint32 => BorrowInfo) borrowInfo, TvmCell dataToTransfer) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
 
         mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
@@ -304,7 +317,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
 
         IUAMUserAccount(userAccountManager).updateUserAccountHealth{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, gasTo, accountHealth, updatedIndexes);
+        }(tonWallet, gasTo, accountHealth, updatedIndexes, dataToTransfer);
     }
 
     function _createUpdatedIndexes() internal view returns(mapping(uint32 => fraction) updatedIndexes) {
@@ -351,32 +364,34 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     }
 
     function requestTokenPayout(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toPayout) external override view onlyUserAccountManager {
-        tvm.rawReserve(msg.value / 2, 2);
-
-        IUAMUserAccount(userAccountManager).requestUserAccountHealthCalculation{
-            value: msg.value / 2
-        }(tonWallet);
+        tvm.rawReserve(msg.value, 2);
 
         IWCMInteractions(walletController).transferTokensToWallet{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, markets[marketId].token, userTip3Wallet, toPayout);
     }
 
-    function _updateMarketState(uint32 marketId) internal {
+    function _updateMarketState(uint32 marketId, MarketDelta marketDelta) internal {
         MarketInfo mi = markets[marketId];
         uint256 dt = uint256(now) - mi.lastUpdateTime;
-        if (mi.vTokenBalance > 0) {
+        if (mi.realTokenBalance > 0) {
             mi.exchangeRate = MarketOperations.calculateExchangeRate(mi.realTokenBalance, mi.totalBorrowed, mi.totalReserve, mi.vTokenBalance);
             mi.exchangeRate = mi.exchangeRate.simplify();
+            fraction u = MarketOperations.calculateU(mi.totalBorrowed, mi.realTokenBalance);
+            u = u.simplify();
+            fraction bir = MarketOperations.calculateBorrowInterestRate(mi.baseRate, u, mi.utilizationMultiplier);
+            bir = bir.simplify();
+            fraction oldIndex = mi.index;
+            mi.index = MarketOperations.calculateNewIndex(mi.index, bir, dt);
+            mi.index = mi.index.simplify();
+            mi.totalBorrowed = MarketOperations.calculateTotalBorrowed(mi.totalBorrowed, oldIndex, mi.index);
+            mi.totalReserve = MarketOperations.calculateReserves(mi.totalReserve, mi.totalBorrowed, bir, mi.reserveFactor, dt);
+            if (marketDelta.totalBorrowed.positive == true) {
+                mi.totalBorrowed += marketDelta.totalBorrowed.delta;
+            } else {
+                mi.totalBorrowed -= marketDelta.totalBorrowed.delta;
+            }
         }
-        fraction u = MarketOperations.calculateU(mi.totalBorrowed, mi.realTokenBalance);
-        u = u.simplify();
-        fraction bir = MarketOperations.calculateBorrowInterestRate(mi.baseRate, u, mi.utilizationMultiplier);
-        bir = bir.simplify();
-        mi.index = MarketOperations.calculateNewIndex(mi.index, bir, dt);
-        mi.index = mi.index.simplify();
-        mi.totalBorrowed = MarketOperations.calculateTotalBorrowed(mi.totalBorrowed, bir, dt);
-        mi.totalReserve = MarketOperations.calculateReserves(mi.totalReserve, mi.totalBorrowed, bir, mi.reserveFactor, dt);
         mi.lastUpdateTime = now;
         markets[marketId] = mi;
     }

@@ -111,7 +111,7 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
         mapping (uint32 => uint256) supplyInfo,
         mapping (uint32 => BorrowInfo) borrowInfo
     ) external override onlyUserAccountManager {
-        tvm.rawReserve(msg.value, 0);
+        tvm.rawReserve(msg.value, 2);
         MarketDelta marketDelta;
         
         // Borrow:

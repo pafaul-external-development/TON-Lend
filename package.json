@@ -60,6 +60,8 @@
         "run:user-supply-tokens": "node ./scripts/contracts/wallet/scripts/run-supply-tokens.js",
         "run:user-update-health": "node ./scripts/contracts/userAccount/scripts/run-check-account-health.js",
         "run:user-withdraw-tokens": "node ./scripts/contracts/userAccount/scripts/run-withdraw-tokens.js",
+        "run:user-borrow-tokens": "node ./scripts/contracts/userAccount/scripts/run-borrow-tokens.js",
+        "run:user-repay-tokens": "node ./scripts/contracts/wallet/scripts/run-repay-tokens.js",
         "run:wallet-get-tokens": "node scripts/contracts/wallet/scripts/run-get-tokens.js"
     },
     "repository": {

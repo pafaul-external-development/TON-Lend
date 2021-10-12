@@ -221,6 +221,22 @@ class MarketsAggregator extends ContractTemplate {
             keyPair: this.keyPair
         });
     }
+
+    /**
+     * 
+     * @param {Object} param0 
+     * @param {Number} param0.marketId
+     * @returns 
+     */
+    async removeMarket({marketId}) {
+        return await encodeMessageBody({
+            contract: this,
+            functionName: 'removeMarket',
+            input: {
+                marketId
+            }
+        })
+    }
 }
 
 module.exports = {

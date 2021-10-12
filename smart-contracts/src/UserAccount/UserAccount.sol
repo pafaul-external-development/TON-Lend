@@ -11,13 +11,15 @@ import "./interfaces/IUAMUserAccount.sol";
 import "../utils/interfaces/IUpgradableContract.sol";
 import "../utils/libraries/MsgFlag.sol";
 
+import '../WalletController/libraries/OperationCodes.sol';
+
 contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUserAccountGetters {
     using UFO for uint256;
     using FPO for fraction;
 
     bool public borrowLock;
 
-    address static owner;
+    address static public owner;
     
     // Used for interactions with market 
     address public userAccountManager;
@@ -90,7 +92,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         markets[marketId].suppliedTokens += tokensToSupply;
         _updateMarketInfo(marketId, index);
 
-        _checkUserAccountHealth(owner);
+        _checkUserAccountHealth(owner, _createNoOpPayload());
     }
 
     /*********************************************************************************************************/
@@ -130,10 +132,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     function writeWithdrawInfo(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, uint256 tokensToSend) external override onlyUserAccountManager{
         tvm.rawReserve(msg.value, 2);
         markets[marketId].suppliedTokens -= tokensToWithdraw;
-
-        IUAMUserAccount(userAccountManager).requestTokenPayout{
-            flag: MsgFlag.REMAINING_GAS
-        }(owner, userTip3Wallet, marketId, tokensToSend);
+        _checkUserAccountHealth(owner, _createTokenPayoutPayload(owner, userTip3Wallet, marketId, tokensToSend));
     }
 
     /*********************************************************************************************************/
@@ -184,11 +183,9 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         borrowLock = false;
 
         if (toBorrow > 0) {
-            IUAMUserAccount(userAccountManager).requestTokenPayout{
-                flag: MsgFlag.REMAINING_GAS
-            }(owner, userTip3Wallet, marketId, toBorrow);
+            _checkUserAccountHealth(owner, _createTokenPayoutPayload(owner, userTip3Wallet, marketId, toBorrow));
         } else {
-            _checkUserAccountHealth(owner);
+            _checkUserAccountHealth(owner, _createNoOpPayload());
         }
     }
 
@@ -212,11 +209,9 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         markets[marketId].borrowInfo = bi;
         
         if (tokensToReturn != 0) { 
-            IUAMUserAccount(userAccountManager).requestTokenPayout{
-                flag: MsgFlag.REMAINING_GAS
-            }(owner, userTip3Wallet, marketId, tokensToReturn);
+            _checkUserAccountHealth(owner, _createTokenPayoutPayload(owner, userTip3Wallet, marketId, tokensToReturn));
         } else {
-            _checkUserAccountHealth(owner);
+            _checkUserAccountHealth(owner, _createNoOpPayload());
         }
     }
 
@@ -225,22 +220,41 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
 
     function checkUserAccountHealth(address gasTo) external override onlyExecutor {
         tvm.rawReserve(msg.value, 2);
-        _checkUserAccountHealth(gasTo);
+        TvmBuilder no_op;
+        no_op.store(OperationCodes.NO_OP);
+
+        _checkUserAccountHealth(gasTo, no_op.toCell());
     }
 
-    function _checkUserAccountHealth(address gasTo) internal view {
+    function _checkUserAccountHealth(address gasTo, TvmCell dataToTransfer) internal view {
         mapping(uint32 => uint256) supplyInfo;
         mapping(uint32 => BorrowInfo) borrowInfo;
         (borrowInfo, supplyInfo) = _getBorrowSupplyInfo();
         IUAMUserAccount(userAccountManager).calculateUserAccountHealth{
             flag: MsgFlag.REMAINING_GAS
-        }(owner, gasTo, supplyInfo, borrowInfo);
+        }(owner, gasTo, supplyInfo, borrowInfo, dataToTransfer);
     }
 
-    function updateUserAccountHealth(address gasTo, fraction _accountHealth, mapping(uint32 => fraction) updatedIndexes) external override onlyUserAccountManager {
+    function updateUserAccountHealth(address gasTo, fraction _accountHealth, mapping(uint32 => fraction) updatedIndexes, TvmCell dataToTransfer) external override onlyUserAccountManager {
         accountHealth = _accountHealth;
         _updateIndexes(updatedIndexes);
-        address(gasTo).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        TvmSlice ts = dataToTransfer.toSlice();
+        (uint8 operation) = ts.decode(uint8);
+        if (operation == OperationCodes.REQUEST_TOKEN_PAYOUT) {
+            (address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToPayout) = ts.decode(address, address, uint32, uint256);
+            IUAMUserAccount(userAccountManager).requestTokenPayout{
+                flag: MsgFlag.REMAINING_GAS
+            }(tonWallet, userTip3Wallet, marketId, tokensToPayout);
+        } else {
+            address(gasTo).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        }
+    }
+
+    function removeMarket(uint32 marketId) external override onlyUserAccountManager {
+        tvm.rawReserve(msg.value, 2);
+        delete markets[marketId];
+        delete knownMarkets[marketId];
+        address(userAccountManager).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     /*********************************************************************************************************/
@@ -274,6 +288,28 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
             supplyInfo[marketId] = umi.suppliedTokens;
             borrowInfo[marketId] = umi.borrowInfo;
         }
+    }
+
+    function _createTokenPayoutPayload(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToSend) internal pure returns (TvmCell) {
+        TvmBuilder op;
+        op.store(OperationCodes.REQUEST_TOKEN_PAYOUT);
+        op.store(tonWallet);
+        op.store(userTip3Wallet);
+        op.store(marketId);
+        op.store(tokensToSend);
+        return op.toCell();
+    }
+
+    function _createNoOpPayload() internal pure returns (TvmCell) {
+        TvmBuilder no_op;
+        no_op.store(OperationCodes.NO_OP);
+        return no_op.toCell();
+    }
+
+    function disableBorrowLock() external override onlyUserAccountManager {
+        tvm.rawReserve(msg.value, 2);
+        borrowLock = false;
+        address(userAccountManager).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     /*********************************************************************************************************/

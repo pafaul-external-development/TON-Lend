@@ -8,21 +8,23 @@ async function main() {
         walletC: true
     });
 
-    let marketInfo = await contracts.marketsAggregator.getMarketInformation({
-        marketId: 0
-    });
+    let allMarketInfo = await contracts.marketsAggregator.getAllMarkets();
 
-    let addMarketPayload = await contracts.walletController.addMarket({
-        marketId: 0,
-        realTokenRoot: marketInfo.token,
-        virtualTokenRoot: marketInfo.virtualToken
-    });
-
-    await contracts.msigWallet.transfer({
-        destination: contracts.walletController.address,
-        value: convertCrystal(10, 'nano'),
-        payload: addMarketPayload
-    });
+    for (let marketId in allMarketInfo) {
+        let marketInfo = allMarketInfo[marketId];
+        
+        let addMarketPayload = await contracts.walletController.addMarket({
+            marketId: marketId,
+            realTokenRoot: marketInfo.token,
+            virtualTokenRoot: marketInfo.virtualToken
+        });
+    
+        await contracts.msigWallet.transfer({
+            destination: contracts.walletController.address,
+            value: convertCrystal(10, 'nano'),
+            payload: addMarketPayload
+        });
+    }
 }
 
 main().then(

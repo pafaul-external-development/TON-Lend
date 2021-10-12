@@ -165,7 +165,23 @@
 			"inputs": [
 				{"name":"gasTo","type":"address"},
 				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"_accountHealth","type":"tuple"},
-				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"updatedIndexes","type":"map(uint32,tuple)"}
+				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"updatedIndexes","type":"map(uint32,tuple)"},
+				{"name":"dataToTransfer","type":"cell"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "removeMarket",
+			"inputs": [
+				{"name":"marketId","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "disableBorrowLock",
+			"inputs": [
 			],
 			"outputs": [
 			]
@@ -191,6 +207,14 @@
 			],
 			"outputs": [
 				{"name":"borrowLock","type":"bool"}
+			]
+		},
+		{
+			"name": "owner",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"owner","type":"address"}
 			]
 		},
 		{

@@ -7,9 +7,13 @@ async function main() {
         user: true
     });
 
+    let codeVersion = (await contracts.userAccountManager.getUserAccountCode({version: 0}) == 'te6ccgEBAQEAAgAAAA==') ?
+                        0 :
+                        Number(await contracts.userAccount.contractCodeVersion()) + 1;
+
     let codeUploadPayload = await contracts.userAccountManager.uploadUserAccountCode({
         code: contracts.userAccount.code,
-        version: 0 //Number(await contracts.userAccount.contractCodeVersion()) + 1
+        version: codeVersion
     });
 
     await contracts.msigWallet.transfer({

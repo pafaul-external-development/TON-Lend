@@ -1,5 +1,4 @@
 const { loadEssentialContracts } = require("../../../utils/contracts");
-const tokenToAdd = require("../modules/tokenToAdd");
 
 async function main() {
     let contracts = await loadEssentialContracts({
@@ -9,16 +8,21 @@ async function main() {
         market: true
     });
 
-    tokenToAdd.swapPairAddress = contracts.testSwapPair.address;
-    tokenToAdd.tokenRoot = (await contracts.marketsAggregator.getMarketInformation({
-        marketId: 1
-    })).token;
-    let addPayload = await contracts.oracle.addToken({...tokenToAdd});
+    let allMarketInfo = await contracts.marketsAggregator.getAllMarkets();
 
-    await contracts.msigWallet.transfer({
-        destination: contracts.oracle.address,
-        payload: addPayload
-    });
+    for (let marketId in allMarketInfo) {
+        let addPayload = await contracts.oracle.addToken({
+            tokenRoot: allMarketInfo[marketId].token,
+            swapPairAddress: contracts.testSwapPair.address,
+            isLeft: marketId % 2 == 0
+        });
+
+        await contracts.msigWallet.transfer({
+            destination: contracts.oracle.address,
+            payload: addPayload
+        });
+    }
+    
 }
 
 main().then(

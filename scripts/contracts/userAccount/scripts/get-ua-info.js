@@ -17,6 +17,8 @@ async function main() {
     console.log(`Health: ${pp(await contracts.userAccount.accountHealth())}`);
 
     console.log(`Code version: ${await contracts.userAccount.contractCodeVersion()}`);
+
+    console.log(`Borrow lock: ${await contracts.userAccount.borrowLock()}`);
 }
 
 main().then(

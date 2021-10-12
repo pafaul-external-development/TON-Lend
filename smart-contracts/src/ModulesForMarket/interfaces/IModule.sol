@@ -65,7 +65,7 @@ interface IRepayModule {
         uint256 tokensForRepay,
         uint32 marketId,
         BorrowInfo borrowInfo
-    ) external view;
+    ) external;
 }
 
 interface ILiquidationModule {

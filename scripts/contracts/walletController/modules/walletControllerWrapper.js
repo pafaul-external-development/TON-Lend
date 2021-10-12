@@ -115,17 +115,10 @@ class WalletController extends ContractTemplate {
         });
     }
 
-    /**
-     * 
-     * @param {Object} param0 
-     * @param {Number} param0.loanId
-     */
-    async createRepayPayload({loanId}) {
+    async createRepayPayload() {
         return await this.call({
             method: 'createRepayPayload',
-            params: {
-                loanId
-            },
+            params: {},
             keyPair: this.keyPair
         });
     }
