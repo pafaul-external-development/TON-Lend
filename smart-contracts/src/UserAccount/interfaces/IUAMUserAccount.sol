@@ -24,11 +24,11 @@ interface IUAMUserAccount {
     function writeBorrowInformation(address tonWallet, address userTip3Wallet, uint256 tokensToBorrow, uint32 marketId, fraction index) external view;
 
     // Liquidation operation
-    // function requestLiquidationInformation(address tonWallet, address targetUser, address tip3UserWallet, uint32 marketId, uint256 tokensProvided, mapping(uint32 => fraction) updatedIndexes) external view;
-    // function receiveLiquidationInformation(address tonWallet, address targetUser, address tip3UserWallet, uint32 marketId, uint256 tokensProvided, mapping(uint32 => uint256) supplyInfo, mapping(uint32 => BorrowInfo) borrowInfo) external view;
-    // function liquidateVTokens(address tonWallet, address targetuser, address tip3UserWallet, uint256 tokensProvided, uint256 vTokensToLiquidate, uint256 tokensToReturn) external view;
-    // function grantVTokens(address tonWallet, address tip3UserWallet, uint256 vTokensToGrant, uint256 tokensToReturn) external view;
-    // function externalHealthUpdate(address tonWallet, address targetuser, address tip3userWallet, uint256 tokensToReturn) external view;
+    function requestLiquidationInformation(address tonWallet, address targetUser, address tip3UserWallet, uint32 marketId, uint256 tokensProvided, mapping(uint32 => fraction) updatedIndexes) external view;
+    function receiveLiquidationInformation(address tonWallet, address targetUser, address tip3UserWallet, uint32 marketId, uint256 tokensProvided, mapping(uint32 => uint256) supplyInfo, mapping(uint32 => BorrowInfo) borrowInfo) external view;
+    function seizeTokens(address tonWallet, address targetUser, address tip3UserWallet, uint32 marketId, uint256 tokensToSeize, uint256 tokensToReturn, BorrowInfo borrowInfo) external view;
+    function grantVTokens(address tonWallet, address targetUser, address tip3UserWallet, uint32 marketId, uint256 vTokensToGrant, uint256 tokensToReturn) external view;
+    function externalHealthUpdate(address tonWallet, address targetUser, address tip3UserWallet, uint32 marketId, uint256 tokensToReturn) external view;
 
     // Check user account health operation
     function requestUserAccountHealthCalculation(address tonWallet) external view;

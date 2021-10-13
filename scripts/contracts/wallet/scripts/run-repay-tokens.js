@@ -22,7 +22,7 @@ async function main() {
 
     let tip3Payload = await realTip3.transfer({
         to: supllyModuleInfo.realTokenWallet,
-        tokens: 1000e9,
+        tokens: 10000e9,
         send_gas_to: zeroAddress,
         payload
     });

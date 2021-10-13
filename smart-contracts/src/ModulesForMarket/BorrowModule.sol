@@ -125,7 +125,7 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
             fraction accountHealth = Utilities.calculateSupplyBorrow(supplyInfo, borrowInfo, marketInfo, tokenPrices);
             if (accountHealth.nom > accountHealth.denom) {
                 uint256 healthDelta = accountHealth.nom - accountHealth.denom;
-                fraction tmp = healthDelta.numFDiv(tokenPrices[marketInfo[marketId].token]);
+                fraction tmp = healthDelta.numFMul(tokenPrices[marketInfo[marketId].token]);
                 uint256 possibleTokenWithdraw = tmp.toNum();
                 if (possibleTokenWithdraw > tokensToBorrow) {
                     marketDelta.totalBorrowed.delta = tokensToBorrow;
@@ -149,9 +149,9 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
                     }(tonWallet, userTip3Wallet, 0, marketId, marketInfo[marketId].index);
                 }
             } else {
-                IUAMUserAccount(userAccountManager).requestUserAccountHealthCalculation{
+                IUAMUserAccount(userAccountManager).writeBorrowInformation{
                     flag: MsgFlag.REMAINING_GAS
-                }(tonWallet);
+                }(tonWallet, userTip3Wallet, 0, marketId, marketInfo[marketId].index);
             }
         } else {
             address(tonWallet).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});

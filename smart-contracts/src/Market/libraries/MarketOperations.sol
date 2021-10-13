@@ -10,10 +10,12 @@ library MarketOperations {
         return fraction(totalBorrowed, totalBorrowed + realTokens);
     }
 
-    function calculateBorrowInterestRate(fraction baseRate, fraction u, fraction utilizationMul) internal returns (fraction) {
+    function calculateBorrowInterestRate(fraction baseRate, uint256 realTokenBalance, uint256 totalBorrowed, fraction utilizationMultiplier) internal returns (fraction) {
         fraction bir;
 
-        bir = u.fMul(utilizationMul);
+        fraction utilizationRate = fraction(totalBorrowed, totalBorrowed + realTokenBalance);
+
+        bir = utilizationRate.fMul(utilizationMultiplier);
         bir = bir.fAdd(baseRate);
 
         return bir;

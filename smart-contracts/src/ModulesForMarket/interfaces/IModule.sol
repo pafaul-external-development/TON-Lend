@@ -69,7 +69,15 @@ interface IRepayModule {
 }
 
 interface ILiquidationModule {
-    
+    function liquidate(
+        address tonWallet, 
+        address targetUser, 
+        address tip3UserWallet, 
+        uint32 marketId, 
+        uint256 tokensProvided, 
+        mapping(uint32 => uint256) supplyInfo, 
+        mapping(uint32 => BorrowInfo) borrowInfo
+    ) external;
 }
 
 library Utilities {
@@ -108,7 +116,8 @@ library Utilities {
                 } else {
                     tmp = borrowInfo[marketId].tokensBorrowed.toF();
                 }
-                tmp = tmp.fMul(tokenPrices[marketInfo[marketId].token]);
+                tmp = tmp.fDiv(tokenPrices[marketInfo[marketId].token]);
+                tmp = tmp.simplify();
                 accountHealth.denom += tmp.toNum();
             }
         }

@@ -8,7 +8,7 @@ async function main() {
     });
 
     let codeVersion = (await contracts.userAccountManager.getUserAccountCode({version: 0}) == 'te6ccgEBAQEAAgAAAA==') ?
-                        0 :
+                        0 : 
                         Number(await contracts.userAccount.contractCodeVersion()) + 1;
 
     let codeUploadPayload = await contracts.userAccountManager.uploadUserAccountCode({

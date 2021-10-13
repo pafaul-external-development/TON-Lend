@@ -9,6 +9,7 @@ const contracts = [
     'ModulesForMarket/BorrowModule',
     'ModulesForMarket/WithdrawModule',
     'ModulesForMarket/RepayModule',
+    'ModulesForMarket/LiquidationModule',
     'Oracle/Oracle',
     'UserAccount/UserAccount',
     'UserAccount/UserAccountManager',

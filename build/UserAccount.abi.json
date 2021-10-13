@@ -180,6 +180,43 @@
 			]
 		},
 		{
+			"name": "requestLiquidationInformation",
+			"inputs": [
+				{"name":"tonWallet","type":"address"},
+				{"name":"tip3UserWallet","type":"address"},
+				{"name":"marketId","type":"uint32"},
+				{"name":"tokensProvided","type":"uint256"},
+				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"updatedIndexes","type":"map(uint32,tuple)"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "liquidateVTokens",
+			"inputs": [
+				{"name":"tonWallet","type":"address"},
+				{"name":"tip3UserWallet","type":"address"},
+				{"name":"marketId","type":"uint32"},
+				{"name":"tokensToSeize","type":"uint256"},
+				{"name":"tokensToReturn","type":"uint256"},
+				{"components":[{"name":"tokensBorrowed","type":"uint256"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"index","type":"tuple"}],"name":"borrowInfo","type":"tuple"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "grantVTokens",
+			"inputs": [
+				{"name":"targetUser","type":"address"},
+				{"name":"tip3UserWallet","type":"address"},
+				{"name":"marketId","type":"uint32"},
+				{"name":"tokensToSeize","type":"uint256"},
+				{"name":"tokensToReturn","type":"uint256"}
+			],
+			"outputs": [
+			]
+		},
+		{
 			"name": "disableBorrowLock",
 			"inputs": [
 			],
@@ -207,6 +244,14 @@
 			],
 			"outputs": [
 				{"name":"borrowLock","type":"bool"}
+			]
+		},
+		{
+			"name": "liquidationLock",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"liquidationLock","type":"bool"}
 			]
 		},
 		{

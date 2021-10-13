@@ -211,6 +211,22 @@ class UserAccountManager extends Contract {
             }
         })
     }
+
+    /**
+     * 
+     * @param {Object} param0 
+     * @param {String} param0.tonWallet
+     * @returns 
+     */
+    async disableUserAccountLock({tonWallet}) {
+        return await encodeMessageBody({
+            contract: this,
+            functionName: 'disableUserAccountLock',
+            input: {
+                tonWallet
+            }
+        })
+    }
 }
 
 module.exports = {

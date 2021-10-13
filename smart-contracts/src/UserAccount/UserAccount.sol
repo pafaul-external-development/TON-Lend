@@ -18,6 +18,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     using FPO for fraction;
 
     bool public borrowLock;
+    bool public liquidationLock;
 
     address static public owner;
     
@@ -54,29 +55,50 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         require(!borrowLock);
         tvm.accept();
 
+        bool _borrowLock = borrowLock;
+        bool _liquidationLock = liquidationLock;
+        address _owner = owner;
+        address _userAccountManager = userAccountManager;
+        mapping (uint32 => bool) _knownMarkets = knownMarkets;
+        mapping (uint32 => UserMarketInfo) _markets = markets;
+        fraction _accountHealth = accountHealth;
+
         tvm.setcode(code);
         tvm.setCurrentCode(code);
 
         onCodeUpgrade(
-            borrowLock,
-            owner,
-            userAccountManager,
-            knownMarkets,
-            markets,
+            _borrowLock,
+            _liquidationLock,
+            _owner,
+            _userAccountManager,
+            _knownMarkets,
+            _markets,
+            _accountHealth,
             updateParams,
             codeVersion
         );
     }
 
     function onCodeUpgrade(
-        bool,
-        address,
-        address,
-        mapping(uint32 => bool),
-        mapping(uint32 => UserMarketInfo),
+        bool _borrowLock,
+        bool _liquidationLock,
+        address _owner,
+        address _userAccountManager,
+        mapping(uint32 => bool) _knownMarkets,
+        mapping(uint32 => UserMarketInfo) _markets,
+        fraction _accountHealth,
         TvmCell,
         uint32 codeVersion
     ) private {
+        tvm.resetStorage();
+        borrowLock = _borrowLock;
+        liquidationLock = _liquidationLock;
+        owner = _owner;
+        userAccountManager = _userAccountManager;
+        knownMarkets = _knownMarkets;
+        markets = _markets;
+        accountHealth = _accountHealth;
+
         contractCodeVersion = codeVersion;
     }
 
@@ -99,12 +121,18 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     // Withdraw functions
 
     function withdraw(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw) external override view onlyOwner {
-        require(tokensToWithdraw <= markets[marketId].suppliedTokens);
-        tvm.rawReserve(msg.value, 2);
-        
-        IUAMUserAccount(userAccountManager).requestWithdraw{
-            flag: MsgFlag.REMAINING_GAS
-        }(owner, userTip3Wallet, marketId, tokensToWithdraw);
+        if (
+            liquidationLock ||
+            tokensToWithdraw <= markets[marketId].suppliedTokens
+        ) {
+            tvm.rawReserve(msg.value, 2);
+            
+            IUAMUserAccount(userAccountManager).requestWithdraw{
+                flag: MsgFlag.REMAINING_GAS
+            }(owner, userTip3Wallet, marketId, tokensToWithdraw);
+        } else {
+            address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        }
     }
 
     function requestWithdrawInfo(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, mapping(uint32 => fraction) updatedIndexes) external override onlyUserAccountManager {
@@ -143,7 +171,8 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         if (
             (!borrowLock) &&
             (markets[marketId].exists) &&
-            (accountHealth.nom > accountHealth.denom)
+            (accountHealth.nom > accountHealth.denom) ||
+            !liquidationLock
         ) {
             borrowLock = true;
             TvmBuilder tb;
@@ -237,6 +266,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
 
     function updateUserAccountHealth(address gasTo, fraction _accountHealth, mapping(uint32 => fraction) updatedIndexes, TvmCell dataToTransfer) external override onlyUserAccountManager {
         accountHealth = _accountHealth;
+        liquidationLock = accountHealth.denom > accountHealth.nom;
         _updateIndexes(updatedIndexes);
         TvmSlice ts = dataToTransfer.toSlice();
         (uint8 operation) = ts.decode(uint8);
@@ -258,9 +288,34 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     }
 
     /*********************************************************************************************************/
-    // Check account health functions
+    // Liquidation functions
 
-    
+    function requestLiquidationInformation(address tonWallet, address tip3UserWallet, uint32 marketId, uint256 tokensProvided, mapping(uint32 => fraction) updatedIndexes) external override onlyUserAccountManager {
+        _updateIndexes(updatedIndexes);
+
+        (mapping(uint32 => BorrowInfo) borrowInfo, mapping(uint32 => uint256) supplyInfo) = _getBorrowSupplyInfo();
+
+        IUAMUserAccount(userAccountManager).receiveLiquidationInformation{
+            flag: MsgFlag.REMAINING_GAS
+        }(tonWallet, owner, tip3UserWallet, marketId, tokensProvided, supplyInfo, borrowInfo);
+    }
+
+    function liquidateVTokens(address tonWallet, address tip3UserWallet, uint32 marketId, uint256 tokensToSeize, uint256 tokensToReturn, BorrowInfo borrowInfo) external override onlyUserAccountManager {
+        markets[marketId].suppliedTokens -= tokensToSeize;
+        markets[marketId].borrowInfo = borrowInfo;
+
+        IUAMUserAccount(userAccountManager).grantVTokens{
+            flag: MsgFlag.REMAINING_GAS
+        }(tonWallet, owner, tip3UserWallet, marketId, tokensToSeize, tokensToReturn);
+    }
+
+    function grantVTokens(address targetUser, address tip3UserWallet, uint32 marketId, uint256 tokensToSeize, uint256 tokensToReturn) external override onlyUserAccountManager {
+        markets[marketId].suppliedTokens += tokensToSeize;
+
+        IUAMUserAccount(userAccountManager).externalHealthUpdate{
+            flag: MsgFlag.REMAINING_GAS
+        }(owner, targetUser, tip3UserWallet, marketId, tokensToReturn);
+    }
 
     /*********************************************************************************************************/
     // internal functions

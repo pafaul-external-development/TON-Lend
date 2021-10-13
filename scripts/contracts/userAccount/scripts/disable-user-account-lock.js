@@ -1,24 +1,20 @@
 const { convertCrystal } = require("locklift/locklift/utils");
 const { loadEssentialContracts } = require("../../../utils/contracts");
-const { loadContractData } = require("../../../utils/migration");
+
 
 async function main() {
     let contracts = await loadEssentialContracts({
         wallet: true,
-        user: true,
+        userAM: true
     });
 
-    let realTip3 = await loadContractData(contracts.locklift, 'RealTip3');
-
-    let payload = await contracts.userAccount.borrow({
-        marketId: 0,
-        amountToBorrow: 1000e9,
-        userTip3Wallet: realTip3.address
+    let payload = await contracts.userAccountManager.disableUserAccountLock({
+        tonWallet: contracts.msigWallet.address
     });
 
     await contracts.msigWallet.transfer({
-        destination: contracts.userAccount.address,
-        value: convertCrystal(10, 'nano'),
+        destination: contracts.userAccountManager.address,
+        value: convertCrystal(2, 'nano'),
         payload
     });
 }

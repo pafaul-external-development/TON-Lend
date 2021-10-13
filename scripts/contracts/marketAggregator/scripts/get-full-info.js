@@ -1,3 +1,4 @@
+const { pp } = require("../../../utils/common");
 const { loadEssentialContracts } = require("../../../utils/contracts");
 
 async function main() {
@@ -9,9 +10,6 @@ async function main() {
     console.log(`Known token prices:`);
     console.log(await contracts.marketsAggregator.getTokenPrices());
 
-    console.log(`Market 0 information:`);
-    console.log(await contracts.marketsAggregator.getMarketInformation({marketId: 0}));
-
     console.log(`All markets information:`);
     console.log(await contracts.marketsAggregator.getAllMarkets());
 
@@ -20,6 +18,9 @@ async function main() {
 
     console.log(`Token price info:`);
     console.log(await contracts.marketsAggregator.getTokenPrices());
+
+    console.log(`Market 0 information:`);
+    console.log(pp(await contracts.marketsAggregator.getMarketInformation({marketId: 0})));
 
     console.log(`Code version:`)
     console.log(await contracts.marketsAggregator.contractCodeVersion());

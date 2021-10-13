@@ -37,7 +37,7 @@ function marketsToAdd() {
             marketId: 0,
             realToken: '0:4c5e140ec14fbbd394232568af191b756970bf36b30600e397b30b3e70b0b7b5',
             _baseRate: fraction(5, 100 * (365*24*60*60)),
-            _utilizationMultiplier: fraction(2, 1),
+            _utilizationMultiplier: fraction(2, 1 * (365*24*60*60)),
             _reserveFactor: fraction(2, 100),
             _exchangeRate: fraction(1, 1),
             _collateralFactor: fraction(30, 100),

@@ -103,9 +103,9 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     function receiveCacheDelta(uint32 marketId, MarketDelta marketDelta, TvmCell args) external override onlyModule {
         tvm.rawReserve(msg.value, 2);
 
-        _acquierInterest(marketId);
+        _acquireInterest(marketId);
         _updateMarketDelta(marketId, marketDelta);
-        _updateMarketParameters(marketId);
+        _updateExchangeRate(marketId);
 
         IModule(msg.sender).resumeOperation{
             flag: MsgFlag.REMAINING_GAS
@@ -117,26 +117,41 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     // update deltas - change real parameters
     // acquireInterest to update parameters - to update parameters such as exchange rate and etc
 
+    function _updateAllMarkets() internal {
+        for ((uint32 marketId,) : markets) {
+            _acquireInterest(marketId);
+            _updateExchangeRate(marketId);
+        }
+    }
+
 
     function _acquireInterest(uint32 marketId) internal {
         MarketInfo mi = markets[marketId];
         uint256 dt = now - mi.lastUpdateTime;
-        fraction borrowRate = MarketOperations.calculateBorrowInterestRate(mi.baseRate, mi.realTokenBalance, mi.totalBorrowed, mi.totalReserve, mi.utilizationMultiplier);
-        fraction simpleInterestFactor = borrowRate.numFMul(dt);
-        fraction newIndex = simpleInterestFactor.fNumAdd(1);
-        newIndex = mi.index.fMul(mi.borrowIndex);
-        fraction finterestAccumulated = mi.totalBorrow.fMul(simpleInterestFactor);
-        uint256 interestAccumulated = finterestAccumulated.toNum();
-        fraction freservesDelta = interestAccumulated.fMul(mi.reserveFactor);
-        uint256 totalBorrowNew = mi.totalBorrowed + interestAccumulated;
-        uint256 totalReservesNew = mi.totalReservesNew + freservesDelta.toNum();
-        mi.index = newIndex;
-        mi.totalBorrowed = totalBorrowNew;
-        mi.totalReserve = totalReservesNew;
-        markets[marketId] = mi;
+        if (
+            (markets[marketId].realTokenBalance != 0 ) ||
+            (markets[marketId].totalBorrowed != 0)
+        ) {
+            fraction borrowRate = MarketOperations.calculateBorrowInterestRate(mi.baseRate, mi.realTokenBalance, mi.totalBorrowed, mi.utilizationMultiplier);
+            borrowRate = borrowRate.simplify();
+            fraction simpleInterestFactor = borrowRate.fNumMul(dt);
+            fraction newIndex = simpleInterestFactor.fNumAdd(1);
+            newIndex = mi.index.fMul(newIndex);
+            newIndex = newIndex.simplify();
+            fraction finterestAccumulated = mi.totalBorrowed.numFMul(simpleInterestFactor);
+            uint256 interestAccumulated = finterestAccumulated.toNum();
+            fraction freservesDelta = interestAccumulated.numFMul(mi.reserveFactor);
+            uint256 totalBorrowNew = mi.totalBorrowed + interestAccumulated;
+            uint256 totalReservesNew = mi.totalReserve + freservesDelta.toNum();
+            mi.index = newIndex;
+            mi.totalBorrowed = totalBorrowNew;
+            mi.totalReserve = totalReservesNew;
+            markets[marketId] = mi;
+        }
+        markets[marketId].lastUpdateTime = now;
     }
 
-    function _updateMarketDeltas(uint32 marketId, MarketDelta marketDelta) internal {
+    function _updateMarketDelta(uint32 marketId, MarketDelta marketDelta) internal {
         if (
             marketDelta.realTokenBalance.delta != 0 &&
             marketDelta.realTokenBalance.positive
@@ -165,13 +180,16 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         }
     }
 
-    function _updateMarketParameters(uint32 marketId) internal {
-        fraction exchangeRate = MarketOperations.calculateExchangeRate(
-            markets[marketId].realTokenBalance,
-            markets[marketId].totalBorrowed,
-            markets[marketId].totalReserve,
-            markets[marketId].vTokenBalance
-        );
+    function _updateExchangeRate(uint32 marketId) internal {
+        if (markets[marketId].vTokenBalance != 0) {
+            fraction exchangeRate = MarketOperations.calculateExchangeRate(
+                markets[marketId].realTokenBalance,
+                markets[marketId].totalBorrowed,
+                markets[marketId].totalReserve,
+                markets[marketId].vTokenBalance
+            );
+            markets[marketId].exchangeRate = exchangeRate;
+        }
     }
 
 
@@ -278,8 +296,11 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         }
 
         markets[marketId] = mi;
+        MarketDelta marketDelta;
 
-        _updateMarketState(marketId);
+        _acquireInterest(marketId);
+        _updateMarketDelta(marketId, marketDelta);
+        _updateExchangeRate(marketId);
 
         address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
@@ -322,12 +343,12 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     function performOperationWalletController(uint8 operationId, address tokenRoot, TvmCell args) external override view onlyWalletController {
         uint32 marketId = tokensToMarkets[tokenRoot];
         TvmCell payload = _createOperationUpdatePayload(operationId, marketId, args);
-        updateAllPrices(payload);
+        _updateAllPrices(payload);
     }
 
     function performOperationUserAccountManager(uint8 operationId, uint32 marketId, TvmCell args) external override view onlyUserAccountManager {
         TvmCell payload = _createOperationUpdatePayload(operationId, marketId, args);
-        updateAllPrices(payload);
+        _updateAllPrices(payload);
     }
 
     function performOperation(TvmCell args) internal view {
@@ -348,9 +369,11 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     function calculateUserAccountHealth(address tonWallet, address gasTo, mapping(uint32 => uint256) supplyInfo, mapping(uint32 => BorrowInfo) borrowInfo, TvmCell dataToTransfer) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
 
+        _updateAllMarkets();
+
         mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
         mapping(uint32 => uint256) userBorrowInfo = _calculateBorrowInfo(borrowInfo, updatedIndexes);
-        fraction accountHealth = _calculateUserAccountHealth(supplyInfo, userBorrowInfo);
+        fraction accountHealth = Utilities.calculateSupplyBorrow(supplyInfo, borrowInfo, markets, tokenPrices);
 
         if (accountHealth.nom < accountHealth.denom) {
             emit LiquidationPossible(tonWallet, accountHealth);
@@ -367,22 +390,23 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         }
     }
 
-    function _calculateUserAccountHealth(mapping(uint32 => uint256) supplyInfo, mapping(uint32 => uint256) borrowInfo) internal returns(fraction) {
-        fraction userAccountHealth = fraction(0, 0);
-        fraction tmpf = fraction(0, 0);
-        for ((uint32 marketId, uint256 tokensSupplied): supplyInfo) {
-            tmpf = tokensSupplied.numFMul(markets[marketId].collateralFactor);
-            tmpf = tmpf.fMul(tokenPrices[markets[marketId].token]);
-            userAccountHealth.nom += tmpf.toNum();
-        }
+    // function _calculateUserAccountHealth(mapping(uint32 => uint256) supplyInfo, mapping(uint32 => uint256) borrowInfo) internal returns(fraction) {
+    //     fraction userAccountHealth = fraction(0, 0);
+    //     fraction tmpf = fraction(0, 0);
+    //     for ((uint32 marketId, uint256 tokensSupplied): supplyInfo) {
+    //         tmpf = tokensSupplied.numFMul(markets[marketId].exchangeRate);
+    //         tmpf = tmpf.fMul(markets[marketId].collateralFactor);
+    //         tmpf = tmpf.fMul(tokenPrices[markets[marketId].token]);
+    //         userAccountHealth.nom += tmpf.toNum();
+    //     }
 
-        for((uint32 marketId, uint256 tokensBorrowed): borrowInfo) {
-            tmpf = tokensBorrowed.numFMul(tokenPrices[markets[marketId].token]);
-            userAccountHealth.denom += tmpf.toNum();
-        }
+    //     for((uint32 marketId, uint256 tokensBorrowed): borrowInfo) {
+    //         tmpf = tokensBorrowed.numFMul(tokenPrices[markets[marketId].token]);
+    //         userAccountHealth.denom += tmpf.toNum();
+    //     }
 
-        return userAccountHealth;
-    }
+    //     return userAccountHealth;
+    // }
 
     function _calculateBorrowInfo(mapping(uint32 => BorrowInfo) borrowInfo, mapping(uint32 => fraction) updatedIndexes) internal returns(mapping (uint32=>uint256) userBorrowInfo) {
         for ((uint32 marketId, BorrowInfo bi): borrowInfo) {
@@ -412,44 +436,6 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         }(tonWallet, markets[marketId].token, userTip3Wallet, toPayout);
     }
 
-    function _updateMarketState(uint32 marketId, MarketDelta marketDelta) internal {
-        MarketInfo mi = markets[marketId];
-        uint256 dt = uint256(now) - mi.lastUpdateTime;
-        // Values to update:
-        // 1. Market's token info
-        // 2. Index
-        // 3. totalBorrowed
-        // 4. totalReserve
-
-        // Process for updating values:
-        // realTokenValue = realTokenValueOld + realTokenValueDelta
-        // vTokenValue = vTokenValueOld + vTokenValueDelta
-        // totalBorrow = totalBorrowOld * newIndex / oldIndex + totalBorrowDelta
-        // totalReserve = 
-
-        if (mi.realTokenBalance > 0) {
-            mi.exchangeRate = MarketOperations.calculateExchangeRate(mi.realTokenBalance, mi.totalBorrowed, mi.totalReserve, mi.vTokenBalance);
-            mi.exchangeRate = mi.exchangeRate.simplify();
-            fraction u = MarketOperations.calculateU(mi.totalBorrowed, mi.realTokenBalance);
-            u = u.simplify();
-            fraction bir = MarketOperations.calculateBorrowInterestRate(mi.baseRate, u, mi.utilizationMultiplier);
-            bir = bir.simplify();
-            fraction oldIndex = mi.index;
-            mi.index = MarketOperations.calculateNewIndex(mi.index, bir, dt);
-            mi.index = mi.index.simplify();
-            mi.totalBorrowed = MarketOperations.calculateTotalBorrowed(mi.totalBorrowed, oldIndex, mi.index);
-            mi.totalReserve = MarketOperations.calculateReserves(mi.totalReserve, mi.totalBorrowed, bir, mi.reserveFactor, dt);
-            if (marketDelta.totalBorrowed.positive == true) {
-                mi.totalBorrowed += marketDelta.totalBorrowed.delta;
-            } else {
-                mi.totalBorrowed -= marketDelta.totalBorrowed.delta;
-            }
-        }
-        mi.lastUpdateTime = now;
-        markets[marketId] = mi;
-    }
-
-
     /*********************************************************************************************************/
     // Interactions with oracle
 
@@ -476,7 +462,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     /**
      * @param payload Payload that will be passed during update and received after
      */
-    function updateAllPrices(TvmCell payload) internal view {
+    function _updateAllPrices(TvmCell payload) internal view {
         IOracleReturnPrices(oracle).getAllTokenPrices{
             flag: MsgFlag.REMAINING_GAS,
             callback: this.receiveAllUpdatedPrices
@@ -490,6 +476,8 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         for((address t, MarketPriceInfo mpi): updatedPrices) {
             tokenPrices[t] = fraction(mpi.tokens, mpi.usd);
             tokenPrices[t] = tokenPrices[t].simplify();
+
+            _updateAllMarkets();
         }
 
         performOperation(payload);
@@ -502,7 +490,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         tvm.rawReserve(msg.value, 2);
         TvmBuilder tb;
         tb.store(OperationCodes.NO_OP);
-        updateAllPrices(tb.toCell());
+        _updateAllPrices(tb.toCell());
     }
 
     /*********************************************************************************************************/
