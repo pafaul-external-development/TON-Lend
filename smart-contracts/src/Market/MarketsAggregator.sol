@@ -102,6 +102,41 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
 
     function receiveCacheDelta(uint32 marketId, MarketDelta marketDelta, TvmCell args) external override onlyModule {
         tvm.rawReserve(msg.value, 2);
+
+        _acquierInterest(marketId);
+        _updateMarketDelta(marketId, marketDelta);
+        _updateMarketParameters(marketId);
+
+        IModule(msg.sender).resumeOperation{
+            flag: MsgFlag.REMAINING_GAS
+        }(marketId, args, markets, tokenPrices);
+    }
+
+    // process: 
+    // acquireInterest - to get deltas from time passing by....
+    // update deltas - change real parameters
+    // acquireInterest to update parameters - to update parameters such as exchange rate and etc
+
+
+    function _acquireInterest(uint32 marketId) internal {
+        MarketInfo mi = markets[marketId];
+        uint256 dt = now - mi.lastUpdateTime;
+        fraction borrowRate = MarketOperations.calculateBorrowInterestRate(mi.baseRate, mi.realTokenBalance, mi.totalBorrowed, mi.totalReserve, mi.utilizationMultiplier);
+        fraction simpleInterestFactor = borrowRate.numFMul(dt);
+        fraction newIndex = simpleInterestFactor.fNumAdd(1);
+        newIndex = mi.index.fMul(mi.borrowIndex);
+        fraction finterestAccumulated = mi.totalBorrow.fMul(simpleInterestFactor);
+        uint256 interestAccumulated = finterestAccumulated.toNum();
+        fraction freservesDelta = interestAccumulated.fMul(mi.reserveFactor);
+        uint256 totalBorrowNew = mi.totalBorrowed + interestAccumulated;
+        uint256 totalReservesNew = mi.totalReservesNew + freservesDelta.toNum();
+        mi.index = newIndex;
+        mi.totalBorrowed = totalBorrowNew;
+        mi.totalReserve = totalReservesNew;
+        markets[marketId] = mi;
+    }
+
+    function _updateMarketDeltas(uint32 marketId, MarketDelta marketDelta) internal {
         if (
             marketDelta.realTokenBalance.delta != 0 &&
             marketDelta.realTokenBalance.positive
@@ -128,11 +163,17 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         } else {
             markets[marketId].vTokenBalance -= marketDelta.vTokenBalance.delta;
         }
-
-        IModule(msg.sender).resumeOperation{
-            flag: MsgFlag.REMAINING_GAS
-        }(marketId, args, markets, tokenPrices);
     }
+
+    function _updateMarketParameters(uint32 marketId) internal {
+        fraction exchangeRate = MarketOperations.calculateExchangeRate(
+            markets[marketId].realTokenBalance,
+            markets[marketId].totalBorrowed,
+            markets[marketId].totalReserve,
+            markets[marketId].vTokenBalance
+        );
+    }
+
 
     function updateModulesCache() external view override onlyOwner {
         tvm.rawReserve(msg.value, 2);
@@ -374,6 +415,18 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     function _updateMarketState(uint32 marketId, MarketDelta marketDelta) internal {
         MarketInfo mi = markets[marketId];
         uint256 dt = uint256(now) - mi.lastUpdateTime;
+        // Values to update:
+        // 1. Market's token info
+        // 2. Index
+        // 3. totalBorrowed
+        // 4. totalReserve
+
+        // Process for updating values:
+        // realTokenValue = realTokenValueOld + realTokenValueDelta
+        // vTokenValue = vTokenValueOld + vTokenValueDelta
+        // totalBorrow = totalBorrowOld * newIndex / oldIndex + totalBorrowDelta
+        // totalReserve = 
+
         if (mi.realTokenBalance > 0) {
             mi.exchangeRate = MarketOperations.calculateExchangeRate(mi.realTokenBalance, mi.totalBorrowed, mi.totalReserve, mi.vTokenBalance);
             mi.exchangeRate = mi.exchangeRate.simplify();
@@ -395,6 +448,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         mi.lastUpdateTime = now;
         markets[marketId] = mi;
     }
+
 
     /*********************************************************************************************************/
     // Interactions with oracle

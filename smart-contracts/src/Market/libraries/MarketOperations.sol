@@ -47,12 +47,12 @@ library MarketOperations {
         return tb_.toNum();
     }
 
-    function calculateReserves(uint256 reserve, uint256 totalBorrowed, fraction bir, fraction reserveFactor, uint256 dt) internal returns (uint256) {
+    function calculateReserves(uint256 reserveOld, uint256 totalBorrowedOld, fraction bir, fraction reserveFactor, uint256 dt) internal returns (uint256) {
         fraction res = bir;
         res = res.fNumMul(dt);
         res = res.fMul(reserveFactor);
-        res = res.fNumMul(totalBorrowed);
-        res = res.fNumAdd(reserve);
+        res = res.fNumMul(totalBorrowedOld);
+        res = res.fNumAdd(reserveOld);
         return res.toNum();
     }
 }
