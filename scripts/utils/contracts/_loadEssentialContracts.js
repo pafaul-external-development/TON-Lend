@@ -19,6 +19,7 @@ const Contract = require("locklift/locklift/contract");
  * @property {Module} withdraw
  * @property {Module} borrow
  * @property {Module} repay
+ * @property {Module} liquidation
  */
 
 /**
@@ -119,6 +120,7 @@ const Contract = require("locklift/locklift/contract");
         modules.withdraw = new Module(await loadContractData(locklift, 'WithdrawModule'));
         modules.borrow = new Module(await loadContractData(locklift, 'BorrowModule'));
         modules.repay = new Module(await loadContractData(locklift, 'RepayModule'));
+        modules.liquidation = new Module(await loadContractData(locklift, 'LiquidationModule'));
     }
 
     /**

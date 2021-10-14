@@ -56,7 +56,7 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
     }
 
     function sendActionId() external override view responsible returns(uint8) {
-        return {flag: MsgFlag.REMAINING_GAS} OperationCodes.BORROW_TOKENS;
+        return {flag: MsgFlag.REMAINING_GAS} OperationCodes.LIQUIDATE_TOKENS;
     }
 
     function getModuleState() external override view returns(mapping(uint32 => MarketInfo), mapping(address => fraction)) {

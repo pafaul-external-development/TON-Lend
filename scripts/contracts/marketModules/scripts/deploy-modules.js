@@ -2,7 +2,7 @@ const { loadEssentialContracts, deployContract } = require("../../../utils/contr
 
 async function main() {
     let contracts = await loadEssentialContracts({wallet: true});
-    let modules = ['SupplyModule', 'BorrowModule', 'RepayModule', 'WithdrawModule'];
+    let modules = ['SupplyModule', 'BorrowModule', 'RepayModule', 'WithdrawModule', 'LiquidationModule'];
     let constructorParams = {
         _owner: contracts.msigWallet.address
     };
