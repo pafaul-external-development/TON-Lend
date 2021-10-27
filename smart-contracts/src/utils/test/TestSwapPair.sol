@@ -4,6 +4,7 @@ import '../Dex/IDexPair.sol';
 import '../libraries/MsgFlag.sol';
 
 contract TestSwapPair is IDexPair {
+    uint256 static nonce;
     IDexPairBalances testBalance;
 
     constructor () public {

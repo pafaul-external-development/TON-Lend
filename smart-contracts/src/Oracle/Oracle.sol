@@ -1,4 +1,4 @@
-pragma ton-solidity >= 0.39.0;
+pragma ton-solidity >= 0.43.0;
 pragma AbiHeader time;
 pragma AbiHeader expire;
 pragma AbiHeader pubkey;
@@ -17,7 +17,7 @@ import "../utils/interfaces/IUpgradableContract.sol";
 
 contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOracleManageTokens, IUpgradableContract {
     // For uniquencess of contract
-    uint256 public nonce;
+    uint256 static nonce;
 
     // Variables for prices
     // Token root => MarketPriceInfo
@@ -26,10 +26,7 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
     mapping(address => address) swapPairToTokenRoot;
 
     // Information for update
-    address root;
-    uint8 contractType;
     uint32 contractCodeVersion;
-    TvmCell platformCode;
 
     // Owner info
     uint256 private ownerPubkey;
@@ -38,8 +35,10 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
     /*********************************************************************************************************/
     // Base functions - for deploying and upgrading contract
     // We are using Platform so constructor is not available
-    constructor() public {
-        revert();
+    constructor(address _owner, uint256 _ownerPubkey) public {
+        tvm.accept();
+        ownerAddress = _owner;
+        ownerPubkey = _ownerPubkey;
     }
 
     /*  Upgrade Data for version 1 (from version 0):
@@ -61,79 +60,46 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
     /**
      * @param code New contract code
      * @param updateParams Extrenal parameters used during update
-     * @param codeVersion_ New code version
-     * @param contractType_ Contract type of received update
+     * @param codeVersion New code version
      */
-    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion_, uint8 contractType_) override external onlyRoot correctContractType(contractType_) {
+    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) override external onlyOwner {
         tvm.accept();
-
-        contractCodeVersion = codeVersion_;
-
-        TvmBuilder builder;
-        builder.store(root);
-        builder.store(contractType);
-        builder.store(codeVersion_);
-        builder.store(platformCode);
-
-        // Store owner info
-        TvmBuilder ownerInfo;
-        ownerInfo.store(ownerPubkey);
-        ownerInfo.store(ownerAddress);
-
-        // Store mappings
-        TvmBuilder mappingStorage;
-        TvmBuilder pricesInfo;
-        pricesInfo.store(prices);
-
-        TvmBuilder addressMapping;
-        addressMapping.store(prices);
-
-        mappingStorage.store(pricesInfo.toCell());
-        mappingStorage.store(addressMapping.toCell());
-
-        builder.store(addressMapping.toCell());
-
-
-        builder.store(updateParams);
 
         tvm.setcode(code);
         tvm.setCurrentCode(code);
 
-        onCodeUpgrade(builder.toCell());
+        onCodeUpgrade(
+            nonce,
+            prices,
+            swapPairToTokenRoot,
+            ownerPubkey,
+            ownerAddress,
+            updateParams,
+            codeVersion
+        );
     }
 
-    /*  Upgrade Data for version 0 (from Platform):
-        bits:
-            address root
-            uint8 platformType
-        refs:
-            1. platformCode
-            2. initialData:
-                bits:
-                    uint256 ownerPubkey
-                    address ownerAddress
-     */
+    function onCodeUpgrade(
+        uint256,
+        mapping(address => MarketPriceInfo),
+        mapping(address => address),
+        uint256,
+        address,
+        TvmCell,
+        uint32
+    ) private {
 
-    /**
-     * @param data Data builded in upgradeContractCode
-     */
-    function onCodeUpgrade(TvmCell data) private {
-        tvm.resetStorage();
-        TvmSlice dataSlice = data.toSlice();
-        (root, contractType) = dataSlice.decode(address, uint8);
-
-        platformCode = dataSlice.loadRef();         // Loading platform code
-        TvmSlice ref = dataSlice.loadRefAsSlice();  // Loading initial parameters
-        (ownerPubkey, ownerAddress) = ref.decode(uint256, address);
     }
 
     /*********************************************************************************************************/
     // Service functions
     function getVersion() override external responsible view returns (uint32) { 
+        tvm.rawReserve(msg.value, 2);
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } contractCodeVersion;
     }
 
     function getDetails() override external responsible view returns (OracleServiceInformation) {
+        tvm.rawReserve(msg.value, 2);
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } OracleServiceInformation(contractCodeVersion, ownerAddress, ownerPubkey);
     }
 
@@ -195,14 +161,16 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
      * @param tokenRoot Address of token root
      * @param payload Payload attached to message (contains information about operation)
      */
-    function getTokenPrice(address tokenRoot, TvmCell payload) override external responsible view returns(uint128, uint128, TvmCell) {
-        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } (prices[tokenRoot].tokens, prices[tokenRoot].usd, payload);
+    function getTokenPrice(address tokenRoot, TvmCell payload) override external responsible view returns(address, uint128, uint128, TvmCell) {
+        tvm.rawReserve(msg.value, 2);
+        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } (tokenRoot, prices[tokenRoot].tokens, prices[tokenRoot].usd, payload);
     }
 
     /**
      * @param payload Payload attached to message (contains information about operation)
      */
     function getAllTokenPrices(TvmCell payload) override external responsible view returns (mapping(address => MarketPriceInfo), TvmCell) {
+        tvm.rawReserve(msg.value, 2);
         return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } (prices, payload);
     }
 
@@ -231,18 +199,8 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
 
     /*********************************************************************************************************/
     // Modifiers
-    modifier onlyRoot() {
-        require(msg.sender == root, OracleErrorCodes.ERROR_NOT_ROOT);
-        _;
-    }
-
     modifier onlyOwner() {
         require(msg.sender == ownerAddress || msg.pubkey() == ownerPubkey, OracleErrorCodes.ERROR_NOT_OWNER);
-        _;
-    }
-
-    modifier trusted() {
-        require(msg.sender == ownerAddress || msg.sender == root || msg.pubkey() == ownerPubkey, OracleErrorCodes.ERROR_NOT_TRUSTED);
         _;
     }
 
@@ -251,16 +209,8 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
         _;
     }
 
-    modifier onlyKnownTokenRoot(address tokenRoot_) {
-        require(prices.exists(tokenRoot_), OracleErrorCodes.ERROR_NOT_KNOWN_TOKEN_ROOT);
-        _;
-    }
-
-    /**
-     * @param contractType_ Received contractType parameter
-     */
-    modifier correctContractType(uint8 contractType_) {
-        require(contractType == contractType_, OracleErrorCodes.ERROR_INVALID_CONTRACT_TYPE);
+    modifier onlyKnownTokenRoot(address _tokenRoot) {
+        require(prices.exists(_tokenRoot), OracleErrorCodes.ERROR_NOT_KNOWN_TOKEN_ROOT);
         _;
     }
 }

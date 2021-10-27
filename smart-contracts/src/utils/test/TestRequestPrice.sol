@@ -23,9 +23,9 @@ contract TestRequestPrice {
         }(tokenRoot, payloadToSend);
     }
 
-    function setInitialInfo(address oracle_, TvmCell payload) external {
+    function setInitialInfo(address _oracle, TvmCell payload) external {
         tvm.accept();
-        oracle = oracle_;
+        oracle = _oracle;
         payloadToSend = payload;
     }
 

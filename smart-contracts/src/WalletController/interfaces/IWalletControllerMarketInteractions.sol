@@ -1,5 +1,5 @@
 pragma ton-solidity >= 0.39.0;
 
-interface IWalletControllerMarketInteractions {
-    function transferTokensToWallet(address tokenRoot, address destination, uint128 amount, TvmCell payload, address sendGasTo) external view;
+interface IWCMInteractions {
+    function transferTokensToWallet(address tonWallet, address tokenRoot, address userTip3Wallet, uint256 toPayout) external view;
 }

@@ -1,0 +1,9 @@
+{
+	"name": "UserAccountManager",
+	"address": "0:bbfba3c828d861e723da55efca8d36330e8bdb35d95f745d29e3fc0c9188b602",
+	"keyPair": {
+		"public": "1d0bafcaa5a39a39f7567bcd5ddaa556eaa12a4eecc87ea142bd0a991e9cf749",
+		"secret": "e682829f060325cdb06dedb59636f62f11234c0cbe53511580a388b38b4970bd"
+	},
+	"network": "devnet"
+}
