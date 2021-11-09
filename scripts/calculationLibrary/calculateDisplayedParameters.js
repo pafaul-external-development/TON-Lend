@@ -108,6 +108,7 @@ function getUSDCollateral({
             f(prices[markets[marketId].token]) *
             f(markets[marketId].collateralFactor);
     }
+    return collateral;
 }
 
 /**
