@@ -131,7 +131,6 @@ function tokensAvailableForWithdrawal({
     let deltaUSD = collateral - borrowed;
     let possibleWithdraw = {};
     for (let marketId in userInfo) {
-        let marketInfo = userInfo[marketId];
         if (collateral > borrowed && Number(userInfo[marketId].suppliedTokens) > 0) {
             let maxTokensForWithdraw = deltaUSD * f(prices[markets[marketId].token]) / f(markets[marketId].exchangeRate) / f(markets[marketId].collateralFactor);
             possibleWithdraw[Number(marketId)] = Math.min(maxTokensForWithdraw, Number(userInfo[marketId].suppliedTokens));
