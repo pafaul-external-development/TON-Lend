@@ -111,6 +111,44 @@ function getUSDCollateral({
     return collateral;
 }
 
+
+/**
+ * @param {Object} param0 
+ * @param {AllMarketsInfo} param0.markets
+ * @param {UserInfo} param0.userInfo
+ * @param {Prices} param0.prices
+ * @returns {Record<Number, Number>}
+ */
+function tokensAvailableForWithdrawal({
+    userInfo,
+    markets,
+    prices
+}) {
+    let collateral = 0;
+    for (let marketId in userInfo) {
+        collateral += 
+            Number(userInfo[marketId].suppliedTokens) * 
+            f(markets[marketId].exchangeRate) /
+            f(prices[markets[marketId].token]);
+    }
+    
+    let borrowed = getUSDBorrowed({userInfo, markets, prices});
+    
+    let deltaUSD = collateral - borrowed;
+    let possibleWithdraw = {};
+    for (let marketId in userInfo) {
+        let marketInfo = userInfo[marketId];
+        if (marketInfo.suppliedTokens > 0) {
+            let maxTokensForWithdraw = deltaUSD * f(prices[markets[marketId].token]) / f(markets[marketId].exchangeRate);
+            possibleWithdraw[Number(marketId)] = Math.min(maxTokensForWithdraw, Number(userInfo[marketId].suppliedTokens));
+        } else {
+            possibleWithdraw[Number(marketId)] = 0;
+        }
+    }
+    
+    return possibleWithdraw;
+}
+
 /**
  * @param {Object} param0 
  * @param {AllMarketsInfo} param0.markets
