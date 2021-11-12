@@ -183,11 +183,23 @@ function getPossibleBorrow({
  * @param {Object} param0 
  * @param {MarketInfo} param0.market
  */
-function getCurrentAPY({
+function getCurrentBorrowRate({
     market
 }) {
-    let currentRate = Number(market.baseRate) + Number(market.totalBorrowed) / (Number(market.totalBorrowed) + Number(market.realTokenBalance)) * f(market.utilizationMultiplier);
-    return currentRate * secondsPerYear;
+    return Number(market.baseRate) + Number(market.totalBorrowed) / (Number(market.totalBorrowed) + Number(market.realTokenBalance)) * f(market.utilizationMultiplier);
+}
+
+
+/**
+ * 
+ * @param {Object} param0 
+ * @param {MarketInfo} param0.market
+ */
+function getBorrowAPY({
+    market
+}) {
+    let borrowRate = getCurrentBorrowRate({market});
+    const borrowApy = (((Math.pow(borrowRate / 24*60*60 + 1, 365))) - 1) * 100;
 }
 
 module.exports = {
@@ -195,5 +207,6 @@ module.exports = {
     getUSDCollateral,
     getAccountHealth,
     getPossibleBorrow,
-    getCurrentAPY
+    getBorrowAPY,
+    getCurrentBorrowRate
 }
