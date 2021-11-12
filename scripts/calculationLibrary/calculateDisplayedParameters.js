@@ -186,7 +186,7 @@ function getPossibleBorrow({
 function getCurrentBorrowRate({
     market
 }) {
-    return Number(market.baseRate) + Number(market.totalBorrowed) / (Number(market.totalBorrowed) + Number(market.realTokenBalance)) * f(market.utilizationMultiplier);
+    return f(market.baseRate) + Number(market.totalBorrowed) / (Number(market.totalBorrowed) + Number(market.realTokenBalance)) * f(market.utilizationMultiplier);
 }
 
 
@@ -199,7 +199,7 @@ function getBorrowAPY({
     market
 }) {
     let borrowRate = getCurrentBorrowRate({market});
-    const borrowApy = (((Math.pow(borrowRate / 24*60*60 + 1, 365))) - 1) * 100;
+    return (((Math.pow(borrowRate / 24*60*60 + 1, 365))) - 1) * 100;
 }
 
 module.exports = {
