@@ -18,6 +18,8 @@ async function main() {
     console.log(`Zero version code exists: ${pp(await contracts.userAccountManager.getUserAccountCode({version: 0}) != 'te6ccgEBAQEAAgAAAA==')}`);
 
     console.log(`Contract code version: ${await contracts.userAccountManager.contractCodeVersion()}`);
+
+    console.log(`Contract codes available: ${pp(await contracts.userAccountManager.userAccountCodes())}`);
 }
 
 main().then(

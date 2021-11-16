@@ -127,6 +127,7 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
 
         fraction fTokensToSend = tokensToWithdraw.numFMul(mi.exchangeRate);
         fraction fTokensToSendUSD = fTokensToSend.fDiv(tokenPrices[marketInfo[marketId].token]);
+        fraction fTokensCollateral = fTokensToSendUSD.fMul(mi.collateralFactor);
 
         // Check user balance in tokens just in case
         // There will be lock at user account for operation, unified for all operations
@@ -136,7 +137,7 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
             (accountHealth.nom > accountHealth.denom) &&
             (supplyInfo[marketId] >= tokensToWithdraw)
         ) {
-            if (accountHealth.nom - accountHealth.denom > fTokensToSendUSD.toNum()) {
+            if (accountHealth.nom - accountHealth.denom > fTokensCollateral.toNum()) {
                 uint256 tokensToSend = fTokensToSend.toNum();
 
                 marketDelta.realTokenBalance.delta = tokensToSend;

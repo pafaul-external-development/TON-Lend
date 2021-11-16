@@ -5,15 +5,15 @@
  */
 function tryToExtractAddress(err) {
     if (
-        err?.code == 414
+        err && err.code == 414
     ) {
-        if (err.data?.exit_code == 51) {
+        if (err.data && err.data.exit_code == 51) {
             return err.data.account_address;
         }
     }
 
     if (
-        err?.code == 507
+        err && err.code == 507
     ) {
         if (err.data.local_error.data.exit_code == 51) {
             return err.data.local_error.data.account_address;

@@ -1,6 +1,26 @@
 const { pp } = require("../../../utils/common");
 const { loadEssentialContracts } = require("../../../utils/contracts");
 
+/**
+ * 
+ * @param {Fraction} f 
+ * @returns 
+ */
+ function f(f) {
+    return Number(f.nom) / Number(f.denom);
+}
+
+/**
+ * 
+ * @param {Object} param0 
+ * @param {MarketInfo} param0.market
+ */
+ function getCurrentBorrowRate({
+    market
+}) {
+    return f(market.baseRate) + Number(market.totalBorrowed) / (Number(market.totalBorrowed) + Number(market.realTokenBalance)) * f(market.utilizationMultiplier);
+}
+
 async function main() {
     let contracts = await loadEssentialContracts({market: true});
 

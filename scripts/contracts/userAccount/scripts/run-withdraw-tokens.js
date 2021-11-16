@@ -14,7 +14,7 @@ async function main() {
     let payload = await contracts.userAccount.withdraw({
         userTip3Wallet: realTip3.address,
         marketId: 0,
-        tokensToWithdraw: 200e9
+        tokensToWithdraw: 9900000000000
     });
 
     await contracts.msigWallet.transfer({
