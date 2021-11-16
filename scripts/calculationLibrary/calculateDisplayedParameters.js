@@ -108,6 +108,38 @@ function getUSDCollateral({
             f(prices[markets[marketId].token]) *
             f(markets[marketId].collateralFactor);
     }
+    return collateral;
+}
+
+
+/**
+ * @param {Object} param0 
+ * @param {AllMarketsInfo} param0.markets
+ * @param {UserInfo} param0.userInfo
+ * @param {Prices} param0.prices
+ * @returns {Record<Number, Number>}
+ */
+function tokensAvailableForWithdrawal({
+    userInfo,
+    markets,
+    prices
+}) {
+    let collateral = getUSDCollateral({userInfo, markets, prices});
+    
+    let borrowed = getUSDBorrowed({userInfo, markets, prices});
+    
+    let deltaUSD = collateral - borrowed;
+    let possibleWithdraw = {};
+    for (let marketId in userInfo) {
+        if (collateral > borrowed && Number(userInfo[marketId].suppliedTokens) > 0) {
+            let maxTokensForWithdraw = deltaUSD * f(prices[markets[marketId].token]) / f(markets[marketId].exchangeRate) / f(markets[marketId].collateralFactor);
+            possibleWithdraw[Number(marketId)] = Math.min(maxTokensForWithdraw, Number(userInfo[marketId].suppliedTokens));
+        } else {
+            possibleWithdraw[Number(marketId)] = 0;
+        }
+    }
+    
+    return possibleWithdraw;
 }
 
 /**
@@ -151,11 +183,23 @@ function getPossibleBorrow({
  * @param {Object} param0 
  * @param {MarketInfo} param0.market
  */
-function getCurrentAPY({
+function getCurrentBorrowRate({
     market
 }) {
-    let currentRate = Number(market.baseRate) + Number(market.totalBorrowed) / (Number(market.totalBorrowed) + Number(market.realTokenBalance)) * f(market.utilizationMultiplier);
-    return currentRate * secondsPerYear;
+    return f(market.baseRate) + Number(market.totalBorrowed) / (Number(market.totalBorrowed) + Number(market.realTokenBalance)) * f(market.utilizationMultiplier);
+}
+
+
+/**
+ * 
+ * @param {Object} param0 
+ * @param {MarketInfo} param0.market
+ */
+function getBorrowAPY({
+    market
+}) {
+    let borrowRate = getCurrentBorrowRate({market});
+    return (((Math.pow(borrowRate / 24*60*60 + 1, 365))) - 1) * 100;
 }
 
 module.exports = {
@@ -163,5 +207,6 @@ module.exports = {
     getUSDCollateral,
     getAccountHealth,
     getPossibleBorrow,
-    getCurrentAPY
+    getBorrowAPY,
+    getCurrentBorrowRate
 }
