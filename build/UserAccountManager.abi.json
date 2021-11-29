@@ -23,11 +23,9 @@
 		{
 			"name": "createUserAccount",
 			"inputs": [
-				{"name":"_answer_id","type":"uint32"},
 				{"name":"tonWallet","type":"address"}
 			],
 			"outputs": [
-				{"name":"value0","type":"address"}
 			]
 		},
 		{
@@ -412,5 +410,14 @@
 	"data": [
 	],
 	"events": [
+		{
+			"name": "AccountCreated",
+			"inputs": [
+				{"name":"tonWallet","type":"address"},
+				{"name":"userAddress","type":"address"}
+			],
+			"outputs": [
+			]
+		}
 	]
 }

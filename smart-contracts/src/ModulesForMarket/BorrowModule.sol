@@ -127,7 +127,7 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
                 uint256 healthDelta = accountHealth.nom - accountHealth.denom;
                 fraction tmp = healthDelta.numFMul(tokenPrices[marketInfo[marketId].token]);
                 uint256 possibleTokenWithdraw = tmp.toNum();
-                if (possibleTokenWithdraw > tokensToBorrow) {
+                if (possibleTokenWithdraw >= tokensToBorrow) {
                     marketDelta.totalBorrowed.delta = tokensToBorrow;
                     marketDelta.totalBorrowed.positive = true;
                     marketDelta.realTokenBalance.delta = tokensToBorrow;

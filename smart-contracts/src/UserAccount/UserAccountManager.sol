@@ -32,6 +32,8 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     mapping(address => bool) public existingModules;
     mapping(uint32 => TvmCell) public userAccountCodes;
 
+    event AccountCreated(address tonWallet, address userAddress);
+
     /*********************************************************************************************************/
     // Functions for deployment and upgrade
     // Contract is deployed via platform
@@ -94,7 +96,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     /**
      * @param tonWallet Address of user's ton wallet
      */
-    function createUserAccount(address tonWallet) external override view responsible returns(address) {
+    function createUserAccount(address tonWallet) external override view {
         tvm.rawReserve(msg.value, 2);
 
         TvmSlice ts = userAccountCodes[0].toSlice();
@@ -109,7 +111,12 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
             }
         }();
 
-        return userAccount;
+        emit AccountCreated(tonWallet, userAccount);
+
+        IUserAccountManager(this).updateUserAccount{
+            value: 0,
+            flag: 64
+        }(tonWallet);
     }
 
     // address calculation functions

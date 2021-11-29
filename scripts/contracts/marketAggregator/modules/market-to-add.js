@@ -25,21 +25,21 @@ function marketsToAdd() {
         return [{
             marketId: 0,
             realToken: '0:22851129f9d892ea040d8eac15e0cf1568986f01da45e8bac9538b0e0c9e8ba7',
-            _baseRate: fraction(5, 100 * (365*24*60*60)),
-            _utilizationMultiplier: fraction(2, 1 * (365*24*60*60)),
-            _reserveFactor: fraction(2, 100),
+            _baseRate: fraction(2, 100 * (365*24*60*60)),
+            _utilizationMultiplier: fraction(20, 100 * (365*24*60*60)),
+            _reserveFactor: fraction(15, 100),
             _exchangeRate: fraction(1, 1),
-            _collateralFactor: fraction(50, 100),
-            _liquidationMultiplier: fraction(105, 100)
+            _collateralFactor: fraction(90, 100),
+            _liquidationMultiplier: fraction(108, 100)
         }, {
             marketId: 1,
             realToken: '0:22ddfb9bbbdfc307c25ae0460ce644bf9d63cd118a6167bd8193d7ae876a6870',
-            _baseRate: fraction(20, 100 * (365*24*60*60)),
-            _utilizationMultiplier: fraction(2, 1 * (365*24*60*60)),
-            _reserveFactor: fraction(10, 100),
+            _baseRate: fraction(2, 100 * (365*24*60*60)),
+            _utilizationMultiplier: fraction(20, 100 * (365*24*60*60)),
+            _reserveFactor: fraction(30, 100),
             _exchangeRate: fraction(1, 1),
-            _collateralFactor: fraction(15, 100),
-            _liquidationMultiplier: fraction(115, 100)
+            _collateralFactor: fraction(25, 100),
+            _liquidationMultiplier: fraction(108, 100)
         }]
     } else if (configuration.network == 'local') {
         return [{

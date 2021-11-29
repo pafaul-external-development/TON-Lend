@@ -137,7 +137,7 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
             (accountHealth.nom > accountHealth.denom) &&
             (supplyInfo[marketId] >= tokensToWithdraw)
         ) {
-            if (accountHealth.nom - accountHealth.denom > fTokensCollateral.toNum()) {
+            if (accountHealth.nom - accountHealth.denom >= fTokensCollateral.toNum()) {
                 uint256 tokensToSend = fTokensToSend.toNum();
 
                 marketDelta.realTokenBalance.delta = tokensToSend;
