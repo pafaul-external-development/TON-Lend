@@ -112,6 +112,7 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
         mapping (uint32 => BorrowInfo) borrowInfo
     ) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
+        mapping(uint32 => MarketDelta) marketsDelta;
         MarketDelta marketDelta;
         
         // Borrow:
@@ -133,7 +134,10 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
                     marketDelta.realTokenBalance.delta = tokensToBorrow;
                     marketDelta.realTokenBalance.positive = false;
 
+                    marketsDelta[marketId] = marketDelta;
+
                     TvmBuilder tb;
+                    tb.store(marketId);
                     tb.store(tonWallet);
                     tb.store(userTip3Wallet);
                     tb.store(tokensToBorrow);
@@ -142,7 +146,7 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
 
                     IContractStateCacheRoot(marketAddress).receiveCacheDelta{
                         flag: MsgFlag.REMAINING_GAS
-                    }(marketId, marketDelta, tb.toCell());
+                    }(marketsDelta, tb.toCell());
                 } else {
                     IUAMUserAccount(userAccountManager).writeBorrowInformation{
                         flag: MsgFlag.REMAINING_GAS
@@ -158,12 +162,12 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
         }
     }
 
-    function resumeOperation(uint32 marketId, TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
+    function resumeOperation(TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
         tvm.rawReserve(msg.value, 2);
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;
         TvmSlice ts = args.toSlice();
-        (address tonWallet, address userTip3Wallet, uint256 tokensToBorrow) = ts.decode(address, address, uint256);
+        (uint32 marketId, address tonWallet, address userTip3Wallet, uint256 tokensToBorrow) = ts.decode(uint32, address, address, uint256);
         IUAMUserAccount(userAccountManager).writeBorrowInformation{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, userTip3Wallet, tokensToBorrow, marketId, marketInfo[marketId].index);

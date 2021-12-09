@@ -115,6 +115,7 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepay
         BorrowInfo borrowInfo
     ) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value, 0);
+        mapping(uint32 => MarketDelta) marketsDelta;
         MarketDelta marketDelta;
 
         uint256 tokensToRepay = borrowInfo.tokensBorrowed;
@@ -142,9 +143,12 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepay
         marketDelta.realTokenBalance.delta = tokenDelta;
         marketDelta.realTokenBalance.positive = true;
 
+        marketsDelta[marketId] = marketDelta;
+
         emit RepayBorrow(marketId, marketDelta, tonWallet, tokenDelta);
 
         TvmBuilder tb;
+        tb.store(marketId);
         tb.store(tonWallet);
         tb.store(userTip3Wallet);
         tb.store(tokensToReturn);
@@ -154,15 +158,15 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepay
 
         IContractStateCacheRoot(marketAddress).receiveCacheDelta{
             flag: MsgFlag.REMAINING_GAS
-        }(marketId, marketDelta, tb.toCell());
+        }(marketsDelta, tb.toCell());
     }
 
-    function resumeOperation(uint32 marketId, TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
+    function resumeOperation(TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
         tvm.rawReserve(msg.value, 2);
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;
         TvmSlice ts = args.toSlice();
-        (address tonWallet, address userTip3Wallet, uint256 tokensToReturn) = ts.decode(address, address, uint256);
+        (uint32 marketId, address tonWallet, address userTip3Wallet, uint256 tokensToReturn) = ts.decode(uint32, address, address, uint256);
         TvmSlice borrowInfoStorage = ts.loadRefAsSlice();
         (BorrowInfo borrowInfo) = borrowInfoStorage.decode(BorrowInfo);
         IUAMUserAccount(userAccountManager).writeRepayInformation{

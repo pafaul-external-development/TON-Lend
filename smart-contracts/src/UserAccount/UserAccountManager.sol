@@ -321,13 +321,14 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         address targetUser, 
         address tip3UserWallet, 
         uint32 marketId, 
+        uint32 marketToLiquidate,
         uint256 tokensProvided,
         mapping(uint32 => fraction) updatedIndexes
     ) external override view onlyModule(OperationCodes.LIQUIDATE_TOKENS) {
         address userAccount = _calculateUserAccountAddress(targetUser);
         IUserAccountData(userAccount).requestLiquidationInformation{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, tip3UserWallet, marketId, tokensProvided, updatedIndexes);
+        }(tonWallet, tip3UserWallet, marketId, marketToLiquidate, tokensProvided, updatedIndexes);
     }
 
     function receiveLiquidationInformation(
@@ -335,13 +336,14 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         address targetUser, 
         address tip3UserWallet, 
         uint32 marketId, 
+        uint32 marketToLiquidate,
         uint256 tokensProvided, 
         mapping(uint32 => uint256) supplyInfo, 
         mapping(uint32 => BorrowInfo) borrowInfo
     ) external override view onlyValidUserAccount(targetUser) {
         ILiquidationModule(modules[OperationCodes.LIQUIDATE_TOKENS]).liquidate{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, targetUser, tip3UserWallet, marketId, tokensProvided, supplyInfo, borrowInfo);
+        }(tonWallet, targetUser, tip3UserWallet, marketId, marketToLiquidate, tokensProvided, supplyInfo, borrowInfo);
     }
 
     function seizeTokens(
@@ -349,6 +351,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         address targetUser,
         address tip3UserWallet,
         uint32 marketId,
+        uint32 marketToLiquidate,
         uint256 tokensToSeize, 
         uint256 tokensToReturn, 
         BorrowInfo borrowInfo
@@ -356,7 +359,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         address userAccount = _calculateUserAccountAddress(targetUser);
         IUserAccountData(userAccount).liquidateVTokens{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, tip3UserWallet, marketId, tokensToSeize, tokensToReturn, borrowInfo);
+        }(tonWallet, tip3UserWallet, marketId, marketToLiquidate, tokensToSeize, tokensToReturn, borrowInfo);
     }
 
     function grantVTokens(

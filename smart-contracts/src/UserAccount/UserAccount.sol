@@ -290,19 +290,19 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     /*********************************************************************************************************/
     // Liquidation functions
 
-    function requestLiquidationInformation(address tonWallet, address tip3UserWallet, uint32 marketId, uint256 tokensProvided, mapping(uint32 => fraction) updatedIndexes) external override onlyUserAccountManager {
+    function requestLiquidationInformation(address tonWallet, address tip3UserWallet, uint32 marketId, uint32 marketToLiquidate, uint256 tokensProvided, mapping(uint32 => fraction) updatedIndexes) external override onlyUserAccountManager {
         _updateIndexes(updatedIndexes);
 
         (mapping(uint32 => BorrowInfo) borrowInfo, mapping(uint32 => uint256) supplyInfo) = _getBorrowSupplyInfo();
 
         IUAMUserAccount(userAccountManager).receiveLiquidationInformation{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, owner, tip3UserWallet, marketId, tokensProvided, supplyInfo, borrowInfo);
+        }(tonWallet, owner, tip3UserWallet, marketId, marketToLiquidate, tokensProvided, supplyInfo, borrowInfo);
     }
 
-    function liquidateVTokens(address tonWallet, address tip3UserWallet, uint32 marketId, uint256 tokensToSeize, uint256 tokensToReturn, BorrowInfo borrowInfo) external override onlyUserAccountManager {
+    function liquidateVTokens(address tonWallet, address tip3UserWallet, uint32 marketId, uint32 marketToLiquidate, uint256 tokensToSeize, uint256 tokensToReturn, BorrowInfo borrowInfo) external override onlyUserAccountManager {
         markets[marketId].suppliedTokens -= tokensToSeize;
-        markets[marketId].borrowInfo = borrowInfo;
+        markets[marketToLiquidate].borrowInfo = borrowInfo;
 
         IUAMUserAccount(userAccountManager).grantVTokens{
             flag: MsgFlag.REMAINING_GAS

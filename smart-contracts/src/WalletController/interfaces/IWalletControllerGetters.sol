@@ -13,5 +13,5 @@ interface IWalletControllerGetters {
 
     function createSupplyPayload() external pure returns(TvmCell);
     function createRepayPayload() external pure returns(TvmCell);
-    function createLiquidationPayload(address targetAccount) external pure returns(TvmCell);
+    function createLiquidationPayload(address targetUser, uint32 marketId) external pure returns(TvmCell);
 }

@@ -38,8 +38,8 @@ interface IUserAccountData {
     function writeWithdrawInfo(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, uint256 tokensToSend) external;
     function requestWithdrawInfo(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, mapping(uint32 => fraction) updatedIndexes) external;
 
-    function requestLiquidationInformation(address tonWallet, address tip3UserWallet, uint32 marketId, uint256 tokensProvided, mapping(uint32 => fraction) updatedIndexes) external;
-    function liquidateVTokens(address tonWallet, address tip3UserWallet, uint32 marketId, uint256 tokensToSeize, uint256 tokensToReturn, BorrowInfo borrowInfo) external;
+    function requestLiquidationInformation(address tonWallet, address tip3UserWallet, uint32 marketId, uint32 marketToLiquidate, uint256 tokensProvided, mapping(uint32 => fraction) updatedIndexes) external;
+    function liquidateVTokens(address tonWallet, address tip3UserWallet, uint32 marketId, uint32 marketToLiquidate, uint256 tokensToSeize, uint256 tokensToReturn, BorrowInfo borrowInfo) external;
     function grantVTokens(address targetUser, address tip3UserWallet, uint32 marketId, uint256 tokensToSeize, uint256 tokensToReturn) external;
 
     function checkUserAccountHealth(address gasTo) external;

@@ -242,12 +242,15 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
                     flag: MsgFlag.REMAINING_GAS
                 }(operation, token_root, tb.toCell());
             } else if (operation == OperationCodes.LIQUIDATE_TOKENS) {
-                (address targetUser) = args.decode(address);
+                (address targetUser, uint32 marketToLiquidate) = args.decode(address, uint32);
                 TvmBuilder tb;
+                TvmBuilder amountStorage;
                 tb.store(sender_address);
                 tb.store(targetUser);
                 tb.store(sender_wallet);
-                tb.store(uint256(amount));
+                amountStorage.store(marketToLiquidate);
+                amountStorage.store(uint256(amount));
+                tb.store(amountStorage.toCell());
                 MarketAggregator(marketAddress).performOperationWalletController{
                     flag: MsgFlag.REMAINING_GAS
                 }(operation, token_root, tb.toCell());
@@ -336,11 +339,12 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
         return tb.toCell();
     }
 
-    function createLiquidationPayload(address targetUser) external override pure returns(TvmCell) {
+    function createLiquidationPayload(address targetUser, uint32 marketId) external override pure returns(TvmCell) {
         TvmBuilder tb;
         tb.store(OperationCodes.LIQUIDATE_TOKENS);
         TvmBuilder op;
         op.store(targetUser);
+        op.store(marketId);
         op.store(op.toCell());
 
         return tb.toCell();

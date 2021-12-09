@@ -100,16 +100,17 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     /*********************************************************************************************************/
     // Cache update functions
 
-    function receiveCacheDelta(uint32 marketId, MarketDelta marketDelta, TvmCell args) external override onlyModule {
+    function receiveCacheDelta(mapping(uint32 => MarketDelta) marketsDelta, TvmCell args) external override onlyModule {
         tvm.rawReserve(msg.value, 2);
-
-        _acquireInterest(marketId);
-        _updateMarketDelta(marketId, marketDelta);
-        _updateExchangeRate(marketId);
+        for ((uint32 marketId, MarketDelta marketDelta): marketsDelta) {
+            _acquireInterest(marketId);
+            _updateMarketDelta(marketId, marketDelta);
+            _updateExchangeRate(marketId);
+        }
 
         IModule(msg.sender).resumeOperation{
             flag: MsgFlag.REMAINING_GAS
-        }(marketId, args, markets, tokenPrices);
+        }(args, markets, tokenPrices);
     }
 
     // process: 
