@@ -1,23 +1,54 @@
-const initializeLocklift = require("../../initializeLocklift");
-const { writeContractData } = require("../../migration/manageContractData");
-
 const configuration = require('../../../scripts.conf');
 const extendContractToGiver = require("../modules/GiverWrapper");
+const initializeLocklift = require("../../../utils/initializeLocklift");
+const { writeContractData } = require('../../../utils/migration');
+const { loadEssentialContracts, deployContract } = require('../../../utils/contracts');
+const { convertCrystal } = require('locklift/locklift/utils');
+
+
 
 async function main() {
-    let locklift = initializeLocklift(configuration.pathToLockliftConfig, configuration.network);
-    let [keyPair] = await locklift.keys.getKeyPairs();
-    let giver = await locklift.factory.getContract('Giver', configuration.buildDirectory);
-    giver = await locklift.giver.deployContract({
+    let contracts = await loadEssentialContracts({
+        wallet: true
+    });
+    let giver = await contracts.locklift.factory.getContract('Giver', configuration.buildDirectory);
+    const {
+        address,
+    } = await contracts.locklift.ton.createDeployMessage({
         contract: giver,
-        initParams: {},
         constructorParams: {},
-        keyPair
+        initParams: {},
+        keyPair: contracts.msigWallet.keyPair,
     });
 
-    writeContractData(giver, 'giverData.js');
+    await contracts.msigWallet.transfer({
+        destination: address,
+        value: convertCrystal(5, 'nano'),
+        payload: ''
+    })
 
-    let giverContract = extendContractToGiver(giver);
+    await contracts.locklift.ton.client.net.wait_for_collection({
+        collection: 'accounts',
+        filter: {
+        id: { eq: address },
+        balance: { gt: `0x0` }
+        },
+        result: 'balance'
+    });
+    
+    // Send deploy transaction
+    const message = await contracts.locklift.ton.createDeployMessage({
+        contract: giver,
+        constructorParams: {},
+        initParams: {},
+        keyPair: contracts.msigWallet.keyPair,
+    });
+    
+    await contracts.locklift.ton.waitForRunTransaction({ message, abi: giver.abi });
+    
+    giver.setAddress(address);
+
+    await writeContractData(giver, 'Giver');
 }
 
 main().then(

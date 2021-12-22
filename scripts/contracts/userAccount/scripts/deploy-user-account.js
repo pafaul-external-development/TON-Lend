@@ -11,7 +11,6 @@ async function main() {
     });
 
     let payloadToDeploy = await contracts.userAccountManager.createUserAccount({
-        _answer_id: 0,
         tonWallet: contracts.msigWallet.address
     });
 
