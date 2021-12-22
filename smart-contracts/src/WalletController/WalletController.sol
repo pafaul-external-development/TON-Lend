@@ -345,7 +345,7 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
         TvmBuilder op;
         op.store(targetUser);
         op.store(marketId);
-        op.store(op.toCell());
+        tb.store(op.toCell());
 
         return tb.toCell();
     }
