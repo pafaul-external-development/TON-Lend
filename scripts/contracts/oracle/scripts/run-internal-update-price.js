@@ -3,13 +3,16 @@ const { loadEssentialContracts } = require("../../../utils/contracts");
 
 async function main() {
     let contracts = await loadEssentialContracts({
+        oracle: true, 
         wallet: true,
-        oracle: true,
+        testSP: true,
         market: true
     });
 
+    let allMarketInfo = await contracts.marketsAggregator.getAllMarkets();
+
     let marketInfo = await contracts.marketsAggregator.getMarketInformation({
-        marketId: 0
+        marketId: 1
     });
 
     let internalUpdatePayload = await contracts.oracle.internalUpdatePrice({
