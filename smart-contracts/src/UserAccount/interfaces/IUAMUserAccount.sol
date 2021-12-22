@@ -28,6 +28,7 @@ interface IUAMUserAccount {
     function receiveLiquidationInformation(address tonWallet, address targetUser, address tip3UserWallet, uint32 marketId, uint32 marketToLiquidate, uint256 tokensProvided, mapping(uint32 => uint256) supplyInfo, mapping(uint32 => BorrowInfo) borrowInfo) external view;
     function seizeTokens(address tonWallet, address targetUser, address tip3UserWallet, uint32 marketId, uint32 marketToLiquidate, uint256 tokensToSeize, uint256 tokensToReturn, BorrowInfo borrowInfo) external view;
     function grantVTokens(address tonWallet, address targetUser, address tip3UserWallet, uint32 marketId, uint256 vTokensToGrant, uint256 tokensToReturn) external view;
+    function abortLiquidation(address tonWallet, address targetUser, address tip3UserWallet, uint32 marketId, uint256 tokensProvided) external view;
     function externalHealthUpdate(address tonWallet, address targetUser, address tip3UserWallet, uint32 marketId, uint256 tokensToReturn) external view;
 
     // Check user account health operation

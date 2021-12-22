@@ -317,6 +317,14 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         }(owner, targetUser, tip3UserWallet, marketId, tokensToReturn);
     }
 
+    function abortLiquidation(address tonWallet, address tip3UserWallet, uint32 marketId, uint256 tokensProvided) external override onlyUserAccountManager {
+        if (tokensProvided != 0) { 
+            _checkUserAccountHealth(owner, _createTokenPayoutPayload(tonWallet, tip3UserWallet, marketId, tokensProvided));
+        } else {
+            _checkUserAccountHealth(owner, _createNoOpPayload());
+        }
+    }
+
     /*********************************************************************************************************/
     // internal functions
     

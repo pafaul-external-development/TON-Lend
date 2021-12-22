@@ -376,6 +376,19 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         }(targetUser, tip3UserWallet, marketId, vTokensToGrant, tokensToReturn);
     }
 
+    function abortLiquidation(
+        address tonWallet, 
+        address targetUser, 
+        address tip3UserWallet, 
+        uint32 marketId, 
+        uint256 tokensProvided
+    ) external override view onlyModule(OperationCodes.LIQUIDATE_TOKENS) {
+        address userAccount = _calculateUserAccountAddress(targetUser);
+        IUserAccountData(userAccount).abortLiquidation{
+            flag: MsgFlag.REMAINING_GAS
+        }(tonWallet, tip3UserWallet, marketId, tokensProvided);
+    }
+
     function externalHealthUpdate(
         address tonWallet,
         address targetUser,

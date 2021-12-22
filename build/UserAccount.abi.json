@@ -219,6 +219,17 @@
 			]
 		},
 		{
+			"name": "abortLiquidation",
+			"inputs": [
+				{"name":"tonWallet","type":"address"},
+				{"name":"tip3UserWallet","type":"address"},
+				{"name":"marketId","type":"uint32"},
+				{"name":"tokensProvided","type":"uint256"}
+			],
+			"outputs": [
+			]
+		},
+		{
 			"name": "disableBorrowLock",
 			"inputs": [
 			],
