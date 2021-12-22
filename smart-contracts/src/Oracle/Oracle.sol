@@ -127,9 +127,16 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
      * @param usd Amount of usd in swap pair
      */
     function externalUpdatePrice(address tokenRoot, uint128 tokens, uint128 usd) override external onlyOwner onlyKnownTokenRoot(tokenRoot) {
-        tvm.accept();
+        if (msg.sender.value == 0) {
+            tvm.accept();
+        } else {
+            tvm.rawReserve(msg.value, 2);
+        }
+
         prices[tokenRoot].tokens = tokens;
         prices[tokenRoot].usd = usd;
+
+        address(ownerAddress).transfer({value: 0, flag: 64});
     }
 
     /**

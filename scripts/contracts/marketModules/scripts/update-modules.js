@@ -23,7 +23,7 @@ async function main() {
 
         await contracts.msigWallet.transfer({
             destination: module.address,
-            value: convertCrystal(2, 'nano'),
+            value: convertCrystal(1, 'nano'),
             payload
         });
     }

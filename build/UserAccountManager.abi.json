@@ -23,11 +23,9 @@
 		{
 			"name": "createUserAccount",
 			"inputs": [
-				{"name":"_answer_id","type":"uint32"},
 				{"name":"tonWallet","type":"address"}
 			],
 			"outputs": [
-				{"name":"value0","type":"address"}
 			]
 		},
 		{
@@ -189,6 +187,7 @@
 				{"name":"targetUser","type":"address"},
 				{"name":"tip3UserWallet","type":"address"},
 				{"name":"marketId","type":"uint32"},
+				{"name":"marketToLiquidate","type":"uint32"},
 				{"name":"tokensProvided","type":"uint256"},
 				{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"updatedIndexes","type":"map(uint32,tuple)"}
 			],
@@ -202,6 +201,7 @@
 				{"name":"targetUser","type":"address"},
 				{"name":"tip3UserWallet","type":"address"},
 				{"name":"marketId","type":"uint32"},
+				{"name":"marketToLiquidate","type":"uint32"},
 				{"name":"tokensProvided","type":"uint256"},
 				{"name":"supplyInfo","type":"map(uint32,uint256)"},
 				{"components":[{"name":"tokensBorrowed","type":"uint256"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"index","type":"tuple"}],"name":"borrowInfo","type":"map(uint32,tuple)"}
@@ -216,6 +216,7 @@
 				{"name":"targetUser","type":"address"},
 				{"name":"tip3UserWallet","type":"address"},
 				{"name":"marketId","type":"uint32"},
+				{"name":"marketToLiquidate","type":"uint32"},
 				{"name":"tokensToSeize","type":"uint256"},
 				{"name":"tokensToReturn","type":"uint256"},
 				{"components":[{"name":"tokensBorrowed","type":"uint256"},{"components":[{"name":"nom","type":"uint256"},{"name":"denom","type":"uint256"}],"name":"index","type":"tuple"}],"name":"borrowInfo","type":"tuple"}
@@ -412,5 +413,14 @@
 	"data": [
 	],
 	"events": [
+		{
+			"name": "AccountCreated",
+			"inputs": [
+				{"name":"tonWallet","type":"address"},
+				{"name":"userAddress","type":"address"}
+			],
+			"outputs": [
+			]
+		}
 	]
 }

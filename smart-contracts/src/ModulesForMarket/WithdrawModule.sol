@@ -114,6 +114,7 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
     ) external override onlyUserAccountManager {
         tvm.rawReserve(msg.value, 2);
         MarketDelta marketDelta;
+        mapping(uint32 => MarketDelta) marketsDelta;
 
         MarketInfo mi = marketInfo[marketId];
 
@@ -127,6 +128,7 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
 
         fraction fTokensToSend = tokensToWithdraw.numFMul(mi.exchangeRate);
         fraction fTokensToSendUSD = fTokensToSend.fDiv(tokenPrices[marketInfo[marketId].token]);
+        fraction fTokensCollateral = fTokensToSendUSD.fMul(mi.collateralFactor);
 
         // Check user balance in tokens just in case
         // There will be lock at user account for operation, unified for all operations
@@ -136,7 +138,7 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
             (accountHealth.nom > accountHealth.denom) &&
             (supplyInfo[marketId] >= tokensToWithdraw)
         ) {
-            if (accountHealth.nom - accountHealth.denom > fTokensToSendUSD.toNum()) {
+            if (accountHealth.nom - accountHealth.denom >= fTokensCollateral.toNum()) {
                 uint256 tokensToSend = fTokensToSend.toNum();
 
                 marketDelta.realTokenBalance.delta = tokensToSend;
@@ -144,9 +146,12 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
                 marketDelta.vTokenBalance.delta = tokensToWithdraw;
                 marketDelta.vTokenBalance.positive = false;
 
+                marketsDelta[marketId] = marketDelta;
+
                 emit TokenWithdraw(marketId, marketDelta, tonWallet, tokensToWithdraw, tokensToSend);
 
                 TvmBuilder tb;
+                tb.store(marketId);
                 tb.store(tonWallet);
                 tb.store(userTip3Wallet);
                 TvmBuilder valueStorate;
@@ -156,7 +161,7 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
 
                 IContractStateCacheRoot(marketAddress).receiveCacheDelta{
                     flag: MsgFlag.REMAINING_GAS
-                }(marketId, marketDelta, tb.toCell());
+                }(marketsDelta, tb.toCell());
             } else {
                 IUAMUserAccount(userAccountManager).requestUserAccountHealthCalculation{
                     flag: MsgFlag.REMAINING_GAS
@@ -169,12 +174,12 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
         }
     }
 
-    function resumeOperation(uint32 marketId, TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
+    function resumeOperation(TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
         tvm.rawReserve(msg.value, 2);
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;
         TvmSlice ts = args.toSlice();
-        (address tonWallet, address userTip3Wallet) = ts.decode(address, address);
+        (uint32 marketId, address tonWallet, address userTip3Wallet) = ts.decode(uint32, address, address);
         TvmSlice values = ts.loadRefAsSlice();
         (uint256 tokensToWithdraw, uint256 tokensToSend) = values.decode(uint256, uint256);
         IUAMUserAccount(userAccountManager).writeWithdrawInfo{

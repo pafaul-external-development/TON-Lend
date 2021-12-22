@@ -7,7 +7,7 @@ async function main() {
     });
 
     let payload = await contracts.marketsAggregator.removeMarket({
-        marketId: 0
+        marketId: 1
     });
 
     await contracts.msigWallet.transfer({

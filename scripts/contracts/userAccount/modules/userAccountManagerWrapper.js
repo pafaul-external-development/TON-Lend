@@ -31,7 +31,6 @@ class UserAccountManager extends Contract {
             contract: this,
             functionName: 'createUserAccount',
             input: {
-                _answer_id: 0,
                 tonWallet
             }
         });

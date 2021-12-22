@@ -32,6 +32,8 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     mapping(address => bool) public existingModules;
     mapping(uint32 => TvmCell) public userAccountCodes;
 
+    event AccountCreated(address tonWallet, address userAddress);
+
     /*********************************************************************************************************/
     // Functions for deployment and upgrade
     // Contract is deployed via platform
@@ -94,7 +96,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     /**
      * @param tonWallet Address of user's ton wallet
      */
-    function createUserAccount(address tonWallet) external override view responsible returns(address) {
+    function createUserAccount(address tonWallet) external override view {
         tvm.rawReserve(msg.value, 2);
 
         TvmSlice ts = userAccountCodes[0].toSlice();
@@ -109,7 +111,12 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
             }
         }();
 
-        return userAccount;
+        emit AccountCreated(tonWallet, userAccount);
+
+        IUserAccountManager(this).updateUserAccount{
+            value: 0,
+            flag: 64
+        }(tonWallet);
     }
 
     // address calculation functions
@@ -314,13 +321,14 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         address targetUser, 
         address tip3UserWallet, 
         uint32 marketId, 
+        uint32 marketToLiquidate,
         uint256 tokensProvided,
         mapping(uint32 => fraction) updatedIndexes
     ) external override view onlyModule(OperationCodes.LIQUIDATE_TOKENS) {
         address userAccount = _calculateUserAccountAddress(targetUser);
         IUserAccountData(userAccount).requestLiquidationInformation{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, tip3UserWallet, marketId, tokensProvided, updatedIndexes);
+        }(tonWallet, tip3UserWallet, marketId, marketToLiquidate, tokensProvided, updatedIndexes);
     }
 
     function receiveLiquidationInformation(
@@ -328,13 +336,14 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         address targetUser, 
         address tip3UserWallet, 
         uint32 marketId, 
+        uint32 marketToLiquidate,
         uint256 tokensProvided, 
         mapping(uint32 => uint256) supplyInfo, 
         mapping(uint32 => BorrowInfo) borrowInfo
     ) external override view onlyValidUserAccount(targetUser) {
         ILiquidationModule(modules[OperationCodes.LIQUIDATE_TOKENS]).liquidate{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, targetUser, tip3UserWallet, marketId, tokensProvided, supplyInfo, borrowInfo);
+        }(tonWallet, targetUser, tip3UserWallet, marketId, marketToLiquidate, tokensProvided, supplyInfo, borrowInfo);
     }
 
     function seizeTokens(
@@ -342,6 +351,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         address targetUser,
         address tip3UserWallet,
         uint32 marketId,
+        uint32 marketToLiquidate,
         uint256 tokensToSeize, 
         uint256 tokensToReturn, 
         BorrowInfo borrowInfo
@@ -349,7 +359,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         address userAccount = _calculateUserAccountAddress(targetUser);
         IUserAccountData(userAccount).liquidateVTokens{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, tip3UserWallet, marketId, tokensToSeize, tokensToReturn, borrowInfo);
+        }(tonWallet, tip3UserWallet, marketId, marketToLiquidate, tokensToSeize, tokensToReturn, borrowInfo);
     }
 
     function grantVTokens(

@@ -14,7 +14,7 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
     mapping (uint32 => MarketInfo) marketInfo;
     mapping (address => fraction) tokenPrices;
 
-    event TokensLiquidated(uint32 marketId, MarketDelta marketDelta, address liquidator, address targetUser, uint256 tokensLiquidated, uint256 vTokensSeized);
+    event TokensLiquidated(uint32 marketId, MarketDelta marketDelta1, uint32 marketToLiquidate, MarketDelta marketDelta2, address liquidator, address targetUser, uint256 tokensLiquidated, uint256 vTokensSeized);
 
     constructor(address _owner) public {
         tvm.accept();
@@ -90,11 +90,13 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;
         TvmSlice ts = args.toSlice();
-        (address tonWallet, address targetUser, address tip3UserWallet, uint256 tokenAmount) = ts.decode(address, address, address, uint256);
+        (address tonWallet, address targetUser, address tip3UserWallet) = ts.decode(address, address, address);
+        TvmSlice amountTS = ts.loadRefAsSlice();
+        (uint32 marketToLiquidate, uint256 tokenAmount) = amountTS.decode(uint32, uint256);
         mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
         IUAMUserAccount(userAccountManager).requestLiquidationInformation{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, targetUser, tip3UserWallet, marketId, tokenAmount, updatedIndexes);
+        }(tonWallet, targetUser, tip3UserWallet, marketId, marketToLiquidate, tokenAmount, updatedIndexes);
     }
 
     function liquidate(
@@ -102,6 +104,7 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
         address targetUser, 
         address tip3UserWallet, 
         uint32 marketId, 
+        uint32 marketToLiquidate,
         uint256 tokensProvided, 
         mapping(uint32 => uint256) supplyInfo, 
         mapping(uint32 => BorrowInfo) borrowInfo
@@ -118,7 +121,7 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
 
         fraction health = Utilities.calculateSupplyBorrow(supplyInfo, borrowInfo, marketInfo, tokenPrices);
         if (health.nom < health.denom) {
-            uint256 maxTokensForLiquidation = borrowInfo[marketId].tokensBorrowed;
+            uint256 maxTokensForLiquidation = borrowInfo[marketToLiquidate].tokensBorrowed;
 
             fraction fmaxTokensForLiquidationVTokenBased = supplyInfo[marketId].numFMul(marketInfo[marketId].exchangeRate);
             uint256 maxTokensForLiquidationVTokenBased = fmaxTokensForLiquidationVTokenBased.toNum();
@@ -140,16 +143,21 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
 
             uint256 tokensToReturn = tokensProvided - tokensToUseForLiquidation;
 
-            BorrowInfo userBorrowInfo = BorrowInfo(borrowInfo[marketId].tokensBorrowed - tokensToLiquidate, marketInfo[marketId].index);
+            BorrowInfo userBorrowInfo = BorrowInfo(borrowInfo[marketToLiquidate].tokensBorrowed - tokensToLiquidate, marketInfo[marketToLiquidate].index);
 
-            MarketDelta marketDelta;
-            marketDelta.realTokenBalance.delta = tokensToUseForLiquidation;
-            marketDelta.realTokenBalance.positive = true;
+            MarketDelta marketDelta1;
+            MarketDelta marketDelta2;
+            mapping(uint32 => MarketDelta) marketDeltas;
+            marketDelta1.realTokenBalance.delta = tokensToUseForLiquidation;
+            marketDelta1.realTokenBalance.positive = true;
+            
+            marketDelta2.totalBorrowed.delta = tokensToLiquidate;
+            marketDelta2.totalBorrowed.positive = false;
 
-            marketDelta.totalBorrowed.delta = tokensToLiquidate;
-            marketDelta.totalBorrowed.positive = false;
+            marketDeltas[marketId] = marketDelta1;
+            marketDeltas[marketToLiquidate] = marketDelta2;
 
-            emit TokensLiquidated(marketId, marketDelta, tonWallet, targetUser, tokensToLiquidate, tokensToSeize);
+            emit TokensLiquidated(marketId, marketDelta2, marketToLiquidate, marketDelta1, tonWallet, targetUser, tokensToLiquidate, tokensToSeize);
 
             TvmBuilder tb;
             TvmBuilder addressStorage;
@@ -157,6 +165,8 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
             addressStorage.store(targetUser);
             addressStorage.store(tip3UserWallet);
             TvmBuilder valueStorage;
+            valueStorage.store(marketId);
+            valueStorage.store(marketToLiquidate);
             valueStorage.store(tokensToSeize);
             valueStorage.store(tokensToReturn);
             TvmBuilder borrowInfoStorage;
@@ -167,13 +177,13 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
 
             IContractStateCacheRoot(marketAddress).receiveCacheDelta{
                 flag: MsgFlag.REMAINING_GAS
-            }(marketId, marketDelta, tb.toCell());
+            }(marketDeltas, tb.toCell());
         } else {
             
         }
     }
 
-    function resumeOperation(uint32 marketId, TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
+    function resumeOperation(TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
         tvm.rawReserve(msg.value, 2);
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;
@@ -181,12 +191,12 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
         TvmSlice addressStorage = ts.loadRefAsSlice();
         (address tonWallet, address targetUser, address tip3UserWallet) = addressStorage.decode(address, address, address);
         TvmSlice valueStorage = ts.loadRefAsSlice();
-        (uint256 tokensToSeize, uint256 tokensToReturn) = valueStorage.decode(uint256, uint256);
+        (uint32 marketId, uint32 marketToLiquidate, uint256 tokensToSeize, uint256 tokensToReturn) = valueStorage.decode(uint32, uint32, uint256, uint256);
         TvmSlice borrowInfoStorage = ts.loadRefAsSlice();
         (BorrowInfo borrowInfo) = borrowInfoStorage.decode(BorrowInfo);
         IUAMUserAccount(userAccountManager).seizeTokens{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, targetUser, tip3UserWallet, marketId, tokensToSeize, tokensToReturn, borrowInfo);
+        }(tonWallet, targetUser, tip3UserWallet, marketId, marketToLiquidate, tokensToSeize, tokensToReturn, borrowInfo);
     }
 
     function _createUpdatedIndexes() internal view returns(mapping(uint32 => fraction) updatedIndexes) {
