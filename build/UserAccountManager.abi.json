@@ -231,6 +231,7 @@
 				{"name":"targetUser","type":"address"},
 				{"name":"tip3UserWallet","type":"address"},
 				{"name":"marketId","type":"uint32"},
+				{"name":"marketToLiquidate","type":"uint32"},
 				{"name":"vTokensToGrant","type":"uint256"},
 				{"name":"tokensToReturn","type":"uint256"}
 			],

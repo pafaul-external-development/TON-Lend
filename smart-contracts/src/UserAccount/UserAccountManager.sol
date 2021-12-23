@@ -367,13 +367,14 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         address targetUser,
         address tip3UserWallet,
         uint32 marketId, 
+        uint32 marketToLiquidate,
         uint256 vTokensToGrant, 
         uint256 tokensToReturn
     ) external override view onlyValidUserAccount(targetUser) {
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).grantVTokens{
             flag: MsgFlag.REMAINING_GAS
-        }(targetUser, tip3UserWallet, marketId, vTokensToGrant, tokensToReturn);
+        }(targetUser, tip3UserWallet, marketId, marketToLiquidate, vTokensToGrant, tokensToReturn);
     }
 
     function abortLiquidation(
@@ -395,8 +396,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         address tip3UserWallet,
         uint32 marketId,
         uint256 tokensToReturn
-    ) external override view onlyValidUserAccount(tonWallet) {
-        tvm.rawReserve(0, 4);
+    ) external override view onlyValidUserAccountExternal(tonWallet) {
         address targetAccount = _calculateUserAccountAddress(targetUser);
         IUserAccountData(targetAccount).checkUserAccountHealth{
             value: msg.value / 4
@@ -583,6 +583,15 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     modifier onlyValidUserAccount(address tonWallet) {
         require(msg.sender == _calculateUserAccountAddress(tonWallet));
         tvm.rawReserve(msg.value, 2);
+        _;
+    }
+
+    /**
+     * @param tonWallet Address of user's ton wallet
+     */
+    modifier onlyValidUserAccountExternal(address tonWallet) {
+        require(msg.sender == _calculateUserAccountAddress(tonWallet));
+        tvm.rawReserve(0, 4);
         _;
     }
 }

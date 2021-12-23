@@ -14,7 +14,7 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
     mapping (uint32 => MarketInfo) marketInfo;
     mapping (address => fraction) tokenPrices;
 
-    event TokensLiquidated(uint32 marketId, MarketDelta marketDelta1, uint32 marketToLiquidate, MarketDelta marketDelta2, address liquidator, address targetUser, uint256 tokensLiquidated, uint256 vTokensSeized);
+    event TokensLiquidated(uint32 marketId, MarketDelta marketDelta1, address liquidator, address targetUser, uint256 tokensLiquidated, uint256 vTokensSeized);
 
     constructor(address _owner) public {
         tvm.accept();
@@ -121,9 +121,9 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
 
         fraction health = Utilities.calculateSupplyBorrow(supplyInfo, borrowInfo, marketInfo, tokenPrices);
         if (health.nom < health.denom) {
-            uint256 maxTokensForLiquidation = borrowInfo[marketToLiquidate].tokensBorrowed;
+            uint256 maxTokensForLiquidation = borrowInfo[marketId].tokensBorrowed;
 
-            fraction fmaxTokensForLiquidationVTokenBased = supplyInfo[marketId].numFMul(marketInfo[marketId].exchangeRate);
+            fraction fmaxTokensForLiquidationVTokenBased = supplyInfo[marketToLiquidate].numFMul(marketInfo[marketToLiquidate].exchangeRate);
             uint256 maxTokensForLiquidationVTokenBased = fmaxTokensForLiquidationVTokenBased.toNum();
 
             fraction fmaxTokensForLiquidationProvided = tokensProvided.numFMul(marketInfo[marketId].liquidationMultiplier);
@@ -138,12 +138,12 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
             fraction ftokensToUseForLiquidation = tokensToLiquidate.numFDiv(marketInfo[marketId].liquidationMultiplier);
             uint256 tokensToUseForLiquidation = ftokensToUseForLiquidation.toNum();
             
-            fraction ftokensToSeize = tokensToLiquidate.numFDiv(marketInfo[marketId].exchangeRate);
+            fraction ftokensToSeize = tokensToLiquidate.numFDiv(marketInfo[marketToLiquidate].exchangeRate);
             uint256 tokensToSeize = ftokensToSeize.toNum();
 
             uint256 tokensToReturn = tokensProvided - tokensToUseForLiquidation;
 
-            BorrowInfo userBorrowInfo = BorrowInfo(borrowInfo[marketToLiquidate].tokensBorrowed - tokensToLiquidate, marketInfo[marketToLiquidate].index);
+            BorrowInfo userBorrowInfo = BorrowInfo(borrowInfo[marketId].tokensBorrowed - tokensToLiquidate, marketInfo[marketId].index);
 
             MarketDelta marketDelta1;
             MarketDelta marketDelta2;
@@ -151,13 +151,12 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
             marketDelta1.realTokenBalance.delta = tokensToUseForLiquidation;
             marketDelta1.realTokenBalance.positive = true;
             
-            marketDelta2.totalBorrowed.delta = tokensToLiquidate;
-            marketDelta2.totalBorrowed.positive = false;
+            marketDelta1.totalBorrowed.delta = tokensToLiquidate;
+            marketDelta1.totalBorrowed.positive = false;
 
             marketDeltas[marketId] = marketDelta1;
-            marketDeltas[marketToLiquidate] = marketDelta2;
 
-            emit TokensLiquidated(marketId, marketDelta2, marketToLiquidate, marketDelta1, tonWallet, targetUser, tokensToLiquidate, tokensToSeize);
+            emit TokensLiquidated(marketId, marketDelta1, tonWallet, targetUser, tokensToLiquidate, tokensToSeize);
 
             TvmBuilder tb;
             TvmBuilder addressStorage;

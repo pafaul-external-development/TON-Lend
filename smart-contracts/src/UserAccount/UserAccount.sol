@@ -122,7 +122,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
 
     function withdraw(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw) external override view onlyOwner {
         if (
-            liquidationLock ||
+            !liquidationLock &&
             tokensToWithdraw <= markets[marketId].suppliedTokens
         ) {
             tvm.rawReserve(msg.value, 2);
@@ -171,7 +171,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         if (
             (!borrowLock) &&
             (markets[marketId].exists) &&
-            (accountHealth.nom > accountHealth.denom) ||
+            (accountHealth.nom > accountHealth.denom) &&
             !liquidationLock
         ) {
             borrowLock = true;
@@ -267,6 +267,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     function updateUserAccountHealth(address gasTo, fraction _accountHealth, mapping(uint32 => fraction) updatedIndexes, TvmCell dataToTransfer) external override onlyUserAccountManager {
         accountHealth = _accountHealth;
         liquidationLock = accountHealth.denom > accountHealth.nom;
+        borrowLock = accountHealth.denom > accountHealth.nom;
         _updateIndexes(updatedIndexes);
         TvmSlice ts = dataToTransfer.toSlice();
         (uint8 operation) = ts.decode(uint8);
@@ -301,20 +302,22 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     }
 
     function liquidateVTokens(address tonWallet, address tip3UserWallet, uint32 marketId, uint32 marketToLiquidate, uint256 tokensToSeize, uint256 tokensToReturn, BorrowInfo borrowInfo) external override onlyUserAccountManager {
-        markets[marketId].suppliedTokens -= tokensToSeize;
-        markets[marketToLiquidate].borrowInfo = borrowInfo;
+        markets[marketToLiquidate].suppliedTokens -= tokensToSeize;
+        markets[marketId].borrowInfo = borrowInfo;
 
         IUAMUserAccount(userAccountManager).grantVTokens{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, owner, tip3UserWallet, marketId, tokensToSeize, tokensToReturn);
+        }(tonWallet, owner, tip3UserWallet, marketId, marketToLiquidate, tokensToSeize, tokensToReturn);
     }
 
-    function grantVTokens(address targetUser, address tip3UserWallet, uint32 marketId, uint256 tokensToSeize, uint256 tokensToReturn) external override onlyUserAccountManager {
-        markets[marketId].suppliedTokens += tokensToSeize;
+    function grantVTokens(address targetUser, address tip3UserWallet, uint32 marketId, uint32 marketToLiquidate, uint256 tokensToSeize, uint256 tokensToReturn) external override onlyUserAccountManager {
+        markets[marketToLiquidate].suppliedTokens += tokensToSeize;
 
-        IUAMUserAccount(userAccountManager).externalHealthUpdate{
-            flag: MsgFlag.REMAINING_GAS
-        }(owner, targetUser, tip3UserWallet, marketId, tokensToReturn);
+        if (tokensToReturn != 0) { 
+            _checkUserAccountHealth(owner, _createTokenPayoutPayload(owner, tip3UserWallet, marketId, tokensToReturn));
+        } else {
+            _checkUserAccountHealth(owner, _createNoOpPayload());
+        }
     }
 
     function abortLiquidation(address tonWallet, address tip3UserWallet, uint32 marketId, uint256 tokensProvided) external override onlyUserAccountManager {
