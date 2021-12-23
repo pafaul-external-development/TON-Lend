@@ -179,9 +179,11 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
                 flag: MsgFlag.REMAINING_GAS
             }(marketDeltas, tb.toCell());
         } else {
-            IUAMUserAccount(userAccountManager).abortLiquidation{
+            IUAMUserAccount(userAccountManager).requestTokenPayout{
                 flag: MsgFlag.REMAINING_GAS
-            }(tonWallet, targetUser, tip3UserWallet, marketId, tokensProvided);
+            }(
+                tonWallet, tip3UserWallet, marketId, tokensProvided
+            );
         }
     }
 

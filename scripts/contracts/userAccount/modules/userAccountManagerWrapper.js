@@ -226,6 +226,22 @@ class UserAccountManager extends Contract {
             }
         })
     }
+
+    /**
+     * 
+     * @param {Object} param0 
+     * @param {String} param0.tonWallet
+     * @returns 
+     */    
+    async requestUserAccountHealthCalculation({tonWallet}) {
+        return await encodeMessageBody({
+            contract: this,
+            functionName: 'requestUserAccountHealthCalculation',
+            input: {
+                tonWallet
+            }
+        })
+    }
 }
 
 module.exports = {
