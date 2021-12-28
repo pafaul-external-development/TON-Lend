@@ -170,7 +170,6 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         tvm.rawReserve(msg.value, 2);
         if (
             (!borrowLock) &&
-            (markets[marketId].exists) &&
             (accountHealth.nom > accountHealth.denom) &&
             !liquidationLock
         ) {

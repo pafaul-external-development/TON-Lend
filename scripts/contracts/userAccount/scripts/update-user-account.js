@@ -8,7 +8,7 @@ async function main() {
     });
 
     let payload = await contracts.userAccountManager.updateUserAccount({
-        tonWallet: contracts.msigWallet.address
+        tonWallet: '0:60bc706a93d66f90c63203e185b6194c16c484d3fc8cccc91fd79d453465b11a' // contracts.msigWallet.address
     });
 
     await contracts.msigWallet.transfer({

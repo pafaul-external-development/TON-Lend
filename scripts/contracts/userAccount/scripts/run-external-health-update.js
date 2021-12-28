@@ -9,7 +9,7 @@ async function main() {
     });
 
     let externalUpdatePayload = await contracts.userAccountManager.requestUserAccountHealthCalculation({
-        tonWallet: '0:7ad72c345cd1872806fbe7f16aca699e3f7a45bef316bbb65fdc0f279162b91e'
+        tonWallet: '0:60bc706a93d66f90c63203e185b6194c16c484d3fc8cccc91fd79d453465b11a'
     })
 
     await contracts.msigWallet.transfer({

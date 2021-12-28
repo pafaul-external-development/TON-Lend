@@ -122,23 +122,32 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
         fraction health = Utilities.calculateSupplyBorrow(supplyInfo, borrowInfo, marketInfo, tokenPrices);
         if (health.nom < health.denom) {
             uint256 maxTokensForLiquidation = borrowInfo[marketId].tokensBorrowed;
+            fraction maxTokensForLiquidationUSD = maxTokensForLiquidation.numFDiv(tokenPrices[marketInfo[marketId].token]);
+            maxTokensForLiquidation = maxTokensForLiquidationUSD.toNum();
 
             fraction fmaxTokensForLiquidationVTokenBased = supplyInfo[marketToLiquidate].numFMul(marketInfo[marketToLiquidate].exchangeRate);
+            fmaxTokensForLiquidationVTokenBased = fmaxTokensForLiquidationVTokenBased.fDiv(tokenPrices[marketInfo[marketToLiquidate].token]);
             uint256 maxTokensForLiquidationVTokenBased = fmaxTokensForLiquidationVTokenBased.toNum();
 
             fraction fmaxTokensForLiquidationProvided = tokensProvided.numFMul(marketInfo[marketId].liquidationMultiplier);
+            fmaxTokensForLiquidationProvided = fmaxTokensForLiquidationProvided.fDiv(tokenPrices[marketInfo[marketId].token]);
             uint256 maxTokensForLiquidationProvided = fmaxTokensForLiquidationProvided.toNum();
 
-            uint256 tokensToLiquidate = math.min(
+            uint256 tokensToLiquidateUSD = math.min(
                 maxTokensForLiquidation,
                 maxTokensForLiquidationVTokenBased,
                 maxTokensForLiquidationProvided
             );
 
+            fraction ftokensToLiquidate = tokensToLiquidateUSD.numFMul(tokenPrices[marketInfo[marketId].token]);
+            ftokensToLiquidate = ftokensToLiquidate.fDiv(marketInfo[marketId].exchangeRate);
+            uint256 tokensToLiquidate = ftokensToLiquidate.toNum();
+
             fraction ftokensToUseForLiquidation = tokensToLiquidate.numFDiv(marketInfo[marketId].liquidationMultiplier);
             uint256 tokensToUseForLiquidation = ftokensToUseForLiquidation.toNum();
             
-            fraction ftokensToSeize = tokensToLiquidate.numFDiv(marketInfo[marketToLiquidate].exchangeRate);
+            fraction ftokensToSeize = tokensToLiquidateUSD.numFMul(tokenPrices[marketInfo[marketToLiquidate].token]);
+            ftokensToSeize = ftokensToSeize.fDiv(marketInfo[marketToLiquidate].exchangeRate);
             uint256 tokensToSeize = ftokensToSeize.toNum();
 
             uint256 tokensToReturn = tokensProvided - tokensToUseForLiquidation;
