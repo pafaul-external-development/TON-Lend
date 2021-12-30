@@ -2,11 +2,10 @@ pragma ton-solidity >= 0.47.0;
 
 import './interfaces/IModule.sol';
 
-contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorrowModule, IUpgradableContract {
+contract BorrowModule is IRoles, IModule, IContractStateCache, IContractAddressSG, IBorrowModule, IUpgradableContract {
     using FPO for fraction;
     using UFO for uint256;
 
-    address owner;
     address marketAddress;
     address userAccountManager;
     uint32 public contractCodeVersion;
@@ -16,19 +15,19 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
 
     event TokenBorrow(uint32 marketId, MarketDelta marketDelta, address tonWallet, uint256 tokensBorrowed);
 
-    constructor(address _owner) public {
+    constructor(address _newOwner) public {
         tvm.accept();
-        owner = _owner;
+        _owner = _newOwner;
     }
 
-    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) external override onlyOwner {
+    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) external override canUpgrade {
         tvm.rawReserve(msg.value, 2);
 
         tvm.setcode(code);
         tvm.setCurrentCode(code);
 
         onCodeUpgrade (
-            owner,
+            _owner,
             marketAddress,
             userAccountManager,
             marketInfo,
@@ -38,7 +37,7 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
     }
 
     function onCodeUpgrade(
-        address _owner,
+        address owner,
         address _marketAddress,
         address _userAccountManager,
         mapping(uint32 => MarketInfo) _marketInfo,
@@ -47,7 +46,7 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
     ) private {
         tvm.accept();
         tvm.resetStorage();
-        owner = _owner;
+        _owner = owner;
         marketAddress = _marketAddress;
         userAccountManager = _userAccountManager;
         marketInfo = _marketInfo;
@@ -63,20 +62,20 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
         return(marketInfo, tokenPrices);
     }
 
-    function setMarketAddress(address _marketAddress) external override onlyOwner {
+    function setMarketAddress(address _marketAddress) external override canChangeParams {
         tvm.rawReserve(msg.value, 2);
         marketAddress = _marketAddress;
-        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        address(_owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
-    function setUserAccountManager(address _userAccountManager) external override onlyOwner {
+    function setUserAccountManager(address _userAccountManager) external override canChangeParams {
         tvm.rawReserve(msg.value, 2);
         userAccountManager = _userAccountManager;
-        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        address(_owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     function getContractAddresses() external override view responsible returns(address _owner, address _marketAddress, address _userAccountManager) {
-        return {flag: MsgFlag.REMAINING_GAS} (owner, marketAddress, userAccountManager);
+        return {flag: MsgFlag.REMAINING_GAS} (_owner, marketAddress, userAccountManager);
     }
 
     function updateCache(address tonWallet, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
@@ -171,11 +170,6 @@ contract BorrowModule is IModule, IContractStateCache, IContractAddressSG, IBorr
         IUAMUserAccount(userAccountManager).writeBorrowInformation{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, userTip3Wallet, tokensToBorrow, marketId, marketInfo[marketId].index);
-    }
-
-    modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
     }
 
     modifier onlyUserAccountManager() {

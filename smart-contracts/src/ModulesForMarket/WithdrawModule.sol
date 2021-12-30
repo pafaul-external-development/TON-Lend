@@ -4,11 +4,10 @@ import './interfaces/IModule.sol';
 
 import '../utils/libraries/MsgFlag.sol';
 
-contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWithdrawModule, IUpgradableContract {
+contract WithdrawModule is IRoles, IModule, IContractStateCache, IContractAddressSG, IWithdrawModule, IUpgradableContract {
     using UFO for uint256;
     using FPO for fraction;
 
-    address owner;
     address marketAddress;
     address userAccountManager;
     uint32 public contractCodeVersion;
@@ -18,19 +17,19 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
 
     event TokenWithdraw(uint32 marketId, MarketDelta marketDelta, address tonWallet, uint256 vTokensWithdrawn, uint256 realTokensWithdrawn);
 
-    constructor(address _owner) public {
+    constructor(address _newOwner) public {
         tvm.accept();
-        owner = _owner;
+        _owner = _newOwner;
     }
 
-    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) external override onlyOwner {
+    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) external override canUpgrade {
         tvm.rawReserve(msg.value, 2);
 
         tvm.setcode(code);
         tvm.setCurrentCode(code);
 
         onCodeUpgrade (
-            owner,
+            _owner,
             marketAddress,
             userAccountManager,
             marketInfo,
@@ -40,7 +39,7 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
     }
 
     function onCodeUpgrade(
-        address _owner,
+        address owner,
         address _marketAddress,
         address _userAccountManager,
         mapping(uint32 => MarketInfo) _marketInfo,
@@ -49,7 +48,7 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
     ) private {
         tvm.accept();
         tvm.resetStorage();
-        owner = _owner;
+        _owner = owner;
         marketAddress = _marketAddress;
         userAccountManager = _userAccountManager;
         marketInfo = _marketInfo;
@@ -65,20 +64,20 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
         return(marketInfo, tokenPrices);
     }
 
-    function setMarketAddress(address _marketAddress) external override onlyOwner {
+    function setMarketAddress(address _marketAddress) external override canChangeParams {
         tvm.rawReserve(msg.value, 2);
         marketAddress = _marketAddress;
-        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        address(_owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
-    function setUserAccountManager(address _userAccountManager) external override onlyOwner {
+    function setUserAccountManager(address _userAccountManager) external override canChangeParams {
         tvm.rawReserve(msg.value, 2);
         userAccountManager = _userAccountManager;
-        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        address(_owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     function getContractAddresses() external override view responsible returns(address _owner, address _marketAddress, address _userAccountManager) {
-        return {flag: MsgFlag.REMAINING_GAS} (owner, marketAddress, userAccountManager);
+        return {flag: MsgFlag.REMAINING_GAS} (_owner, marketAddress, userAccountManager);
     }
 
     function updateCache(address tonWallet, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
@@ -122,7 +121,6 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
         // 1. Calculate account health
         // 2. Calculate USD amount for withdraw token
         // 3. Check if user can afford to withdraw required amount of real tokens
-        // TODO: add lock for withdraw operation, can create some trouble ???
 
         fraction accountHealth = Utilities.calculateSupplyBorrow(supplyInfo, borrowInfo, marketInfo, tokenPrices);
 
@@ -195,11 +193,6 @@ contract WithdrawModule is IModule, IContractStateCache, IContractAddressSG, IWi
 
     modifier onlyUserAccountManager() {
         require(msg.sender == userAccountManager);
-        _;
-    }
-
-    modifier onlyOwner() {
-        require(msg.sender == owner);
         _;
     }
 }

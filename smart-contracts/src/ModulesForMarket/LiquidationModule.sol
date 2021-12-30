@@ -2,11 +2,10 @@ pragma ton-solidity >= 0.47.0;
 
 import './interfaces/IModule.sol';
 
-contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, ILiquidationModule, IUpgradableContract {
+contract LiquidationModule is IRoles, IModule, IContractStateCache, IContractAddressSG, ILiquidationModule, IUpgradableContract {
     using FPO for fraction;
     using UFO for uint256;
 
-    address owner;
     address marketAddress;
     address userAccountManager;
     uint32 public contractCodeVersion;
@@ -16,19 +15,19 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
 
     event TokensLiquidated(uint32 marketId, MarketDelta marketDelta1, address liquidator, address targetUser, uint256 tokensLiquidated, uint256 vTokensSeized);
 
-    constructor(address _owner) public {
+    constructor(address _newOwner) public {
         tvm.accept();
-        owner = _owner;
+        _owner = _newOwner;
     }
 
-    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) external override onlyOwner {
+    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) external override canUpgrade {
         tvm.rawReserve(msg.value, 2);
 
         tvm.setcode(code);
         tvm.setCurrentCode(code);
 
         onCodeUpgrade (
-            owner,
+            _owner,
             marketAddress,
             userAccountManager,
             marketInfo,
@@ -38,7 +37,7 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
     }
 
     function onCodeUpgrade(
-        address _owner,
+        address owner,
         address _marketAddress,
         address _userAccountManager,
         mapping(uint32 => MarketInfo) _marketInfo,
@@ -47,7 +46,7 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
     ) private {
         tvm.accept();
         tvm.resetStorage();
-        owner = _owner;
+        _owner = owner;
         marketAddress = _marketAddress;
         userAccountManager = _userAccountManager;
         marketInfo = _marketInfo;
@@ -63,20 +62,20 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
         return(marketInfo, tokenPrices);
     }
 
-    function setMarketAddress(address _marketAddress) external override onlyOwner {
+    function setMarketAddress(address _marketAddress) external override canChangeParams {
         tvm.rawReserve(msg.value, 2);
         marketAddress = _marketAddress;
-        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        address(_owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
-    function setUserAccountManager(address _userAccountManager) external override onlyOwner {
+    function setUserAccountManager(address _userAccountManager) external override canChangeParams {
         tvm.rawReserve(msg.value, 2);
         userAccountManager = _userAccountManager;
-        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        address(_owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     function getContractAddresses() external override view responsible returns(address _owner, address _marketAddress, address _userAccountManager) {
-        return {flag: MsgFlag.REMAINING_GAS} (owner, marketAddress, userAccountManager);
+        return {flag: MsgFlag.REMAINING_GAS} (_owner, marketAddress, userAccountManager);
     }
 
     function updateCache(address tonWallet, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
@@ -120,72 +119,71 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
         // - User will not exceed vToken balance of user that is liquidated (vTokenLimit)
 
         fraction health = Utilities.calculateSupplyBorrow(supplyInfo, borrowInfo, marketInfo, tokenPrices);
-        if (health.nom < health.denom) {
-            uint256 maxTokensForLiquidation = borrowInfo[marketId].tokensBorrowed;
-            fraction maxTokensForLiquidationUSD = maxTokensForLiquidation.numFDiv(tokenPrices[marketInfo[marketId].token]);
-            maxTokensForLiquidation = maxTokensForLiquidationUSD.toNum();
+        if (health.nom <= health.denom) {
+            uint256 tokensToLiquidate = math.min(
+                borrowInfo[marketId].tokensBorrowed,
+                tokensProvided
+            );
+
+            fraction ftokensToLiquidate = tokensToLiquidate.numFMul(marketInfo[marketId].liquidationMultiplier);
+            ftokensToLiquidate = ftokensToLiquidate.fDiv(tokenPrices[marketInfo[marketId].token]);
 
             fraction fmaxTokensForLiquidationVTokenBased = supplyInfo[marketToLiquidate].numFMul(marketInfo[marketToLiquidate].exchangeRate);
             fmaxTokensForLiquidationVTokenBased = fmaxTokensForLiquidationVTokenBased.fDiv(tokenPrices[marketInfo[marketToLiquidate].token]);
-            uint256 maxTokensForLiquidationVTokenBased = fmaxTokensForLiquidationVTokenBased.toNum();
 
-            fraction fmaxTokensForLiquidationProvided = tokensProvided.numFMul(marketInfo[marketId].liquidationMultiplier);
-            fmaxTokensForLiquidationProvided = fmaxTokensForLiquidationProvided.fDiv(tokenPrices[marketInfo[marketId].token]);
-            uint256 maxTokensForLiquidationProvided = fmaxTokensForLiquidationProvided.toNum();
+            fraction ftokensToSeizeUSD = ftokensToLiquidate.getMin(fmaxTokensForLiquidationVTokenBased);
 
-            uint256 tokensToLiquidateUSD = math.min(
-                maxTokensForLiquidation,
-                maxTokensForLiquidationVTokenBased,
-                maxTokensForLiquidationProvided
-            );
+            if (ftokensToSeizeUSD.nom > 0) {
+                fraction ftokensToSeize = ftokensToSeizeUSD.fMul(tokenPrices[marketInfo[marketToLiquidate].token]);
+                ftokensToSeize = ftokensToSeize.fDiv(marketInfo[marketToLiquidate].exchangeRate);
+                uint256 tokensToSeize = ftokensToSeize.toNum();
 
-            fraction ftokensToLiquidate = tokensToLiquidateUSD.numFMul(tokenPrices[marketInfo[marketId].token]);
-            ftokensToLiquidate = ftokensToLiquidate.fDiv(marketInfo[marketId].exchangeRate);
-            uint256 tokensToLiquidate = ftokensToLiquidate.toNum();
+                ftokensToLiquidate = ftokensToSeizeUSD.fDiv(marketInfo[marketId].liquidationMultiplier);
+                ftokensToLiquidate = ftokensToLiquidate.fMul(tokenPrices[marketInfo[marketId].token]);
+                tokensToLiquidate = ftokensToLiquidate.toNum();
 
-            fraction ftokensToUseForLiquidation = tokensToLiquidate.numFDiv(marketInfo[marketId].liquidationMultiplier);
-            uint256 tokensToUseForLiquidation = ftokensToUseForLiquidation.toNum();
-            
-            fraction ftokensToSeize = tokensToLiquidateUSD.numFMul(tokenPrices[marketInfo[marketToLiquidate].token]);
-            ftokensToSeize = ftokensToSeize.fDiv(marketInfo[marketToLiquidate].exchangeRate);
-            uint256 tokensToSeize = ftokensToSeize.toNum();
+                uint256 tokensToReturn = tokensProvided - tokensToLiquidate;
 
-            uint256 tokensToReturn = tokensProvided - tokensToUseForLiquidation;
+                BorrowInfo userBorrowInfo = BorrowInfo(borrowInfo[marketId].tokensBorrowed - tokensToLiquidate, marketInfo[marketId].index);
 
-            BorrowInfo userBorrowInfo = BorrowInfo(borrowInfo[marketId].tokensBorrowed - tokensToLiquidate, marketInfo[marketId].index);
+                MarketDelta marketDelta;
+                mapping(uint32 => MarketDelta) marketDeltas;
+                marketDelta.realTokenBalance.delta = tokensToLiquidate;
+                marketDelta.realTokenBalance.positive = true;
+                
+                marketDelta.totalBorrowed.delta = tokensToLiquidate;
+                marketDelta.totalBorrowed.positive = false;
 
-            MarketDelta marketDelta1;
-            MarketDelta marketDelta2;
-            mapping(uint32 => MarketDelta) marketDeltas;
-            marketDelta1.realTokenBalance.delta = tokensToUseForLiquidation;
-            marketDelta1.realTokenBalance.positive = true;
-            
-            marketDelta1.totalBorrowed.delta = tokensToLiquidate;
-            marketDelta1.totalBorrowed.positive = false;
+                marketDeltas[marketId] = marketDelta;
 
-            marketDeltas[marketId] = marketDelta1;
+                emit TokensLiquidated(marketId, marketDelta, tonWallet, targetUser, tokensToLiquidate, tokensToSeize);
 
-            emit TokensLiquidated(marketId, marketDelta1, tonWallet, targetUser, tokensToLiquidate, tokensToSeize);
+                TvmBuilder tb;
+                TvmBuilder addressStorage;
+                addressStorage.store(tonWallet);
+                addressStorage.store(targetUser);
+                addressStorage.store(tip3UserWallet);
+                TvmBuilder valueStorage;
+                valueStorage.store(marketId);
+                valueStorage.store(marketToLiquidate);
+                valueStorage.store(tokensToSeize);
+                valueStorage.store(tokensToReturn);
+                TvmBuilder borrowInfoStorage;
+                borrowInfoStorage.store(userBorrowInfo);
+                tb.store(addressStorage.toCell());
+                tb.store(valueStorage.toCell());
+                tb.store(borrowInfoStorage.toCell());
 
-            TvmBuilder tb;
-            TvmBuilder addressStorage;
-            addressStorage.store(tonWallet);
-            addressStorage.store(targetUser);
-            addressStorage.store(tip3UserWallet);
-            TvmBuilder valueStorage;
-            valueStorage.store(marketId);
-            valueStorage.store(marketToLiquidate);
-            valueStorage.store(tokensToSeize);
-            valueStorage.store(tokensToReturn);
-            TvmBuilder borrowInfoStorage;
-            borrowInfoStorage.store(userBorrowInfo);
-            tb.store(addressStorage.toCell());
-            tb.store(valueStorage.toCell());
-            tb.store(borrowInfoStorage.toCell());
-
-            IContractStateCacheRoot(marketAddress).receiveCacheDelta{
-                flag: MsgFlag.REMAINING_GAS
-            }(marketDeltas, tb.toCell());
+                IContractStateCacheRoot(marketAddress).receiveCacheDelta{
+                    flag: MsgFlag.REMAINING_GAS
+                }(marketDeltas, tb.toCell());
+            } else {
+                IUAMUserAccount(userAccountManager).requestTokenPayout{
+                    flag: MsgFlag.REMAINING_GAS
+                }(
+                    tonWallet, tip3UserWallet, marketId, tokensProvided
+                );
+            }
         } else {
             IUAMUserAccount(userAccountManager).requestTokenPayout{
                 flag: MsgFlag.REMAINING_GAS
@@ -215,11 +213,6 @@ contract LiquidationModule is IModule, IContractStateCache, IContractAddressSG, 
         for ((uint32 marketId, MarketInfo mi): marketInfo) {
             updatedIndexes[marketId] = mi.index;
         }
-    }
-
-    modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
     }
 
     modifier onlyUserAccountManager() {

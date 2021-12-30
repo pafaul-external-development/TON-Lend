@@ -15,7 +15,9 @@ import "../utils/libraries/MsgFlag.sol";
 import "../utils/Dex/IDexPair.sol";
 import "../utils/interfaces/IUpgradableContract.sol";
 
-contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOracleManageTokens, IUpgradableContract {
+import { IRoles } from '../utils/interfaces/IRoles.sol';
+
+contract Oracle is IRoles, IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOracleManageTokens, IUpgradableContract {
     // For uniquencess of contract
     uint256 static nonce;
 
@@ -28,17 +30,12 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
     // Information for update
     uint32 contractCodeVersion;
 
-    // Owner info
-    uint256 private ownerPubkey;
-    address private ownerAddress;
-
     /*********************************************************************************************************/
     // Base functions - for deploying and upgrading contract
     // We are using Platform so constructor is not available
-    constructor(address _owner, uint256 _ownerPubkey) public {
+    constructor(address _newOwner) public {
         tvm.accept();
-        ownerAddress = _owner;
-        ownerPubkey = _ownerPubkey;
+        _owner = _newOwner;
     }
 
     /*  Upgrade Data for version 1 (from version 0):
@@ -62,7 +59,7 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
      * @param updateParams Extrenal parameters used during update
      * @param codeVersion New code version
      */
-    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) override external onlyOwner {
+    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) override external canUpgrade {
         tvm.accept();
 
         tvm.setcode(code);
@@ -72,23 +69,29 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
             nonce,
             prices,
             swapPairToTokenRoot,
-            ownerPubkey,
-            ownerAddress,
+            0,
+            _owner,
             updateParams,
             codeVersion
         );
     }
 
     function onCodeUpgrade(
+        uint256 _nonce,
+        mapping(address => MarketPriceInfo) _prices,
+        mapping(address => address) _swapPairToTokenRoot,
         uint256,
-        mapping(address => MarketPriceInfo),
-        mapping(address => address),
-        uint256,
-        address,
+        address _ownerAddress,
         TvmCell,
-        uint32
+        uint32 _codeVersion
     ) private {
-
+        tvm.accept();
+        tvm.resetStorage();
+        nonce = _nonce;
+        prices = _prices;
+        swapPairToTokenRoot = _swapPairToTokenRoot;
+        _owner = _ownerAddress;
+        contractCodeVersion = _codeVersion;
     }
 
     /*********************************************************************************************************/
@@ -100,24 +103,9 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
 
     function getDetails() override external responsible view returns (OracleServiceInformation) {
         tvm.rawReserve(msg.value, 2);
-        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } OracleServiceInformation(contractCodeVersion, ownerAddress, ownerPubkey);
+        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } OracleServiceInformation(contractCodeVersion, _owner);
     }
 
-    /**
-     * @param newOwnerPubkey New pubkey that can update market prices and manage markets
-     */
-    function changeOwnerPubkey(uint256 newOwnerPubkey) override external onlyOwner {
-        tvm.accept();
-        ownerPubkey = newOwnerPubkey;
-    }
-
-    /**
-     * @param newOwnerAddress New address that can update market prices and manage markets
-     */
-    function changeOwnerAddress(address newOwnerAddress) override external onlyOwner {
-        tvm.accept();
-        ownerAddress = newOwnerAddress;
-    }
 
     /*********************************************************************************************************/
     // Update price functions
@@ -126,7 +114,7 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
      * @param tokens Amount of tokens in swap pair
      * @param usd Amount of usd in swap pair
      */
-    function externalUpdatePrice(address tokenRoot, uint128 tokens, uint128 usd) override external onlyOwner onlyKnownTokenRoot(tokenRoot) {
+    function externalUpdatePrice(address tokenRoot, uint128 tokens, uint128 usd) override external canChangeParams onlyKnownTokenRoot(tokenRoot) {
         if (msg.sender.value == 0) {
             tvm.accept();
         } else {
@@ -136,7 +124,7 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
         prices[tokenRoot].tokens = tokens;
         prices[tokenRoot].usd = usd;
 
-        address(ownerAddress).transfer({value: 0, flag: 64});
+        address(msg.sender).transfer({value: 0, flag: 64});
     }
 
     /**
@@ -188,7 +176,7 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
      * @param swapPairAddress Address of swap pair to fetch price information from
      * @param isLeft Is token on the left side or on the right (check internalGetUpdatedPrice)
      */
-    function addToken(address tokenRoot, address swapPairAddress, bool isLeft) override external onlyOwner {
+    function addToken(address tokenRoot, address swapPairAddress, bool isLeft) override external canChangeParams {
         tvm.accept();
         swapPairToTokenRoot[swapPairAddress] = tokenRoot;
         prices[tokenRoot] = MarketPriceInfo(swapPairAddress, isLeft, 0, 0);
@@ -198,7 +186,7 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
     /**
      * @param tokenRoot Address of token root
      */
-    function removeToken(address tokenRoot) override external onlyOwner {
+    function removeToken(address tokenRoot) override external canChangeParams {
         tvm.accept();
         delete swapPairToTokenRoot[prices[tokenRoot].swapPair];
         delete prices[tokenRoot];
@@ -206,10 +194,6 @@ contract Oracle is IOracleService, IOracleUpdatePrices, IOracleReturnPrices, IOr
 
     /*********************************************************************************************************/
     // Modifiers
-    modifier onlyOwner() {
-        require(msg.sender == ownerAddress || msg.pubkey() == ownerPubkey, OracleErrorCodes.ERROR_NOT_OWNER);
-        _;
-    }
 
     modifier onlyTrustedSwapPair() {
         require(swapPairToTokenRoot.exists(msg.sender), OracleErrorCodes.ERROR_NOT_KNOWN_SWAP_PAIR);

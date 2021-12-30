@@ -4,7 +4,7 @@ async function main() {
     let contracts = await loadEssentialContracts({wallet: true});
     let modules = ['SupplyModule', 'BorrowModule', 'RepayModule', 'WithdrawModule', 'LiquidationModule'];
     let constructorParams = {
-        _owner: contracts.msigWallet.address
+        _newOwner: contracts.msigWallet.address
     };
     for (let contractName of modules) {
         await deployContract({

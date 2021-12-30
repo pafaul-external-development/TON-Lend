@@ -61,6 +61,26 @@ function marketsToAdd() {
             _collateralFactor: fraction(30, 100),
             _liquidationMultiplier: fraction(105, 100)
         }]
+    } else if (configuration.network == 'mainnet') {
+        return [{
+            marketId: 0,
+            realToken: '0:751b6e22687891bdc1706c8d91bf77281237f7453d27dc3106c640ec165a2abf',
+            _baseRate: fraction(2, 100 * (365*24*60*60)),
+            _utilizationMultiplier: fraction(20, 100 * (365*24*60*60)),
+            _reserveFactor: fraction(15, 100),
+            _exchangeRate: fraction(1, 1),
+            _collateralFactor: fraction(90, 100),
+            _liquidationMultiplier: fraction(108, 100)
+        }, {
+            marketId: 1,
+            realToken: '0:0ee39330eddb680ce731cd6a443c71d9069db06d149a9bec9569d1eb8d04eb37',
+            _baseRate: fraction(2, 100 * (365*24*60*60)),
+            _utilizationMultiplier: fraction(20, 100 * (365*24*60*60)),
+            _reserveFactor: fraction(30, 100),
+            _exchangeRate: fraction(1, 1),
+            _collateralFactor: fraction(25, 100),
+            _liquidationMultiplier: fraction(108, 100)
+        }]
     }
 }
 

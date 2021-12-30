@@ -4,11 +4,10 @@ import './interfaces/IModule.sol';
 
 import '../utils/libraries/MsgFlag.sol';
 
-contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepayModule, IUpgradableContract {
+contract RepayModule is IRoles, IModule, IContractStateCache, IContractAddressSG, IRepayModule, IUpgradableContract {
     using UFO for uint256;
     using FPO for fraction;
 
-    address owner;
     address marketAddress;
     address userAccountManager;
     uint32 public contractCodeVersion;
@@ -18,19 +17,19 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepay
 
     event RepayBorrow(uint32 marketId, MarketDelta marketDelta, address tonWallet, uint256 tokenDelta);
 
-    constructor(address _owner) public {
+    constructor(address _newOwner) public {
         tvm.accept();
-        owner = _owner;
+        _owner = _newOwner;
     }
 
-    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) external override onlyOwner {
+    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) external override canUpgrade {
         tvm.rawReserve(msg.value, 2);
 
         tvm.setcode(code);
         tvm.setCurrentCode(code);
 
         onCodeUpgrade (
-            owner,
+            _owner,
             marketAddress,
             userAccountManager,
             marketInfo,
@@ -40,7 +39,7 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepay
     }
 
     function onCodeUpgrade(
-        address _owner,
+        address owner,
         address _marketAddress,
         address _userAccountManager,
         mapping(uint32 => MarketInfo) _marketInfo,
@@ -49,7 +48,7 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepay
     ) private {
         tvm.accept();
         tvm.resetStorage();
-        owner = _owner;
+        _owner = owner;
         marketAddress = _marketAddress;
         userAccountManager = _userAccountManager;
         marketInfo = _marketInfo;
@@ -57,28 +56,28 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepay
         contractCodeVersion = _codeVersion;
     }
 
-    function getModuleState() external override view returns(mapping(uint32 => MarketInfo), mapping(address => fraction)) {
-        return(marketInfo, tokenPrices);
-    }
-
     function sendActionId() external override view responsible returns(uint8) {
         return {flag: MsgFlag.REMAINING_GAS} OperationCodes.REPAY_TOKENS;
     }
 
-    function setMarketAddress(address _marketAddress) external override onlyOwner {
-        tvm.rawReserve(msg.value, 2);
-        marketAddress = _marketAddress;
-        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+    function getModuleState() external override view returns(mapping(uint32 => MarketInfo), mapping(address => fraction)) {
+        return(marketInfo, tokenPrices);
     }
 
-    function setUserAccountManager(address _userAccountManager) external override onlyOwner {
+    function setMarketAddress(address _marketAddress) external override canChangeParams {
+        tvm.rawReserve(msg.value, 2);
+        marketAddress = _marketAddress;
+        address(_owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+    }
+
+    function setUserAccountManager(address _userAccountManager) external override canChangeParams {
         tvm.rawReserve(msg.value, 2);
         userAccountManager = _userAccountManager;
-        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        address(_owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     function getContractAddresses() external override view responsible returns(address _owner, address _marketAddress, address _userAccountManager) {
-        return {flag: MsgFlag.REMAINING_GAS} (owner, marketAddress, userAccountManager);
+        return {flag: MsgFlag.REMAINING_GAS} (_owner, marketAddress, userAccountManager);
     }
 
     function updateCache(address tonWallet, mapping(uint32 => MarketInfo) _marketInfo, mapping(address => fraction) _tokenPrices) external override onlyMarket {
@@ -172,11 +171,6 @@ contract RepayModule is IModule, IContractStateCache, IContractAddressSG, IRepay
         IUAMUserAccount(userAccountManager).writeRepayInformation{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, userTip3Wallet, marketId, tokensToReturn, borrowInfo);
-    }
-
-    modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
     }
 
     modifier onlyMarket() {

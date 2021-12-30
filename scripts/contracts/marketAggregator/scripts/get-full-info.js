@@ -24,6 +24,9 @@ const { loadEssentialContracts } = require("../../../utils/contracts");
 async function main() {
     let contracts = await loadEssentialContracts({market: true});
 
+    console.log(`Owner address:`);
+    console.log(await contracts.marketsAggregator.getOwner());
+
     console.log(`Service contract addresses:`);
     console.log(await contracts.marketsAggregator.getServiceContractAddresses());
 

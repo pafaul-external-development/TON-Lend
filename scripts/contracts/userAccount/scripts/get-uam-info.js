@@ -7,7 +7,7 @@ async function main() {
         userAM: true
     });
 
-    console.log(`Owner: ${await contracts.userAccountManager.owner()}`);
+    console.log(`Owner: ${await contracts.userAccountManager.getOwner()}`);
 
     console.log(`Market address: ${await contracts.userAccountManager.marketAddress()}`);
 

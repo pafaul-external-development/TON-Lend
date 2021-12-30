@@ -14,7 +14,7 @@ async function main() {
 
     await contracts.msigWallet.transfer({
         destination: contracts.userAccountManager.address,
-        value: convertCrystal(3, 'nano'),
+        value: convertCrystal(1, 'nano'),
         payload: externalUpdatePayload
     });
 }

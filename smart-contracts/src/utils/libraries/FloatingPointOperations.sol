@@ -46,6 +46,14 @@ library FPO {
         return ((a.nom == b.nom) && (a.denom == b.denom));
     }
 
+    function getMin(fraction a, fraction b) internal pure returns(fraction) {
+        if (a.nom * b.denom < b.nom * a.denom) {
+            return a;
+        } else {
+            return b;
+        }
+    }
+
     function simplify(fraction a) internal pure returns(fraction) {
         // loosing % of presicion at most
         if (a.nom / a.denom > 100e9) {

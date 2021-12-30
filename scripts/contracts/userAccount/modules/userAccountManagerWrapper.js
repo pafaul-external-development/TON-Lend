@@ -145,9 +145,9 @@ class UserAccountManager extends Contract {
         });
     }
 
-    async owner() {
+    async getOwner() {
         return await this.call({
-            method: 'owner',
+            method: 'getOwner',
             params: {},
             keyPair: this.keyPair
         });

@@ -21,11 +21,9 @@ import './UserAccount.sol';
 
 import '../ModulesForMarket/interfaces/IModule.sol';
 
-contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUserAccount, IUAMMarket {
+contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager, IUAMUserAccount, IUAMMarket {
     // Information for update
     uint32 public contractCodeVersion;
-
-    address public owner;
 
     address public marketAddress;
     mapping(uint8 => address) public modules;
@@ -37,9 +35,9 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     /*********************************************************************************************************/
     // Functions for deployment and upgrade
     // Contract is deployed via platform
-    constructor(address _owner) public {
+    constructor(address _newOwner) public {
         tvm.accept();
-        owner = _owner;
+        _owner = _newOwner;
     }
 
     /*  Upgrade Data for version 1 (from version 0):
@@ -55,14 +53,14 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
             refs:
                 1. mapping(uint32 => bool) marketIds
      */
-    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) override external onlyOwner {
+    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) override external canUpgrade {
         tvm.accept();
 
         tvm.setcode(code);
         tvm.setCurrentCode(code);
 
         onCodeUpgrade(
-            owner,
+            _owner,
             marketAddress,
             modules,
             existingModules,
@@ -73,7 +71,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     }
 
     function onCodeUpgrade(
-        address _owner,
+        address owner,
         address _marketAddress,
         mapping(uint8 => address) _modules,
         mapping(address => bool) _existingModules,
@@ -84,7 +82,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         tvm.accept();
         tvm.resetStorage();
         contractCodeVersion = _codeVersion;
-        owner = _owner;
+        _owner = owner;
         marketAddress = _marketAddress;
         modules = _modules;
         existingModules = _existingModules;
@@ -114,8 +112,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         emit AccountCreated(tonWallet, userAccount);
 
         IUserAccountManager(this).updateUserAccount{
-            value: 0,
-            flag: 64
+            value: UserAccountCostConstants.useForUADeploy
         }(tonWallet);
     }
 
@@ -460,14 +457,14 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     /**
      * @param _market Address of market smart contract
      */
-    function setMarketAddress(address _market) external override onlyOwner {
+    function setMarketAddress(address _market) external override canChangeParams {
         tvm.accept();
         marketAddress = _market;
     }
 
     /*********************************************************************************************************/
     // Function for userAccountCode
-    function uploadUserAccountCode(uint32 version, TvmCell code) external override {
+    function uploadUserAccountCode(uint32 version, TvmCell code) external override canChangeParams {
         userAccountCodes[version] = code;
         
         address(msg.sender).transfer({flag: MsgFlag.REMAINING_GAS, value: 0});
@@ -500,7 +497,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         }();
     }
 
-    function removeMarket(address tonWallet, uint32 marketId) external view onlyOwner {
+    function removeMarket(address tonWallet, uint32 marketId) external view canChangeParams {
         tvm.rawReserve(msg.value, 2);
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).removeMarket{
@@ -523,15 +520,11 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
 
     /*********************************************************************************************************/
     // modifiers
-    // TODO: add error codes
-    modifier onlyOwner() {
-        require(msg.sender == owner, UserAccountErrorCodes.ERROR_NOT_ROOT);
-        _;
-    }
 
     modifier onlyMarket() {
         require(
-            msg.sender == marketAddress
+            msg.sender == marketAddress,
+            UserAccountErrorCodes.ERROR_NOT_MARKET
         );
         tvm.rawReserve(msg.value, 2);
         _;
@@ -539,31 +532,36 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
 
     modifier onlyTrusted() {
         require(
-            msg.sender == owner ||
-            msg.sender == marketAddress
+            msg.sender == _owner ||
+            msg.sender == marketAddress ||
+            _canChangeParams[msg.sender],
+            UserAccountErrorCodes.ERROR_NOT_TRUSTED
         );
         _;
     }
 
     modifier onlyModules() {
         require(
-            existingModules.exists(msg.sender)
+            existingModules.exists(msg.sender),
+            UserAccountErrorCodes.ERROR_NOT_MODULE
         );
         _;
     }
 
     modifier executor() {
         require(
-            msg.sender == owner ||
+            msg.sender == _owner ||
             msg.sender == marketAddress ||
-            existingModules.exists(msg.sender)
+            existingModules.exists(msg.sender),
+            UserAccountErrorCodes.ERROR_NOT_EXECUTOR
         );
         _;
     }
 
     modifier onlyModule(uint8 operationId) {
         require(
-            msg.sender == modules[operationId]
+            msg.sender == modules[operationId],
+            UserAccountErrorCodes.ERROR_INVALID_MODULE
         );
         tvm.rawReserve(msg.value, 2);
         _;
@@ -572,7 +570,8 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     modifier onlySelectedExecutors(uint8 operationId, address tonWallet) {
         require(
             (msg.sender == modules[operationId]) ||
-            (msg.sender == _calculateUserAccountAddress(tonWallet))
+            (msg.sender == _calculateUserAccountAddress(tonWallet)),
+            UserAccountErrorCodes.ERROR_INVALID_EXECUTOR
         );
         _;
     }
@@ -581,7 +580,10 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
      * @param tonWallet Address of user's ton wallet
      */
     modifier onlyValidUserAccount(address tonWallet) {
-        require(msg.sender == _calculateUserAccountAddress(tonWallet));
+        require(
+            msg.sender == _calculateUserAccountAddress(tonWallet),
+            UserAccountErrorCodes.INVALID_USER_ACCOUNT
+        );
         tvm.rawReserve(msg.value, 2);
         _;
     }
@@ -590,7 +592,10 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
      * @param tonWallet Address of user's ton wallet
      */
     modifier onlyValidUserAccountExternal(address tonWallet) {
-        require(msg.sender == _calculateUserAccountAddress(tonWallet));
+        require(
+            msg.sender == _calculateUserAccountAddress(tonWallet),
+            UserAccountErrorCodes.INVALID_USER_ACCOUNT
+        );
         tvm.rawReserve(0, 4);
         _;
     }
