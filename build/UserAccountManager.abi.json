@@ -306,6 +306,14 @@
 			]
 		},
 		{
+			"name": "withdrawExtraTons",
+			"inputs": [
+				{"name":"tonWallet","type":"address"}
+			],
+			"outputs": [
+			]
+		},
+		{
 			"name": "setMarketAddress",
 			"inputs": [
 				{"name":"_market","type":"address"}

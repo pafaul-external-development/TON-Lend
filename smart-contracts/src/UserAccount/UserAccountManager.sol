@@ -112,7 +112,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         emit AccountCreated(tonWallet, userAccount);
 
         IUserAccountManager(this).updateUserAccount{
-            value: UserAccountCostConstants.useForUADeploy
+            value: msg.value - UserAccountCostConstants.useForUADeploy - UserAccountCostConstants.estimatedExecCost
         }(tonWallet);
     }
 
@@ -449,6 +449,11 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         IMarketOperations(marketAddress).requestTokenPayout{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, userTip3Wallet, marketId, toPayout);
+    }
+
+    function withdrawExtraTons(address tonWallet) external onlyOwner {
+        tvm.accept();
+        address(tonWallet).transfer({value: 0, flag: 160});
     }
 
     /*********************************************************************************************************/
