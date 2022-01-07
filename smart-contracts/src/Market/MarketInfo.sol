@@ -29,4 +29,5 @@ struct MarketDelta {
     DeltaInfo realTokenBalance;
     DeltaInfo vTokenBalance;
     DeltaInfo totalBorrowed;
+    DeltaInfo totalReserve;
 }
