@@ -112,7 +112,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         emit AccountCreated(tonWallet, userAccount);
 
         IUserAccountManager(this).updateUserAccount{
-            value: UserAccountCostConstants.useForUADeploy
+            value: msg.value - UserAccountCostConstants.useForUADeploy - UserAccountCostConstants.estimatedExecCost
         }(tonWallet);
     }
 
@@ -351,12 +351,13 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         uint32 marketToLiquidate,
         uint256 tokensToSeize, 
         uint256 tokensToReturn, 
+        uint256 tokensFromReserve,
         BorrowInfo borrowInfo
     ) external override view onlyModule(OperationCodes.LIQUIDATE_TOKENS) {
         address userAccount = _calculateUserAccountAddress(targetUser);
         IUserAccountData(userAccount).liquidateVTokens{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, tip3UserWallet, marketId, marketToLiquidate, tokensToSeize, tokensToReturn, borrowInfo);
+        }(tonWallet, tip3UserWallet, marketId, marketToLiquidate, tokensToSeize, tokensToReturn, tokensFromReserve, borrowInfo);
     }
 
     function grantVTokens(
@@ -366,12 +367,20 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         uint32 marketId, 
         uint32 marketToLiquidate,
         uint256 vTokensToGrant, 
-        uint256 tokensToReturn
-    ) external override view onlyValidUserAccount(targetUser) {
+        uint256 tokensToReturn,
+        uint256 tokensFromReserve
+    ) external override view onlyValidUserAccountNoReserve(targetUser) {
+        tvm.rawReserve(msg.value - UserAccountCostConstants.updateHealthCost, 2);
+        
+        address targetAccount = _calculateUserAccountAddress(targetUser);
+        IUserAccountData(targetAccount).checkUserAccountHealth{
+            value: UserAccountCostConstants.updateHealthCost
+        }(tonWallet);
+
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).grantVTokens{
             flag: MsgFlag.REMAINING_GAS
-        }(targetUser, tip3UserWallet, marketId, marketToLiquidate, vTokensToGrant, tokensToReturn);
+        }(tip3UserWallet, marketId, marketToLiquidate, vTokensToGrant, tokensToReturn, tokensFromReserve);
     }
 
     function abortLiquidation(
@@ -387,21 +396,40 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         }(tonWallet, tip3UserWallet, marketId, tokensProvided);
     }
 
-    function externalHealthUpdate(
+    function returnAndSupply(
         address tonWallet,
-        address targetUser,
         address tip3UserWallet,
         uint32 marketId,
-        uint256 tokensToReturn
-    ) external override view onlyValidUserAccountExternal(tonWallet) {
-        address targetAccount = _calculateUserAccountAddress(targetUser);
-        IUserAccountData(targetAccount).checkUserAccountHealth{
-            value: msg.value / 4
-        }(tonWallet);
+        uint32 marketToLiquidate,
+        uint256 tokensToReturn,
+        uint256 tokensFromReserve
+    ) external override view onlyValidUserAccountNoReserve(tonWallet) {
+        if (tokensToReturn != 0) {
+            uint128 tonsToUse = msg.value / 4;
+            tvm.rawReserve(tonsToUse, 2);
 
-        IMarketOperations(marketAddress).requestTokenPayout{
-            flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, tip3UserWallet, marketId, tokensToReturn);
+            TvmBuilder tb;
+            tb.store(tonWallet);
+            tb.store(tokensFromReserve);
+
+            IMarketOperations(marketAddress).performOperationUserAccountManager{
+                value: msg.value - tonsToUse
+            }(OperationCodes.SUPPLY_TOKENS, marketToLiquidate, tb.toCell());
+
+            IMarketOperations(marketAddress).requestTokenPayout{
+                flag: MsgFlag.REMAINING_GAS
+            }(tonWallet, tip3UserWallet, marketId, tokensToReturn);
+        } else {
+            tvm.rawReserve(msg.value, 2);
+
+            TvmBuilder tb;
+            tb.store(tonWallet);
+            tb.store(tokensFromReserve);
+
+            IMarketOperations(marketAddress).performOperationUserAccountManager{
+                flag: MsgFlag.REMAINING_GAS
+            }(OperationCodes.SUPPLY_TOKENS, marketToLiquidate, tb.toCell());
+        }
     }
 
     /*********************************************************************************************************/
@@ -449,6 +477,11 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         IMarketOperations(marketAddress).requestTokenPayout{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, userTip3Wallet, marketId, toPayout);
+    }
+
+    function withdrawExtraTons(address tonWallet) external onlyOwner {
+        tvm.accept();
+        address(tonWallet).transfer({value: 0, flag: 160});
     }
 
     /*********************************************************************************************************/
@@ -588,15 +621,11 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         _;
     }
 
-    /**
-     * @param tonWallet Address of user's ton wallet
-     */
-    modifier onlyValidUserAccountExternal(address tonWallet) {
+    modifier onlyValidUserAccountNoReserve(address tonWallet) {
         require(
             msg.sender == _calculateUserAccountAddress(tonWallet),
             UserAccountErrorCodes.INVALID_USER_ACCOUNT
         );
-        tvm.rawReserve(0, 4);
         _;
     }
 }

@@ -176,6 +176,15 @@ contract MarketAggregator is IRoles, IUpgradableContract, IMarketOracle, IMarket
         } else {
             markets[marketId].vTokenBalance -= marketDelta.vTokenBalance.delta;
         }
+
+        if (
+            marketDelta.totalReserve.delta != 0 &&
+            marketDelta.totalReserve.positive
+        ) {
+            markets[marketId].totalReserve += marketDelta.totalReserve.delta;
+        } else {
+            markets[marketId].totalReserve -= marketDelta.totalReserve.delta;
+        }
     }
 
     function _updateExchangeRate(uint32 marketId) internal {
