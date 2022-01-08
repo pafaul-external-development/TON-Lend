@@ -121,7 +121,7 @@ contract BorrowModule is IRoles, IModule, IContractStateCache, IContractAddressS
         // 4. Check if there is enough (collateral - borrowed) for new token borrow
         // 5. Increase user's borrowed amount
 
-        if (tokensToBorrow < marketInfo[marketId].realTokenBalance) {
+        if (tokensToBorrow < marketInfo[marketId].realTokenBalance - marketInfo[marketId].totalReserve) {
             fraction accountHealth = Utilities.calculateSupplyBorrow(supplyInfo, borrowInfo, marketInfo, tokenPrices);
             if (accountHealth.nom > accountHealth.denom) {
                 uint256 healthDelta = accountHealth.nom - accountHealth.denom;
