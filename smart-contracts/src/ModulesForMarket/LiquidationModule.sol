@@ -13,7 +13,7 @@ contract LiquidationModule is IRoles, IModule, IContractStateCache, IContractAdd
     mapping (uint32 => MarketInfo) marketInfo;
     mapping (address => fraction) tokenPrices;
 
-    event TokensLiquidated(uint32 marketId, MarketDelta marketDelta1, address liquidator, address targetUser, uint256 tokensLiquidated, uint256 vTokensSeized);
+    event TokensLiquidated(uint32 marketId, mapping(uint32 => MarketDelta) marketDeltas, address liquidator, address targetUser, uint256 tokensLiquidated, uint256 vTokensSeized);
 
     constructor(address _newOwner) public {
         tvm.accept();
@@ -127,7 +127,7 @@ contract LiquidationModule is IRoles, IModule, IContractStateCache, IContractAdd
 
             // Calculating USD value of liquidation
             fraction ftokensToLiquidateUSD = tokensToLiquidate.numFMul(marketInfo[marketId].liquidationMultiplier);
-            ftokensToLiquidateUSD = ftokensToLiquidate.fDiv(tokenPrices[marketInfo[marketId].token]);
+            ftokensToLiquidateUSD = ftokensToLiquidateUSD.fDiv(tokenPrices[marketInfo[marketId].token]);
 
             // Calculating USD value of collateral
             fraction fvTokensCollateralUSD = supplyInfo[marketToLiquidate].numFMul(marketInfo[marketToLiquidate].exchangeRate);
@@ -139,7 +139,7 @@ contract LiquidationModule is IRoles, IModule, IContractStateCache, IContractAdd
 
             // Calculating how much of collateral tokens to seize
             fraction fvTokensCollateral = fvTokensCollateralUSD.getMin(ftokensToLiquidateUSD);
-            ftokensToSeize = fvTokensCollateral.fMul(tokenPrices[marketInfo[marketToLiquidate].token]);
+            fraction ftokensToSeize = fvTokensCollateral.fMul(tokenPrices[marketInfo[marketToLiquidate].token]);
             ftokensToSeize = ftokensToSeize.fDiv(marketInfo[marketToLiquidate].exchangeRate);
             tokensToSeize = ftokensToSeize.toNum();
 
@@ -161,8 +161,8 @@ contract LiquidationModule is IRoles, IModule, IContractStateCache, IContractAdd
                 uint256 reservesUsageTokens = freservesUsageTokens.toNum();
                 if (reservesUsageTokens < marketInfo[marketId].totalReserve) {
                     tokensFromReserve = reservesUsageTokens;
-                    collateralMarketDelta.totalReserves.delta = tokensFromReserve;
-                    collateralMarketDelta.totalReserves.positive = false;
+                    collateralMarketDelta.totalReserve.delta = tokensFromReserve;
+                    collateralMarketDelta.totalReserve.positive = false;
                 } else {
                     // abort liquidation
                     IUAMUserAccount(userAccountManager).requestTokenPayout{
@@ -177,7 +177,7 @@ contract LiquidationModule is IRoles, IModule, IContractStateCache, IContractAdd
             marketDeltas[marketId] = liquidationMarketDelta;
             marketDeltas[marketToLiquidate] = collateralMarketDelta;
 
-            emit TokensLiquidated(marketId, marketDelta, tonWallet, targetUser, tokensToLiquidate, tokensToSeize);
+            emit TokensLiquidated(marketId, marketDeltas, tonWallet, targetUser, tokensToLiquidate, tokensToSeize);
 
             BorrowInfo userBorrowInfo = BorrowInfo(borrowInfo[marketId].tokensBorrowed - tokensToLiquidate, marketInfo[marketId].index);
 

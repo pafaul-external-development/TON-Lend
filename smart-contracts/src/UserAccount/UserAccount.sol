@@ -300,22 +300,27 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         }(tonWallet, owner, tip3UserWallet, marketId, marketToLiquidate, tokensProvided, supplyInfo, borrowInfo);
     }
 
-    function liquidateVTokens(address tonWallet, address tip3UserWallet, uint32 marketId, uint32 marketToLiquidate, uint256 tokensToSeize, uint256 tokensToReturn, BorrowInfo borrowInfo) external override onlyUserAccountManager {
+    function liquidateVTokens(address tonWallet, address tip3UserWallet, uint32 marketId, uint32 marketToLiquidate, uint256 tokensToSeize, uint256 tokensToReturn, uint256 tokensFromReserve, BorrowInfo borrowInfo) external override onlyUserAccountManager {
         markets[marketToLiquidate].suppliedTokens -= tokensToSeize;
         markets[marketId].borrowInfo = borrowInfo;
 
         IUAMUserAccount(userAccountManager).grantVTokens{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, owner, tip3UserWallet, marketId, marketToLiquidate, tokensToSeize, tokensToReturn);
+        }(tonWallet, owner, tip3UserWallet, marketId, marketToLiquidate, tokensToSeize, tokensToReturn, tokensFromReserve);
     }
 
-    function grantVTokens(address targetUser, address tip3UserWallet, uint32 marketId, uint32 marketToLiquidate, uint256 tokensToSeize, uint256 tokensToReturn) external override onlyUserAccountManager {
+    function grantVTokens(address tip3UserWallet, uint32 marketId, uint32 marketToLiquidate, uint256 tokensToSeize, uint256 tokensToReturn, uint256 tokensFromReserve) external override onlyUserAccountManager {
         markets[marketToLiquidate].suppliedTokens += tokensToSeize;
-
-        if (tokensToReturn != 0) { 
-            _checkUserAccountHealth(owner, _createTokenPayoutPayload(owner, tip3UserWallet, marketId, tokensToReturn));
+        if (tokensFromReserve != 0) {
+            IUAMUserAccount(userAccountManager).returnAndSupply{
+                flag: MsgFlag.REMAINING_GAS
+            }(owner, tip3UserWallet, marketId, marketToLiquidate, tokensToReturn, tokensFromReserve);
         } else {
-            _checkUserAccountHealth(owner, _createNoOpPayload());
+            if (tokensToReturn != 0) {
+                _checkUserAccountHealth(owner, _createTokenPayoutPayload(owner, tip3UserWallet, marketId, tokensToReturn));
+            } else {
+                _checkUserAccountHealth(owner, _createNoOpPayload());
+            }
         }
     }
 
