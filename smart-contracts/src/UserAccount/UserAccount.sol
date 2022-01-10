@@ -52,31 +52,36 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     }
 
     function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) override external onlyUserAccountManager {
-        require(!borrowLock);
-        tvm.accept();
+        if (borrowLock) {
+            tvm.accept();
+            address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        } else {
+            tvm.accept();
 
-        bool _borrowLock = borrowLock;
-        bool _liquidationLock = liquidationLock;
-        address _owner = owner;
-        address _userAccountManager = userAccountManager;
-        mapping (uint32 => bool) _knownMarkets = knownMarkets;
-        mapping (uint32 => UserMarketInfo) _markets = markets;
-        fraction _accountHealth = accountHealth;
+            bool _borrowLock = borrowLock;
+            bool _liquidationLock = liquidationLock;
+            address _owner = owner;
+            address _userAccountManager = userAccountManager;
+            mapping (uint32 => bool) _knownMarkets = knownMarkets;
+            mapping (uint32 => UserMarketInfo) _markets = markets;
+            fraction _accountHealth = accountHealth;
 
-        tvm.setcode(code);
-        tvm.setCurrentCode(code);
+            tvm.setcode(code);
+            tvm.setCurrentCode(code);
 
-        onCodeUpgrade(
-            _borrowLock,
-            _liquidationLock,
-            _owner,
-            _userAccountManager,
-            _knownMarkets,
-            _markets,
-            _accountHealth,
-            updateParams,
-            codeVersion
-        );
+            onCodeUpgrade(
+                _borrowLock,
+                _liquidationLock,
+                _owner,
+                _userAccountManager,
+                _knownMarkets,
+                _markets,
+                _accountHealth,
+                updateParams,
+                codeVersion
+            );
+        }
+        
     }
 
     function onCodeUpgrade(
@@ -266,7 +271,6 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     function updateUserAccountHealth(address gasTo, fraction _accountHealth, mapping(uint32 => fraction) updatedIndexes, TvmCell dataToTransfer) external override onlyUserAccountManager {
         accountHealth = _accountHealth;
         liquidationLock = accountHealth.denom > accountHealth.nom;
-        borrowLock = accountHealth.denom > accountHealth.nom;
         _updateIndexes(updatedIndexes);
         TvmSlice ts = dataToTransfer.toSlice();
         (uint8 operation) = ts.decode(uint8);

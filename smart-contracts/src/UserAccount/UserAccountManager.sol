@@ -95,7 +95,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
      * @param tonWallet Address of user's ton wallet
      */
     function createUserAccount(address tonWallet) external override view {
-        tvm.rawReserve(msg.value, 2);
+        tvm.rawReserve(msg.value - UserAccountCostConstants.useForUADeploy, 2);
 
         TvmSlice ts = userAccountCodes[0].toSlice();
         require(!ts.empty());
@@ -112,7 +112,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         emit AccountCreated(tonWallet, userAccount);
 
         IUserAccountManager(this).updateUserAccount{
-            value: msg.value - UserAccountCostConstants.useForUADeploy - UserAccountCostConstants.estimatedExecCost
+            flag: MsgFlag.REMAINING_GAS
         }(tonWallet);
     }
 
