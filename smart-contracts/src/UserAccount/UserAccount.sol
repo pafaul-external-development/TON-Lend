@@ -57,29 +57,30 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
             address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
         } else {
             tvm.accept();
+            if (codeVersion > contractCodeVersion) {
+                bool _borrowLock = borrowLock;
+                bool _liquidationLock = liquidationLock;
+                address _owner = owner;
+                address _userAccountManager = userAccountManager;
+                mapping (uint32 => bool) _knownMarkets = knownMarkets;
+                mapping (uint32 => UserMarketInfo) _markets = markets;
+                fraction _accountHealth = accountHealth;
 
-            bool _borrowLock = borrowLock;
-            bool _liquidationLock = liquidationLock;
-            address _owner = owner;
-            address _userAccountManager = userAccountManager;
-            mapping (uint32 => bool) _knownMarkets = knownMarkets;
-            mapping (uint32 => UserMarketInfo) _markets = markets;
-            fraction _accountHealth = accountHealth;
+                tvm.setcode(code);
+                tvm.setCurrentCode(code);
 
-            tvm.setcode(code);
-            tvm.setCurrentCode(code);
-
-            onCodeUpgrade(
-                _borrowLock,
-                _liquidationLock,
-                _owner,
-                _userAccountManager,
-                _knownMarkets,
-                _markets,
-                _accountHealth,
-                updateParams,
-                codeVersion
-            );
+                onCodeUpgrade(
+                    _borrowLock,
+                    _liquidationLock,
+                    _owner,
+                    _userAccountManager,
+                    _knownMarkets,
+                    _markets,
+                    _accountHealth,
+                    updateParams,
+                    codeVersion
+                );
+            }
         }
         
     }

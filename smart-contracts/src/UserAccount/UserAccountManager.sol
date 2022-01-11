@@ -514,7 +514,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
                 flag: MsgFlag.REMAINING_GAS
             }(code, empty, codeVersion);
         } else {
-            address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+            address(userAccount).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
         }
     }
 
