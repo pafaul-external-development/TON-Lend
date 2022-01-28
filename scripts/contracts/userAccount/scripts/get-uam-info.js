@@ -7,7 +7,7 @@ async function main() {
         userAM: true
     });
 
-    console.log(`Owner: ${await contracts.userAccountManager.owner()}`);
+    console.log(`Owner: ${await contracts.userAccountManager.getOwner()}`);
 
     console.log(`Market address: ${await contracts.userAccountManager.marketAddress()}`);
 
@@ -21,7 +21,7 @@ async function main() {
 
     console.log(`Contract codes available: ${pp(await contracts.userAccountManager.userAccountCodes())}`);
 
-    console.log(`User account address: ${await contracts.userAccountManager.calculateUserAccoutAddress({tonWallet: '0:b16223d7abbd15b07fbcb31bf9281c76e8cdf79cd0aabd29330fc7483ac00c9e'})}`);
+    console.log(`User account address: ${await contracts.userAccountManager.calculateUserAccoutAddress({tonWallet: '0:60bc706a93d66f90c63203e185b6194c16c484d3fc8cccc91fd79d453465b11a'})}`);
 }
 
 main().then(

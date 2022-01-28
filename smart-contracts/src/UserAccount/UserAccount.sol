@@ -52,31 +52,37 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     }
 
     function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) override external onlyUserAccountManager {
-        require(!borrowLock);
-        tvm.accept();
+        if (borrowLock) {
+            tvm.accept();
+            address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        } else {
+            tvm.accept();
+            if (codeVersion > contractCodeVersion) {
+                bool _borrowLock = borrowLock;
+                bool _liquidationLock = liquidationLock;
+                address _owner = owner;
+                address _userAccountManager = userAccountManager;
+                mapping (uint32 => bool) _knownMarkets = knownMarkets;
+                mapping (uint32 => UserMarketInfo) _markets = markets;
+                fraction _accountHealth = accountHealth;
 
-        bool _borrowLock = borrowLock;
-        bool _liquidationLock = liquidationLock;
-        address _owner = owner;
-        address _userAccountManager = userAccountManager;
-        mapping (uint32 => bool) _knownMarkets = knownMarkets;
-        mapping (uint32 => UserMarketInfo) _markets = markets;
-        fraction _accountHealth = accountHealth;
+                tvm.setcode(code);
+                tvm.setCurrentCode(code);
 
-        tvm.setcode(code);
-        tvm.setCurrentCode(code);
-
-        onCodeUpgrade(
-            _borrowLock,
-            _liquidationLock,
-            _owner,
-            _userAccountManager,
-            _knownMarkets,
-            _markets,
-            _accountHealth,
-            updateParams,
-            codeVersion
-        );
+                onCodeUpgrade(
+                    _borrowLock,
+                    _liquidationLock,
+                    _owner,
+                    _userAccountManager,
+                    _knownMarkets,
+                    _markets,
+                    _accountHealth,
+                    updateParams,
+                    codeVersion
+                );
+            }
+        }
+        
     }
 
     function onCodeUpgrade(
@@ -122,7 +128,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
 
     function withdraw(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw) external override view onlyOwner {
         if (
-            liquidationLock ||
+            !liquidationLock &&
             tokensToWithdraw <= markets[marketId].suppliedTokens
         ) {
             tvm.rawReserve(msg.value, 2);
@@ -170,8 +176,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         tvm.rawReserve(msg.value, 2);
         if (
             (!borrowLock) &&
-            (markets[marketId].exists) &&
-            (accountHealth.nom > accountHealth.denom) ||
+            (accountHealth.nom > accountHealth.denom) &&
             !liquidationLock
         ) {
             borrowLock = true;
@@ -300,21 +305,36 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         }(tonWallet, owner, tip3UserWallet, marketId, marketToLiquidate, tokensProvided, supplyInfo, borrowInfo);
     }
 
-    function liquidateVTokens(address tonWallet, address tip3UserWallet, uint32 marketId, uint32 marketToLiquidate, uint256 tokensToSeize, uint256 tokensToReturn, BorrowInfo borrowInfo) external override onlyUserAccountManager {
-        markets[marketId].suppliedTokens -= tokensToSeize;
-        markets[marketToLiquidate].borrowInfo = borrowInfo;
+    function liquidateVTokens(address tonWallet, address tip3UserWallet, uint32 marketId, uint32 marketToLiquidate, uint256 tokensToSeize, uint256 tokensToReturn, uint256 tokensFromReserve, BorrowInfo borrowInfo) external override onlyUserAccountManager {
+        markets[marketToLiquidate].suppliedTokens -= tokensToSeize;
+        markets[marketId].borrowInfo = borrowInfo;
 
         IUAMUserAccount(userAccountManager).grantVTokens{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, owner, tip3UserWallet, marketId, tokensToSeize, tokensToReturn);
+        }(tonWallet, owner, tip3UserWallet, marketId, marketToLiquidate, tokensToSeize, tokensToReturn, tokensFromReserve);
     }
 
-    function grantVTokens(address targetUser, address tip3UserWallet, uint32 marketId, uint256 tokensToSeize, uint256 tokensToReturn) external override onlyUserAccountManager {
-        markets[marketId].suppliedTokens += tokensToSeize;
+    function grantVTokens(address tip3UserWallet, uint32 marketId, uint32 marketToLiquidate, uint256 tokensToSeize, uint256 tokensToReturn, uint256 tokensFromReserve) external override onlyUserAccountManager {
+        markets[marketToLiquidate].suppliedTokens += tokensToSeize;
+        if (tokensFromReserve != 0) {
+            IUAMUserAccount(userAccountManager).returnAndSupply{
+                flag: MsgFlag.REMAINING_GAS
+            }(owner, tip3UserWallet, marketId, marketToLiquidate, tokensToReturn, tokensFromReserve);
+        } else {
+            if (tokensToReturn != 0) {
+                _checkUserAccountHealth(owner, _createTokenPayoutPayload(owner, tip3UserWallet, marketId, tokensToReturn));
+            } else {
+                _checkUserAccountHealth(owner, _createNoOpPayload());
+            }
+        }
+    }
 
-        IUAMUserAccount(userAccountManager).externalHealthUpdate{
-            flag: MsgFlag.REMAINING_GAS
-        }(owner, targetUser, tip3UserWallet, marketId, tokensToReturn);
+    function abortLiquidation(address tonWallet, address tip3UserWallet, uint32 marketId, uint256 tokensProvided) external override onlyUserAccountManager {
+        if (tokensProvided != 0) { 
+            _checkUserAccountHealth(owner, _createTokenPayoutPayload(tonWallet, tip3UserWallet, marketId, tokensProvided));
+        } else {
+            _checkUserAccountHealth(owner, _createNoOpPayload());
+        }
     }
 
     function abortLiquidation(address tonWallet, address tip3UserWallet, uint32 marketId, uint256 tokensToReturn) external override onlyUserAccountManager {

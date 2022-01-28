@@ -11,6 +11,8 @@ import '../../utils/interfaces/IUpgradableContract.sol';
 
 import '../../utils/libraries/MsgFlag.sol';
 
+import { IRoles } from '../../utils/interfaces/IRoles.sol';
+
 interface IModule {
     function performAction(uint32 marketId, TvmCell args, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external;
     function resumeOperation(TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external;
@@ -164,6 +166,8 @@ library Utilities {
     ) internal returns (fraction) {
         fraction accountHealth = fraction(0, 0);
         fraction tmp;
+        fraction nom = fraction(0, 1);
+        fraction denom = fraction(0, 1);
 
         // Supply:
         // 1. Calculate real token amount: vToken*exchangeRate
@@ -173,7 +177,8 @@ library Utilities {
             tmp = supplied.numFMul(marketInfo[marketId].exchangeRate);
             tmp = tmp.fDiv(tokenPrices[marketInfo[marketId].token]);
             tmp = tmp.fMul(marketInfo[marketId].collateralFactor);
-            accountHealth.nom += tmp.toNum();
+            nom = nom.fAdd(tmp);
+            nom = nom.simplify();
         }
 
         // Borrow:
@@ -190,9 +195,12 @@ library Utilities {
                 }
                 tmp = tmp.fDiv(tokenPrices[marketInfo[marketId].token]);
                 tmp = tmp.simplify();
-                accountHealth.denom += tmp.toNum();
+                denom = denom.fAdd(tmp);
+                denom = denom.simplify();
             }
         }
+
+        accountHealth = nom.fDiv(denom);
 
         return accountHealth;
     }

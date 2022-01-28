@@ -6,6 +6,14 @@ struct fraction {
 }
 
 library FPO {
+    uint256 constant bits224 = 2**224;
+    uint256 constant bits192 = 2**192;
+    uint256 constant bits160 = 2**160;
+    uint256 constant bits128 = 2**128;
+    uint256 constant bits96 = 2**96;
+    uint256 constant bits64 = 2**64;
+    uint256 constant bits32 = 2**32;
+
     function fMul(fraction a, fraction b) internal pure returns (fraction) {
         return fraction(a.nom*b.nom, a.denom*b.denom);
     }
@@ -46,20 +54,25 @@ library FPO {
         return ((a.nom == b.nom) && (a.denom == b.denom));
     }
 
+    function getMin(fraction a, fraction b) internal pure returns(fraction) {
+        if (a.nom * b.denom < b.nom * a.denom) {
+            return a;
+        } else {
+            return b;
+        }
+    }
+
+    function lessThan(fraction a, fraction b) internal pure returns(bool) {
+        return a.nom * b.denom < b.nom * a.denom;
+    }
+
     function simplify(fraction a) internal pure returns(fraction) {
-        // loosing % of presicion at most
+        // loosing ¯\_(ツ)_/¯ % of presicion at most
         if (a.nom / a.denom > 100e9) {
             return fraction(a.nom / a.denom, 1);
         } else {
             // using bitshift for simultaneos division
             // leaving up to 64 bits of information if nom & denom > 2^64
-            uint256 bits224 = 2**224;
-            uint256 bits192 = 2**192;
-            uint256 bits160 = 2**160;
-            uint256 bits128 = 2**128;
-            uint256 bits96 = 2**96;
-            uint256 bits64 = 2**64;
-            uint256 bits32 = 2**32;
             if ( (a.nom >= bits224) && (a.denom >= bits224) ) {
                 return fraction(a.nom / bits160, a.denom / bits160);
             }

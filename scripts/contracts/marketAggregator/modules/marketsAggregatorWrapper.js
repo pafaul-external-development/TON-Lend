@@ -199,6 +199,14 @@ class MarketsAggregator extends ContractTemplate {
         });
     }
 
+    async getOwner() {
+        return await this.call({
+            method: 'getOwner',
+            params: {},
+            keyPair: this.keyPair
+        })
+    }
+
     /**
      * 
      * @param {Object} param0 

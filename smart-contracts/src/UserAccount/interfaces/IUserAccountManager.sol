@@ -1,5 +1,7 @@
 pragma ton-solidity >= 0.39.0;
 
+import { IRoles } from '../../utils/interfaces/IRoles.sol';
+
 interface IUserAccountManager {
     function createUserAccount(address tonWallet) external view;
     function calculateUserAccountAddress(address tonWallet) external responsible view returns (address);

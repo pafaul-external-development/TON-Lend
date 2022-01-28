@@ -8,20 +8,20 @@ contract BorrowModule is ACModule, IBorrowModule, IUpgradableContract {
 
     event TokenBorrow(uint32 marketId, MarketDelta marketDelta, address tonWallet, uint256 tokensBorrowed);
 
-    constructor(address _owner) public {
+    constructor(address _newOwner) public {
         tvm.accept();
         owner = _owner;
         actionId = OperationCodes.BORROW_TOKENS;
     }
 
-    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) external override onlyOwner {
+    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) external override canUpgrade {
         tvm.rawReserve(msg.value, 2);
 
         tvm.setcode(code);
         tvm.setCurrentCode(code);
 
         onCodeUpgrade (
-            owner,
+            _owner,
             marketAddress,
             userAccountManager,
             marketInfo,
@@ -31,7 +31,7 @@ contract BorrowModule is ACModule, IBorrowModule, IUpgradableContract {
     }
 
     function onCodeUpgrade(
-        address _owner,
+        address owner,
         address _marketAddress,
         address _userAccountManager,
         mapping(uint32 => MarketInfo) _marketInfo,
@@ -80,7 +80,7 @@ contract BorrowModule is ACModule, IBorrowModule, IUpgradableContract {
         // 4. Check if there is enough (collateral - borrowed) for new token borrow
         // 5. Increase user's borrowed amount
 
-        if (tokensToBorrow < marketInfo[marketId].realTokenBalance) {
+        if (tokensToBorrow < marketInfo[marketId].realTokenBalance - marketInfo[marketId].totalReserve) {
             fraction accountHealth = Utilities.calculateSupplyBorrow(supplyInfo, borrowInfo, marketInfo, tokenPrices);
             if (accountHealth.nom > accountHealth.denom) {
                 uint256 healthDelta = accountHealth.nom - accountHealth.denom;

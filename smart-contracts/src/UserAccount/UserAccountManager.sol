@@ -21,11 +21,9 @@ import './UserAccount.sol';
 
 import '../ModulesForMarket/interfaces/IModule.sol';
 
-contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUserAccount, IUAMMarket {
+contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager, IUAMUserAccount, IUAMMarket {
     // Information for update
     uint32 public contractCodeVersion;
-
-    address public owner;
 
     address public marketAddress;
     mapping(uint8 => address) public modules;
@@ -37,9 +35,9 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     /*********************************************************************************************************/
     // Functions for deployment and upgrade
     // Contract is deployed via platform
-    constructor(address _owner) public {
+    constructor(address _newOwner) public {
         tvm.accept();
-        owner = _owner;
+        _owner = _newOwner;
     }
 
     /*  Upgrade Data for version 1 (from version 0):
@@ -55,14 +53,14 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
             refs:
                 1. mapping(uint32 => bool) marketIds
      */
-    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) override external onlyOwner {
+    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) override external canUpgrade {
         tvm.accept();
 
         tvm.setcode(code);
         tvm.setCurrentCode(code);
 
         onCodeUpgrade(
-            owner,
+            _owner,
             marketAddress,
             modules,
             existingModules,
@@ -73,7 +71,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     }
 
     function onCodeUpgrade(
-        address _owner,
+        address owner,
         address _marketAddress,
         mapping(uint8 => address) _modules,
         mapping(address => bool) _existingModules,
@@ -84,7 +82,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         tvm.accept();
         tvm.resetStorage();
         contractCodeVersion = _codeVersion;
-        owner = _owner;
+        _owner = owner;
         marketAddress = _marketAddress;
         modules = _modules;
         existingModules = _existingModules;
@@ -97,7 +95,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
      * @param tonWallet Address of user's ton wallet
      */
     function createUserAccount(address tonWallet) external override view {
-        tvm.rawReserve(msg.value, 2);
+        tvm.rawReserve(msg.value - UserAccountCostConstants.useForUADeploy, 2);
 
         TvmSlice ts = userAccountCodes[0].toSlice();
         require(!ts.empty());
@@ -114,8 +112,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         emit AccountCreated(tonWallet, userAccount);
 
         IUserAccountManager(this).updateUserAccount{
-            value: 0,
-            flag: 64
+            flag: MsgFlag.REMAINING_GAS
         }(tonWallet);
     }
 
@@ -354,12 +351,13 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         uint32 marketToLiquidate,
         uint256 tokensToSeize, 
         uint256 tokensToReturn, 
+        uint256 tokensFromReserve,
         BorrowInfo borrowInfo
     ) external override view onlyModule(OperationCodes.LIQUIDATE_TOKENS) {
         address userAccount = _calculateUserAccountAddress(targetUser);
         IUserAccountData(userAccount).liquidateVTokens{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, tip3UserWallet, marketId, marketToLiquidate, tokensToSeize, tokensToReturn, borrowInfo);
+        }(tonWallet, tip3UserWallet, marketId, marketToLiquidate, tokensToSeize, tokensToReturn, tokensFromReserve, borrowInfo);
     }
 
     function grantVTokens(
@@ -367,44 +365,86 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         address targetUser,
         address tip3UserWallet,
         uint32 marketId, 
+        uint32 marketToLiquidate,
         uint256 vTokensToGrant, 
-        uint256 tokensToReturn
-    ) external override view onlyValidUserAccount(targetUser) {
+        uint256 tokensToReturn,
+        uint256 tokensFromReserve
+    ) external override view onlyValidUserAccountNoReserve(targetUser) {
+        tvm.rawReserve(msg.value - UserAccountCostConstants.updateHealthCost, 2);
+        
+        address targetAccount = _calculateUserAccountAddress(targetUser);
+        IUserAccountData(targetAccount).checkUserAccountHealth{
+            value: UserAccountCostConstants.updateHealthCost
+        }(tonWallet);
+
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).grantVTokens{
             flag: MsgFlag.REMAINING_GAS
-        }(targetUser, tip3UserWallet, marketId, vTokensToGrant, tokensToReturn);
+        }(tip3UserWallet, marketId, marketToLiquidate, vTokensToGrant, tokensToReturn, tokensFromReserve);
     }
 
     function abortLiquidation(
+<<<<<<< HEAD
         address tonWallet,
         address targetUser,
         address tip3UserWallet, 
         uint32 marketId, 
         uint256 tokensToReturn
+=======
+        address tonWallet, 
+        address targetUser, 
+        address tip3UserWallet, 
+        uint32 marketId, 
+        uint256 tokensProvided
+>>>>>>> e67d432a8271c38b768fc116501f6aef5ab7d2ad
     ) external override view onlyModule(OperationCodes.LIQUIDATE_TOKENS) {
         address userAccount = _calculateUserAccountAddress(targetUser);
         IUserAccountData(userAccount).abortLiquidation{
             flag: MsgFlag.REMAINING_GAS
+<<<<<<< HEAD
         }(tonWallet, tip3UserWallet, marketId, tokensToReturn);
     }
 
     function externalHealthUpdate(
+=======
+        }(tonWallet, tip3UserWallet, marketId, tokensProvided);
+    }
+
+    function returnAndSupply(
+>>>>>>> e67d432a8271c38b768fc116501f6aef5ab7d2ad
         address tonWallet,
-        address targetUser,
         address tip3UserWallet,
         uint32 marketId,
-        uint256 tokensToReturn
-    ) external override view onlyValidUserAccount(tonWallet) {
-        tvm.rawReserve(0, 4);
-        address targetAccount = _calculateUserAccountAddress(targetUser);
-        IUserAccountData(targetAccount).checkUserAccountHealth{
-            value: msg.value / 4
-        }(tonWallet);
+        uint32 marketToLiquidate,
+        uint256 tokensToReturn,
+        uint256 tokensFromReserve
+    ) external override view onlyValidUserAccountNoReserve(tonWallet) {
+        if (tokensToReturn != 0) {
+            uint128 tonsToUse = msg.value / 4;
+            tvm.rawReserve(tonsToUse, 2);
 
-        IMarketOperations(marketAddress).requestTokenPayout{
-            flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, tip3UserWallet, marketId, tokensToReturn);
+            TvmBuilder tb;
+            tb.store(tonWallet);
+            tb.store(tokensFromReserve);
+
+            IMarketOperations(marketAddress).performOperationUserAccountManager{
+                value: msg.value - tonsToUse
+            }(OperationCodes.SUPPLY_TOKENS, marketToLiquidate, tb.toCell());
+
+            IMarketOperations(marketAddress).requestTokenPayout{
+                flag: MsgFlag.REMAINING_GAS
+            }(tonWallet, tip3UserWallet, marketId, tokensToReturn);
+        } else {
+            tvm.rawReserve(msg.value, 2);
+
+            TvmBuilder tb;
+            tb.store(tonWallet);
+            tb.store(tokensFromReserve);
+
+            IMarketOperations(marketAddress).performOperationUserAccountManager{
+                flag: MsgFlag.REMAINING_GAS
+            }(OperationCodes.SUPPLY_TOKENS, marketToLiquidate, tb.toCell());
+        }
     }
 
     /*********************************************************************************************************/
@@ -454,20 +494,25 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         }(tonWallet, userTip3Wallet, marketId, toPayout);
     }
 
+    function withdrawExtraTons(address tonWallet) external onlyOwner {
+        tvm.accept();
+        address(tonWallet).transfer({value: 0, flag: 160});
+    }
+
     /*********************************************************************************************************/
     // Market managing functions
 
     /**
      * @param _market Address of market smart contract
      */
-    function setMarketAddress(address _market) external override onlyOwner {
+    function setMarketAddress(address _market) external override canChangeParams {
         tvm.accept();
         marketAddress = _market;
     }
 
     /*********************************************************************************************************/
     // Function for userAccountCode
-    function uploadUserAccountCode(uint32 version, TvmCell code) external override {
+    function uploadUserAccountCode(uint32 version, TvmCell code) external override canChangeParams {
         userAccountCodes[version] = code;
         
         address(msg.sender).transfer({flag: MsgFlag.REMAINING_GAS, value: 0});
@@ -484,7 +529,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
                 flag: MsgFlag.REMAINING_GAS
             }(code, empty, codeVersion);
         } else {
-            address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+            address(userAccount).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
         }
     }
 
@@ -500,7 +545,7 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
         }();
     }
 
-    function removeMarket(address tonWallet, uint32 marketId) external view onlyOwner {
+    function removeMarket(address tonWallet, uint32 marketId) external view canChangeParams {
         tvm.rawReserve(msg.value, 2);
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).removeMarket{
@@ -523,15 +568,11 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
 
     /*********************************************************************************************************/
     // modifiers
-    // TODO: add error codes
-    modifier onlyOwner() {
-        require(msg.sender == owner, UserAccountErrorCodes.ERROR_NOT_ROOT);
-        _;
-    }
 
     modifier onlyMarket() {
         require(
-            msg.sender == marketAddress
+            msg.sender == marketAddress,
+            UserAccountErrorCodes.ERROR_NOT_MARKET
         );
         tvm.rawReserve(msg.value, 2);
         _;
@@ -539,31 +580,36 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
 
     modifier onlyTrusted() {
         require(
-            msg.sender == owner ||
-            msg.sender == marketAddress
+            msg.sender == _owner ||
+            msg.sender == marketAddress ||
+            _canChangeParams[msg.sender],
+            UserAccountErrorCodes.ERROR_NOT_TRUSTED
         );
         _;
     }
 
     modifier onlyModules() {
         require(
-            existingModules.exists(msg.sender)
+            existingModules.exists(msg.sender),
+            UserAccountErrorCodes.ERROR_NOT_MODULE
         );
         _;
     }
 
     modifier executor() {
         require(
-            msg.sender == owner ||
+            msg.sender == _owner ||
             msg.sender == marketAddress ||
-            existingModules.exists(msg.sender)
+            existingModules.exists(msg.sender),
+            UserAccountErrorCodes.ERROR_NOT_EXECUTOR
         );
         _;
     }
 
     modifier onlyModule(uint8 operationId) {
         require(
-            msg.sender == modules[operationId]
+            msg.sender == modules[operationId],
+            UserAccountErrorCodes.ERROR_INVALID_MODULE
         );
         tvm.rawReserve(msg.value, 2);
         _;
@@ -572,7 +618,8 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
     modifier onlySelectedExecutors(uint8 operationId, address tonWallet) {
         require(
             (msg.sender == modules[operationId]) ||
-            (msg.sender == _calculateUserAccountAddress(tonWallet))
+            (msg.sender == _calculateUserAccountAddress(tonWallet)),
+            UserAccountErrorCodes.ERROR_INVALID_EXECUTOR
         );
         _;
     }
@@ -581,8 +628,19 @@ contract UserAccountManager is IUpgradableContract, IUserAccountManager, IUAMUse
      * @param tonWallet Address of user's ton wallet
      */
     modifier onlyValidUserAccount(address tonWallet) {
-        require(msg.sender == _calculateUserAccountAddress(tonWallet));
+        require(
+            msg.sender == _calculateUserAccountAddress(tonWallet),
+            UserAccountErrorCodes.INVALID_USER_ACCOUNT
+        );
         tvm.rawReserve(msg.value, 2);
+        _;
+    }
+
+    modifier onlyValidUserAccountNoReserve(address tonWallet) {
+        require(
+            msg.sender == _calculateUserAccountAddress(tonWallet),
+            UserAccountErrorCodes.INVALID_USER_ACCOUNT
+        );
         _;
     }
 }

@@ -10,20 +10,20 @@ contract WithdrawModule is ACModule, IWithdrawModule, IUpgradableContract {
 
     event TokenWithdraw(uint32 marketId, MarketDelta marketDelta, address tonWallet, uint256 vTokensWithdrawn, uint256 realTokensWithdrawn);
 
-    constructor(address _owner) public {
+    constructor(address _newOwner) public {
         tvm.accept();
         owner = _owner;
         actionId = OperationCodes.WITHDRAW_TOKENS;
     }
 
-    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) external override onlyOwner {
+    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) external override canUpgrade {
         tvm.rawReserve(msg.value, 2);
 
         tvm.setcode(code);
         tvm.setCurrentCode(code);
 
         onCodeUpgrade (
-            owner,
+            _owner,
             marketAddress,
             userAccountManager,
             marketInfo,
@@ -33,7 +33,7 @@ contract WithdrawModule is ACModule, IWithdrawModule, IUpgradableContract {
     }
 
     function onCodeUpgrade(
-        address _owner,
+        address owner,
         address _marketAddress,
         address _userAccountManager,
         mapping(uint32 => MarketInfo) _marketInfo,
@@ -80,13 +80,11 @@ contract WithdrawModule is ACModule, IWithdrawModule, IUpgradableContract {
         // 1. Calculate account health
         // 2. Calculate USD amount for withdraw token
         // 3. Check if user can afford to withdraw required amount of real tokens
-        // TODO: add lock for withdraw operation, can create some trouble ???
 
         fraction accountHealth = Utilities.calculateSupplyBorrow(supplyInfo, borrowInfo, marketInfo, tokenPrices);
 
         fraction fTokensToSend = tokensToWithdraw.numFMul(mi.exchangeRate);
         fraction fTokensToSendUSD = fTokensToSend.fDiv(tokenPrices[marketInfo[marketId].token]);
-        fraction fTokensCollateral = fTokensToSendUSD.fMul(mi.collateralFactor);
 
         // Check user balance in tokens just in case
         // There will be lock at user account for operation, unified for all operations
@@ -96,7 +94,10 @@ contract WithdrawModule is ACModule, IWithdrawModule, IUpgradableContract {
             (accountHealth.nom > accountHealth.denom) &&
             (supplyInfo[marketId] >= tokensToWithdraw)
         ) {
-            if (accountHealth.nom - accountHealth.denom >= fTokensCollateral.toNum()) {
+            if (
+                accountHealth.nom - accountHealth.denom >= fTokensToSendUSD.toNum() &&
+                fTokensToSend.toNum() <= mi.realTokenBalance - mi.totalReserve
+            ) {
                 uint256 tokensToSend = fTokensToSend.toNum();
 
                 marketDelta.realTokenBalance.delta = tokensToSend;
@@ -144,4 +145,18 @@ contract WithdrawModule is ACModule, IWithdrawModule, IUpgradableContract {
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, userTip3Wallet, marketId, tokensToWithdraw, tokensToSend);
     }
+<<<<<<< HEAD
+=======
+
+    modifier onlyMarket() {
+        require(msg.sender == marketAddress);
+        tvm.rawReserve(msg.value, 2);
+        _;
+    }
+
+    modifier onlyUserAccountManager() {
+        require(msg.sender == userAccountManager);
+        _;
+    }
+>>>>>>> e67d432a8271c38b768fc116501f6aef5ab7d2ad
 }

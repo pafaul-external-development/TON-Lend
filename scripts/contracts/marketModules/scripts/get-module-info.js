@@ -19,6 +19,7 @@ async function main() {
         console.log(`Known contract addresses: ${pp(await module.getContractAddresses())}`);
         console.log(`Module state: ${pp(await module.getModuleState())}`);
         console.log(`Contract code version: ${await module.contractCodeVersion()}`);
+        console.log(`Owner address: ${await module.getOwner()}`);
     }
 
 }

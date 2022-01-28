@@ -15,8 +15,7 @@ async function main() {
         
         let addMarketPayload = await contracts.walletController.addMarket({
             marketId: marketId,
-            realTokenRoot: marketInfo.token,
-            virtualTokenRoot: marketInfo.virtualToken
+            realTokenRoot: marketInfo.token
         });
     
         await contracts.msigWallet.transfer({

@@ -10,20 +10,20 @@ contract SupplyModule is ACModule, IUpgradableContract {
 
     event TokensSupplied(uint32 marketId, MarketDelta marketDelta, address tonWallet, uint256 tokensSupplied);
 
-    constructor(address _owner) public {
+    constructor(address _newOwner) public {
         tvm.accept();
         owner = _owner;
         actionId = OperationCodes.SUPPLY_TOKENS;
     }
 
-    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) external override onlyOwner {
+    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) external override canUpgrade {
         tvm.rawReserve(msg.value, 2);
 
         tvm.setcode(code);
         tvm.setCurrentCode(code);
 
         onCodeUpgrade (
-            owner,
+            _owner,
             marketAddress,
             userAccountManager,
             marketInfo,
@@ -33,7 +33,7 @@ contract SupplyModule is ACModule, IUpgradableContract {
     }
 
     function onCodeUpgrade(
-        address _owner,
+        address owner,
         address _marketAddress,
         address _userAccountManager,
         mapping(uint32 => MarketInfo) _marketInfo,

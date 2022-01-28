@@ -5,8 +5,7 @@
 		{
 			"name": "constructor",
 			"inputs": [
-				{"name":"_owner","type":"address"},
-				{"name":"_ownerPubkey","type":"uint256"}
+				{"name":"_newOwner","type":"address"}
 			],
 			"outputs": [
 			]
@@ -36,23 +35,7 @@
 				{"name":"_answer_id","type":"uint32"}
 			],
 			"outputs": [
-				{"components":[{"name":"codeVersion","type":"uint32"},{"name":"ownerAddress","type":"address"},{"name":"ownerPubkey","type":"uint256"}],"name":"value0","type":"tuple"}
-			]
-		},
-		{
-			"name": "changeOwnerPubkey",
-			"inputs": [
-				{"name":"newOwnerPubkey","type":"uint256"}
-			],
-			"outputs": [
-			]
-		},
-		{
-			"name": "changeOwnerAddress",
-			"inputs": [
-				{"name":"newOwnerAddress","type":"address"}
-			],
-			"outputs": [
+				{"components":[{"name":"codeVersion","type":"uint32"},{"name":"ownerAddress","type":"address"}],"name":"value0","type":"tuple"}
 			]
 		},
 		{
@@ -122,6 +105,56 @@
 				{"name":"tokenRoot","type":"address"}
 			],
 			"outputs": [
+			]
+		},
+		{
+			"name": "setUpgrader",
+			"inputs": [
+				{"name":"upgrader","type":"address"},
+				{"name":"allowed","type":"bool"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "setParamChanger",
+			"inputs": [
+				{"name":"paramChanger","type":"address"},
+				{"name":"allowed","type":"bool"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "changeOwner",
+			"inputs": [
+				{"name":"_newOwner","type":"address"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "getOwner",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"address"}
+			]
+		},
+		{
+			"name": "getUpgraders",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"map(address,bool)"}
+			]
+		},
+		{
+			"name": "getParamChangers",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"map(address,bool)"}
 			]
 		}
 	],

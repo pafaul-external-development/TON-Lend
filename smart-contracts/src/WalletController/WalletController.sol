@@ -11,7 +11,6 @@ import "./libraries/CostConstants.sol";
 import "./libraries/WalletControllerErrorCodes.sol";
 import "./libraries/OperationCodes.sol";
 
-// import "../Market/interfaces/IMarketInterfaces.sol";
 import "../Market/MarketsAggregator.sol";
 
 import "../utils/interfaces/IUpgradableContract.sol";
@@ -22,11 +21,12 @@ import "../utils/TIP3/interfaces/ITONTokenWallet.sol";
 
 import "../utils/libraries/MsgFlag.sol";
 
-contract WalletController is IWCMInteractions, IWalletControllerMarketManagement, IWalletControllerGetters, IUpgradableContract, ITokensReceivedCallback {
+import { IRoles } from '../utils/interfaces/IRoles.sol';
+
+contract WalletController is IRoles, IWCMInteractions, IWalletControllerMarketManagement, IWalletControllerGetters, IUpgradableContract, ITokensReceivedCallback {
     // Information for update
     uint32 public contractCodeVersion;
 
-    address public owner;
     address public marketAddress;
 
     // Root TIP-3 to market address mapping
@@ -38,7 +38,7 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
 
     /*********************************************************************************************************/
     // Functions for deployment and upgrade
-    constructor(address _owner) public { 
+    constructor(address _newOwner) public { 
         tvm.accept();
         owner = _owner;
     }
@@ -48,14 +48,14 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
      * @param updateParams Extrenal parameters used during update
      * @param codeVersion New code version
      */
-    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) override external onlyOwner {
+    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) override external canUpgrade {
         tvm.accept();
 
         tvm.setcode(code);
         tvm.setCurrentCode(code);
         
         onCodeUpgrade(
-            owner,
+            _owner,
             marketAddress,
             wallets,
             realTokenRoots,
@@ -85,14 +85,14 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
 
     /*********************************************************************************************************/
     // Market functions
-    function setMarketAddress(address _market) external override onlyOwner {
+    function setMarketAddress(address _market) external override canChangeParams {
         tvm.rawReserve(msg.value, 2);
         marketAddress = _market;
 
-        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
-    function addMarket(uint32 marketId, address realTokenRoot) external override onlyTrusted {
+    function addMarket(uint32 marketId, address realTokenRoot) external override canChangeParams {
         tvm.accept();
         marketTIP3Info[marketId] = MarketTokenAddresses({
             realToken: realTokenRoot,
@@ -111,7 +111,7 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
     /**
      * @param marketId Id of market to remove
      */
-    function removeMarket(uint32 marketId) external override onlyTrusted {
+    function removeMarket(uint32 marketId) external override canChangeParams {
         tvm.accept();
         MarketTokenAddresses marketTokenAddresses = marketTIP3Info[marketId];
 
@@ -263,11 +263,6 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
 
     /*********************************************************************************************************/
     // modifiers
-    
-    modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
-    }
 
     modifier onlyMarket() {
         require(msg.sender == marketAddress, WalletControllerErrorCodes.ERROR_MSG_SENDER_IS_NOT_MARKET);
@@ -276,7 +271,6 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
 
     modifier onlyTrusted() {
         require(
-            (msg.sender == owner) || 
             (msg.sender == marketAddress)
         );
         _;

@@ -61,6 +61,33 @@ module.exports = {
                 phrase: 'melody clarify hand pause kit economy bind behind grid witness cheap tomorrow',
                 amount: 20,
             }
+        },
+        mainnet: {
+            ton_client: {
+                // See the TON client specification for all available options
+                network: {
+                    server_address: 'https://main.ton.dev',
+                    endpoints: [
+                        'https://main2.ton.dev/',
+                        'https://main3.ton.dev/',
+                        'https://main4.ton.dev/'
+                    ]
+                },
+            },
+
+            // This giver is default local-node giver
+            giver: {
+                address: '0:a007f6b1686dabfcb686bb8152d330d19971b707fbd842199915c677e9822d31',
+                abi: { "ABI version": 2, "header": ["time", "expire"], "functions": [ { "name": "constructor", "inputs": [ ], "outputs": [ ] }, { "name": "sendGrams", "inputs": [ {"name":"dest","type":"address"}, {"name":"amount","type":"uint64"} ], "outputs": [ ] } ], "data": [ ], "events": [ ]},
+                key: '',
+            },
+
+            // Use tonos-cli to generate your phrase
+            // !!! Never commit it in your repos !!!
+            keys: {
+                phrase: 'fee faint soul broken super place inject silly post base loyal cinnamon',
+                amount: 20,
+            }
         }
     },
 };

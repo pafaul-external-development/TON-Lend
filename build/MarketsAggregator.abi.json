@@ -5,7 +5,7 @@
 		{
 			"name": "constructor",
 			"inputs": [
-				{"name":"_owner","type":"address"}
+				{"name":"_newOwner","type":"address"}
 			],
 			"outputs": [
 			]
@@ -23,7 +23,7 @@
 		{
 			"name": "receiveCacheDelta",
 			"inputs": [
-				{"components":[{"components":[{"name":"positive","type":"bool"},{"name":"delta","type":"uint256"}],"name":"realTokenBalance","type":"tuple"},{"components":[{"name":"positive","type":"bool"},{"name":"delta","type":"uint256"}],"name":"vTokenBalance","type":"tuple"},{"components":[{"name":"positive","type":"bool"},{"name":"delta","type":"uint256"}],"name":"totalBorrowed","type":"tuple"}],"name":"marketsDelta","type":"map(uint32,tuple)"},
+				{"components":[{"components":[{"name":"positive","type":"bool"},{"name":"delta","type":"uint256"}],"name":"realTokenBalance","type":"tuple"},{"components":[{"name":"positive","type":"bool"},{"name":"delta","type":"uint256"}],"name":"vTokenBalance","type":"tuple"},{"components":[{"name":"positive","type":"bool"},{"name":"delta","type":"uint256"}],"name":"totalBorrowed","type":"tuple"},{"components":[{"name":"positive","type":"bool"},{"name":"delta","type":"uint256"}],"name":"totalReserve","type":"tuple"}],"name":"marketsDelta","type":"map(uint32,tuple)"},
 				{"name":"args","type":"cell"}
 			],
 			"outputs": [
@@ -241,11 +241,53 @@
 			]
 		},
 		{
-			"name": "transferOwnership",
+			"name": "setUpgrader",
 			"inputs": [
-				{"name":"newOwner","type":"address"}
+				{"name":"upgrader","type":"address"},
+				{"name":"allowed","type":"bool"}
 			],
 			"outputs": [
+			]
+		},
+		{
+			"name": "setParamChanger",
+			"inputs": [
+				{"name":"paramChanger","type":"address"},
+				{"name":"allowed","type":"bool"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "changeOwner",
+			"inputs": [
+				{"name":"_newOwner","type":"address"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "getOwner",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"address"}
+			]
+		},
+		{
+			"name": "getUpgraders",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"map(address,bool)"}
+			]
+		},
+		{
+			"name": "getParamChangers",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"map(address,bool)"}
 			]
 		},
 		{
@@ -254,14 +296,6 @@
 			],
 			"outputs": [
 				{"name":"contractCodeVersion","type":"uint32"}
-			]
-		},
-		{
-			"name": "owner",
-			"inputs": [
-			],
-			"outputs": [
-				{"name":"owner","type":"address"}
 			]
 		},
 		{

@@ -145,9 +145,9 @@ class UserAccountManager extends Contract {
         });
     }
 
-    async owner() {
+    async getOwner() {
         return await this.call({
-            method: 'owner',
+            method: 'getOwner',
             params: {},
             keyPair: this.keyPair
         });
@@ -221,6 +221,22 @@ class UserAccountManager extends Contract {
         return await encodeMessageBody({
             contract: this,
             functionName: 'disableUserAccountLock',
+            input: {
+                tonWallet
+            }
+        })
+    }
+
+    /**
+     * 
+     * @param {Object} param0 
+     * @param {String} param0.tonWallet
+     * @returns 
+     */    
+    async requestUserAccountHealthCalculation({tonWallet}) {
+        return await encodeMessageBody({
+            contract: this,
+            functionName: 'requestUserAccountHealthCalculation',
             input: {
                 tonWallet
             }

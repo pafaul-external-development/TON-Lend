@@ -6,15 +6,12 @@ pragma AbiHeader pubkey;
 import './interfaces/IMarketInterfaces.sol';
 import "../ModulesForMarket/interfaces/IModule.sol";
 
-contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters, IMarketOwnerFunctions, IMarketGetters, IMarketOperations, IContractStateCacheRoot {
+contract MarketAggregator is IRoles, IUpgradableContract, IMarketOracle, IMarketSetters, IMarketOwnerFunctions, IMarketGetters, IMarketOperations, IContractStateCacheRoot {
     using UFO for uint256;
     using FPO for fraction;
 
     // Information for update
     uint32 public contractCodeVersion;
-    
-    // owner info
-    address public owner;
 
     address public userAccountManager;
     address public walletController;
@@ -39,15 +36,20 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     /*********************************************************************************************************/
     // Base functions - for deploying and upgrading contract
     // We are using Platform so constructor is not available
+<<<<<<< HEAD
     /**
      * @notice Create contract and set it's owner
      * @param _owner Address of owner
      */
     constructor(address _owner) public {
+=======
+    constructor(address _newOwner) public {
+>>>>>>> e67d432a8271c38b768fc116501f6aef5ab7d2ad
         tvm.accept();
-        owner = _owner;
+        _owner = _newOwner;
     }
 
+<<<<<<< HEAD
     /**
      * @notice Upgrade contract code
      * @param code New code of contract
@@ -55,13 +57,16 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
      * @param codeVersion New version of contract
      */
     function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) override external onlyOwner {
+=======
+    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) override external canUpgrade {
+>>>>>>> e67d432a8271c38b768fc116501f6aef5ab7d2ad
         tvm.accept();
 
         tvm.setcode(code);
         tvm.setCurrentCode(code);
 
         onCodeUpgrade(
-            owner,
+            _owner,
             userAccountManager,
             walletController,
             oracle,
@@ -87,19 +92,19 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
      * @param _codeVersion
      */
     function onCodeUpgrade(
-        address _owner,
+        address owner,
         address _userAccountManager,
         address _walletController,
         address _oracle,
         mapping(uint32 => MarketInfo) _markets,
         mapping(address => fraction) _tokenPrices,
         mapping(uint8 => address) _modules,
-        TvmCell updateParams,
+        TvmCell,
         uint32 _codeVersion
     ) private {
         tvm.resetStorage();
         contractCodeVersion = _codeVersion;
-        owner = _owner;
+        _owner = owner;
         userAccountManager = _userAccountManager;
         walletController = _walletController;
         oracle = _oracle;
@@ -213,6 +218,15 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         } else {
             markets[marketId].vTokenBalance -= marketDelta.vTokenBalance.delta;
         }
+
+        if (
+            marketDelta.totalReserve.delta != 0 &&
+            marketDelta.totalReserve.positive
+        ) {
+            markets[marketId].totalReserve += marketDelta.totalReserve.delta;
+        } else {
+            markets[marketId].totalReserve -= marketDelta.totalReserve.delta;
+        }
     }
 
     /**
@@ -239,7 +253,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         for ((, address module) : modules) {
             IContractStateCache(module).updateCache{
                 value: valueToTransfer
-            }(owner, markets, tokenPrices);
+            }(_owner, markets, tokenPrices);
         }
     }
 
@@ -263,7 +277,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
 
     function withdrawExtraTons(uint128 amount) external override onlyOwner {
         tvm.accept();
-        address(owner).transfer({flag: 1, value: amount});
+        address(_owner).transfer({flag: 1, value: amount});
     }
 
     function getAllModules() external override view responsible returns(mapping(uint8 => address)) {
@@ -294,7 +308,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         fraction _exchangeRate,
         fraction _collateralFactor,
         fraction _liquidationMultiplier
-    ) external onlyOwner {
+    ) external canChangeParams {
         tvm.rawReserve(msg.value, 2);
         if (!createdMarkets[marketId]) {
             createdMarkets[marketId] = true;
@@ -345,7 +359,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         fraction _exchangeRate,
         fraction _collateralFactor,
         fraction _liquidationMultiplier
-    ) external onlyOwner {
+    ) external canChangeParams {
         tvm.rawReserve(msg.value, 2);
 
         MarketInfo mi = markets[marketId];
@@ -365,7 +379,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         _updateMarketDelta(marketId, marketDelta);
         _updateExchangeRate(marketId);
 
-        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        address(_owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     /**
@@ -374,7 +388,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
      */
     function removeMarket(
         uint32 marketId
-    ) external onlyOwner {
+    ) external canChangeParams {
         tvm.rawReserve(msg.value, 2);
 
         emit MarketDeleted(marketId, markets[marketId]);
@@ -383,37 +397,45 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         delete createdMarkets[marketId];
         delete markets[marketId];
 
-        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        address(_owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     /*********************************************************************************************************/
     // Operations with modules
 
+<<<<<<< HEAD
     /**
      * @notice Add module to system
      * @param operationId Id of module operation
      * @param module Address of module
      */
     function addModule(uint8 operationId, address module) external onlyOwner {
+=======
+    function addModule(uint8 operationId, address module) external canChangeParams {
+>>>>>>> e67d432a8271c38b768fc116501f6aef5ab7d2ad
         tvm.rawReserve(msg.value, 2);
         modules[operationId] = module;
         isModule[module] = true;
         moduleAmount = moduleAmount + 1;
         IContractStateCache(module).updateCache{
             flag: MsgFlag.REMAINING_GAS
-        }(owner, markets, tokenPrices);
+        }(_owner, markets, tokenPrices);
     }
 
+<<<<<<< HEAD
     /**
      * @notice THIS OPERATION REMOVES MODULE. OPERATION WILL NOT BE AVAILABLE
      * @param operationId Operation id of module
      */
     function removeModule(uint8 operationId) external onlyOwner {
+=======
+    function removeModule(uint8 operationId) external canChangeParams {
+>>>>>>> e67d432a8271c38b768fc116501f6aef5ab7d2ad
         tvm.rawReserve(msg.value, 2);
         delete isModule[modules[operationId]];
         delete modules[operationId];
         moduleAmount = moduleAmount - 1;
-        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        address(_owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     /**
@@ -454,10 +476,11 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
                 flag: MsgFlag.REMAINING_GAS
             }(marketId, moduleArgs, markets, tokenPrices);
         } else {
-            address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+            address(_owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
         }
     }
 
+<<<<<<< HEAD
     /**
      * @notice Calculate user account health
      * @param tonWallet Address of owner's wallet
@@ -467,12 +490,20 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
      * @param dataToTransfer Data that is transferred from user account
      */
     function calculateUserAccountHealth(address tonWallet, address gasTo, mapping(uint32 => uint256) supplyInfo, mapping(uint32 => BorrowInfo) borrowInfo, TvmCell dataToTransfer) external override onlyUserAccountManager {
+=======
+    function calculateUserAccountHealth(
+        address tonWallet, 
+        address gasTo, 
+        mapping(uint32 => uint256) supplyInfo, 
+        mapping(uint32 => BorrowInfo) borrowInfo, 
+        TvmCell dataToTransfer
+    ) external override onlyUserAccountManager {
+>>>>>>> e67d432a8271c38b768fc116501f6aef5ab7d2ad
         tvm.rawReserve(msg.value, 2);
 
         _updateAllMarkets();
 
         mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
-        mapping(uint32 => uint256) userBorrowInfo = _calculateBorrowInfo(borrowInfo, updatedIndexes);
         fraction accountHealth = Utilities.calculateSupplyBorrow(supplyInfo, borrowInfo, markets, tokenPrices);
 
         if (accountHealth.nom < accountHealth.denom) {
@@ -490,6 +521,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
         }
     }
 
+<<<<<<< HEAD
     /**
      * @notice calculate borrow info
      * @param borrowInfo Borrow information of user
@@ -513,6 +545,8 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
      * @param marketId Id of market that is performing oeration
      * @param args Arguments of operation
      */
+=======
+>>>>>>> e67d432a8271c38b768fc116501f6aef5ab7d2ad
     function _createOperationUpdatePayload(uint8 operationId, uint32 marketId, TvmCell args) internal pure returns (TvmCell payload) {
         TvmBuilder tb;
         tb.store(operationId);
@@ -603,7 +637,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     /**
      * @param _userAccountManager Address of userAccountManager smart contract
      */
-    function setUserAccountManager(address _userAccountManager) external override onlyOwner {
+    function setUserAccountManager(address _userAccountManager) external override canChangeParams {
         tvm.rawReserve(msg.value, 2);
         userAccountManager = _userAccountManager;
         address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
@@ -612,7 +646,7 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     /**
      * @param _tip3WalletController Address of TIP3WalletController smart contract
      */
-    function setWalletController(address _tip3WalletController) external override onlyOwner {
+    function setWalletController(address _tip3WalletController) external override canChangeParams {
         tvm.rawReserve(msg.value, 2);
         walletController = _tip3WalletController;
         address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
@@ -621,18 +655,9 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
     /**
      * @param _oracle Address of Oracle smart contract
      */
-    function setOracleAddress(address _oracle) external override onlyOwner {
+    function setOracleAddress(address _oracle) external override canChangeParams {
         tvm.rawReserve(msg.value, 2);
         oracle = _oracle;
-        address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
-    }
-
-    /**
-     * @param newOwner Address of new contract's owner
-     */
-    function transferOwnership(address newOwner) external override onlyOwner {
-        tvm.rawReserve(msg.value, 2);
-        owner = newOwner;
         address(msg.sender).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
@@ -641,11 +666,6 @@ contract MarketAggregator is IUpgradableContract, IMarketOracle, IMarketSetters,
 
     modifier onlySelf() {
         require(msg.sender == address(this), MarketErrorCodes.ERROR_MSG_SENDER_IS_NOT_SELF);
-        _;
-    }
-
-    modifier onlyOwner() {
-        require(msg.sender == owner, MarketErrorCodes.ERROR_MSG_SENDER_IS_NOT_OWNER);
         _;
     }
 

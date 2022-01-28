@@ -37,7 +37,6 @@ interface IMarketGetters {
 }
 
 interface IMarketOwnerFunctions {
-    function transferOwnership(address newOwner) external;
     function withdrawExtraTons(uint128 amount) external;
     function updateModulesCache() external view;
     function forceUpdateAllPrices() external; 

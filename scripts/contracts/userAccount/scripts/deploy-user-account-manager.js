@@ -5,7 +5,7 @@ async function main() {
     await deployContract({
         contractName: 'UserAccountManager',
         constructorParams: {
-            _owner: contracts.msigWallet.address
+            _newOwner: contracts.msigWallet.address
         },
         initParams: {}
     });

@@ -8,20 +8,20 @@ contract LiquidationModule is ACModule, ILiquidationModule, IUpgradableContract 
 
     event TokensLiquidated(uint32 marketId, MarketDelta marketDelta1, uint32 marketToLiquidate, MarketDelta marketDelta2, address liquidator, address targetUser, uint256 tokensLiquidated, uint256 vTokensSeized);
 
-    constructor(address _owner) public {
+    constructor(address _newOwner) public {
         tvm.accept();
         owner = _owner;
         actionId = OperationCodes.LIQUIDATE_TOKENS;
     }
 
-    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) external override onlyOwner {
+    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) external override canUpgrade {
         tvm.rawReserve(msg.value, 2);
 
         tvm.setcode(code);
         tvm.setCurrentCode(code);
 
         onCodeUpgrade (
-            owner,
+            _owner,
             marketAddress,
             userAccountManager,
             marketInfo,
@@ -31,7 +31,7 @@ contract LiquidationModule is ACModule, ILiquidationModule, IUpgradableContract 
     }
 
     function onCodeUpgrade(
-        address _owner,
+        address owner,
         address _marketAddress,
         address _userAccountManager,
         mapping(uint32 => MarketInfo) _marketInfo,
@@ -40,7 +40,7 @@ contract LiquidationModule is ACModule, ILiquidationModule, IUpgradableContract 
     ) private {
         tvm.accept();
         tvm.resetStorage();
-        owner = _owner;
+        _owner = owner;
         marketAddress = _marketAddress;
         userAccountManager = _userAccountManager;
         marketInfo = _marketInfo;
@@ -83,44 +83,67 @@ contract LiquidationModule is ACModule, ILiquidationModule, IUpgradableContract 
         // - User will not exceed vToken balance of user that is liquidated (vTokenLimit)
 
         fraction health = Utilities.calculateSupplyBorrow(supplyInfo, borrowInfo, marketInfo, tokenPrices);
-        if (health.nom < health.denom) {
-            uint256 maxTokensForLiquidation = borrowInfo[marketToLiquidate].tokensBorrowed;
-
-            fraction fmaxTokensForLiquidationVTokenBased = supplyInfo[marketId].numFMul(marketInfo[marketId].exchangeRate);
-            uint256 maxTokensForLiquidationVTokenBased = fmaxTokensForLiquidationVTokenBased.toNum();
-
-            fraction fmaxTokensForLiquidationProvided = tokensProvided.numFMul(marketInfo[marketId].liquidationMultiplier);
-            uint256 maxTokensForLiquidationProvided = fmaxTokensForLiquidationProvided.toNum();
-
+        if (health.nom <= health.denom) {
             uint256 tokensToLiquidate = math.min(
-                maxTokensForLiquidation,
-                maxTokensForLiquidationVTokenBased,
-                maxTokensForLiquidationProvided
+                borrowInfo[marketId].tokensBorrowed,
+                tokensProvided
             );
 
-            fraction ftokensToUseForLiquidation = tokensToLiquidate.numFDiv(marketInfo[marketId].liquidationMultiplier);
-            uint256 tokensToUseForLiquidation = ftokensToUseForLiquidation.toNum();
-            
-            fraction ftokensToSeize = tokensToLiquidate.numFDiv(marketInfo[marketId].exchangeRate);
-            uint256 tokensToSeize = ftokensToSeize.toNum();
+            // Calculating USD value of liquidation
+            fraction ftokensToLiquidateUSD = tokensToLiquidate.numFMul(marketInfo[marketId].liquidationMultiplier);
+            ftokensToLiquidateUSD = ftokensToLiquidateUSD.fDiv(tokenPrices[marketInfo[marketId].token]);
 
-            uint256 tokensToReturn = tokensProvided - tokensToUseForLiquidation;
+            // Calculating USD value of collateral
+            fraction fvTokensCollateralUSD = supplyInfo[marketToLiquidate].numFMul(marketInfo[marketToLiquidate].exchangeRate);
+            fvTokensCollateralUSD = fvTokensCollateralUSD.fDiv(tokenPrices[marketInfo[marketToLiquidate].token]);
 
-            BorrowInfo userBorrowInfo = BorrowInfo(borrowInfo[marketToLiquidate].tokensBorrowed - tokensToLiquidate, marketInfo[marketToLiquidate].index);
+            uint256 tokensToSeize;
+            uint256 tokensToReturn;
+            uint256 tokensFromReserve;
 
-            MarketDelta marketDelta1;
-            MarketDelta marketDelta2;
+            // Calculating how much of collateral tokens to seize
+            fraction fvTokensCollateral = fvTokensCollateralUSD.getMin(ftokensToLiquidateUSD);
+            fraction ftokensToSeize = fvTokensCollateral.fMul(tokenPrices[marketInfo[marketToLiquidate].token]);
+            ftokensToSeize = ftokensToSeize.fDiv(marketInfo[marketToLiquidate].exchangeRate);
+            tokensToSeize = ftokensToSeize.toNum();
+
+            tokensToReturn = tokensProvided - tokensToLiquidate;
             mapping(uint32 => MarketDelta) marketDeltas;
-            marketDelta1.realTokenBalance.delta = tokensToUseForLiquidation;
-            marketDelta1.realTokenBalance.positive = true;
-            
-            marketDelta2.totalBorrowed.delta = tokensToLiquidate;
-            marketDelta2.totalBorrowed.positive = false;
+            MarketDelta collateralMarketDelta;
+            MarketDelta liquidationMarketDelta;
 
-            marketDeltas[marketId] = marketDelta1;
-            marketDeltas[marketToLiquidate] = marketDelta2;
+            liquidationMarketDelta.totalBorrowed.delta = tokensToLiquidate;
+            liquidationMarketDelta.totalBorrowed.positive = false;
+            liquidationMarketDelta.realTokenBalance.delta = tokensToLiquidate;
+            liquidationMarketDelta.realTokenBalance.positive = true;
 
-            emit TokensLiquidated(marketId, marketDelta2, marketToLiquidate, marketDelta1, tonWallet, targetUser, tokensToLiquidate, tokensToSeize);
+            if (fvTokensCollateralUSD.lessThan(ftokensToLiquidateUSD)) {
+                // Using reserves from market to compensate liquidity absence
+                fraction freservesUsageUSD = ftokensToLiquidateUSD.fSub(fvTokensCollateralUSD);
+                freservesUsageUSD = freservesUsageUSD.simplify();
+                fraction freservesUsageTokens = freservesUsageUSD.fMul(tokenPrices[marketInfo[marketToLiquidate].token]);
+                uint256 reservesUsageTokens = freservesUsageTokens.toNum();
+                if (reservesUsageTokens < marketInfo[marketId].totalReserve) {
+                    tokensFromReserve = reservesUsageTokens;
+                    collateralMarketDelta.totalReserve.delta = tokensFromReserve;
+                    collateralMarketDelta.totalReserve.positive = false;
+                } else {
+                    // abort liquidation
+                    IUAMUserAccount(userAccountManager).requestTokenPayout{
+                        flag: MsgFlag.REMAINING_GAS
+                    }(
+                        tonWallet, tip3UserWallet, marketId, tokensProvided
+                    );
+                    tvm.exit();
+                }
+            }
+
+            marketDeltas[marketId] = liquidationMarketDelta;
+            marketDeltas[marketToLiquidate] = collateralMarketDelta;
+
+            emit TokensLiquidated(marketId, marketDeltas, tonWallet, targetUser, tokensToLiquidate, tokensToSeize);
+
+            BorrowInfo userBorrowInfo = BorrowInfo(borrowInfo[marketId].tokensBorrowed - tokensToLiquidate, marketInfo[marketId].index);
 
             TvmBuilder tb;
             TvmBuilder addressStorage;
@@ -132,6 +155,7 @@ contract LiquidationModule is ACModule, ILiquidationModule, IUpgradableContract 
             valueStorage.store(marketToLiquidate);
             valueStorage.store(tokensToSeize);
             valueStorage.store(tokensToReturn);
+            valueStorage.store(tokensFromReserve);
             TvmBuilder borrowInfoStorage;
             borrowInfoStorage.store(userBorrowInfo);
             tb.store(addressStorage.toCell());
@@ -142,15 +166,11 @@ contract LiquidationModule is ACModule, ILiquidationModule, IUpgradableContract 
                 flag: MsgFlag.REMAINING_GAS
             }(marketDeltas, tb.toCell());
         } else {
-            IUAMUserAccount(userAccountManager).abortLiquidation{
+            IUAMUserAccount(userAccountManager).requestTokenPayout{
                 flag: MsgFlag.REMAINING_GAS
             }(
-                tonWallet,
-                targetUser,
-                tip3UserWallet, 
-                marketId, 
-                tokensProvided
-            )
+                tonWallet, tip3UserWallet, marketId, tokensProvided
+            );
         }
     }
 
@@ -162,27 +182,11 @@ contract LiquidationModule is ACModule, ILiquidationModule, IUpgradableContract 
         TvmSlice addressStorage = ts.loadRefAsSlice();
         (address tonWallet, address targetUser, address tip3UserWallet) = addressStorage.decode(address, address, address);
         TvmSlice valueStorage = ts.loadRefAsSlice();
-        (uint32 marketId, uint32 marketToLiquidate, uint256 tokensToSeize, uint256 tokensToReturn) = valueStorage.decode(uint32, uint32, uint256, uint256);
+        (uint32 marketId, uint32 marketToLiquidate, uint256 tokensToSeize, uint256 tokensToReturn, uint256 tokensFromReserve) = valueStorage.decode(uint32, uint32, uint256, uint256, uint256);
         TvmSlice borrowInfoStorage = ts.loadRefAsSlice();
         (BorrowInfo borrowInfo) = borrowInfoStorage.decode(BorrowInfo);
         IUAMUserAccount(userAccountManager).seizeTokens{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, targetUser, tip3UserWallet, marketId, marketToLiquidate, tokensToSeize, tokensToReturn, borrowInfo);
-    }
-
-    modifier onlyOwner() {
-        require(msg.sender == owner);
-        _;
-    }
-
-    modifier onlyUserAccountManager() {
-        require(msg.sender == userAccountManager);
-        _;
-    }
-
-    modifier onlyMarket() {
-        require(msg.sender == marketAddress);
-        tvm.rawReserve(msg.value, 2);
-        _;
+        }(tonWallet, targetUser, tip3UserWallet, marketId, marketToLiquidate, tokensToSeize, tokensToReturn, tokensFromReserve, borrowInfo);
     }
 }
