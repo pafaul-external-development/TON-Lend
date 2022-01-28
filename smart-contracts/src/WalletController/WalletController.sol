@@ -32,7 +32,6 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
     // Root TIP-3 to market address mapping
     mapping (address => address) public wallets;
     mapping (address => bool) public realTokenRoots;
-    mapping (address => bool) public vTokenRoots;
     mapping (address => uint32) public tokensToMarkets;
 
     mapping (uint32 => MarketTokenAddresses) public marketTIP3Info;
@@ -42,19 +41,8 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
     constructor(address _owner) public { 
         tvm.accept();
         owner = _owner;
-     } // Contract will be deployed using platform
+    }
 
-    /*  Upgrade data for version 1 (from 0):
-        bits:
-            address root
-            uint8 platformType
-        refs:
-            1. TvmCell platformCode
-            2. mappingStorage:
-                refs:
-                    1. mapping(address => MarketTokenAddresses) marketAddresses
-                    2. mapping(address => address) wallets
-     */
     /**
      * @param code New contract code
      * @param updateParams Extrenal parameters used during update
@@ -71,35 +59,28 @@ contract WalletController is IWCMInteractions, IWalletControllerMarketManagement
             marketAddress,
             wallets,
             realTokenRoots,
-            vTokenRoots,
             marketTIP3Info,
             updateParams,
             codeVersion
         );
     }
 
-    /*  Upgrade Data for version 0 (from Platform):
-        bits:
-            address root
-            uint8 platformType
-            address gasTo ?
-        refs:
-            1. platformCode
-            2. initialData
-            bits: 
-                1. marketAddress
-     */
     function onCodeUpgrade(
-        address, 
-        address, 
-        mapping(address => address), 
-        mapping(address => bool), 
-        mapping(address => bool), 
-        mapping(uint32 => MarketTokenAddresses), 
-        TvmCell, 
+        address _owner, 
+        address _marketAddress, 
+        mapping(address => address) _wallets, 
+        mapping(address => bool) _realTokenRoots, 
+        mapping(uint32 => MarketTokenAddresses) _marketTIP3Info, 
+        TvmCell _updateParams, 
         uint32 _codeVersion
     ) private {
+        tvm.resetStorage();
         contractCodeVersion = _codeVersion;
+        owner = _owner;
+        marketAddress = _marketAddress;
+        wallets = _wallets;
+        realTokenRoots = _realTokenRoots;
+        marketTIP3Info = _marketTIP3Info;
     }
 
     /*********************************************************************************************************/

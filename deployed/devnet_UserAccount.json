@@ -1,9 +1,9 @@
 {
-	"name": "UserAccount",
-	"address": "0:138cb85062641a6c304bbdb266e124b4e21f43a5626a8c2a48292e7bd60814d3",
-	"keyPair": {
-		"public": "1d0bafcaa5a39a39f7567bcd5ddaa556eaa12a4eecc87ea142bd0a991e9cf749",
-		"secret": "e682829f060325cdb06dedb59636f62f11234c0cbe53511580a388b38b4970bd"
-	},
-	"network": "devnet"
+    "name": "UserAccount",
+    "address": "0:68340243fb1f492165eafa0aff338db888c01a3cdc258dbfa95361c6b3a03dfb",
+    "keyPair": {
+        "public": "1d0bafcaa5a39a39f7567bcd5ddaa556eaa12a4eecc87ea142bd0a991e9cf749",
+        "secret": "e682829f060325cdb06dedb59636f62f11234c0cbe53511580a388b38b4970bd"
+    },
+    "network": "devnet"
 }
