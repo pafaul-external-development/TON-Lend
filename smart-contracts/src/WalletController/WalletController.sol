@@ -11,7 +11,6 @@ import "./libraries/CostConstants.sol";
 import "./libraries/WalletControllerErrorCodes.sol";
 import "./libraries/OperationCodes.sol";
 
-// import "../Market/interfaces/IMarketInterfaces.sol";
 import "../Market/MarketsAggregator.sol";
 
 import "../utils/interfaces/IUpgradableContract.sol";
@@ -33,7 +32,6 @@ contract WalletController is IRoles, IWCMInteractions, IWalletControllerMarketMa
     // Root TIP-3 to market address mapping
     mapping (address => address) public wallets;
     mapping (address => bool) public realTokenRoots;
-    mapping (address => bool) public vTokenRoots;
     mapping (address => uint32) public tokensToMarkets;
 
     mapping (uint32 => MarketTokenAddresses) public marketTIP3Info;
@@ -42,20 +40,9 @@ contract WalletController is IRoles, IWCMInteractions, IWalletControllerMarketMa
     // Functions for deployment and upgrade
     constructor(address _newOwner) public { 
         tvm.accept();
-        _owner = _newOwner;
-     } // Contract will be deployed using platform
+        owner = _owner;
+    }
 
-    /*  Upgrade data for version 1 (from 0):
-        bits:
-            address root
-            uint8 platformType
-        refs:
-            1. TvmCell platformCode
-            2. mappingStorage:
-                refs:
-                    1. mapping(address => MarketTokenAddresses) marketAddresses
-                    2. mapping(address => address) wallets
-     */
     /**
      * @param code New contract code
      * @param updateParams Extrenal parameters used during update
@@ -72,43 +59,28 @@ contract WalletController is IRoles, IWCMInteractions, IWalletControllerMarketMa
             marketAddress,
             wallets,
             realTokenRoots,
-            vTokenRoots,
             marketTIP3Info,
             updateParams,
             codeVersion
         );
     }
 
-    /*  Upgrade Data for version 0 (from Platform):
-        bits:
-            address root
-            uint8 platformType
-            address gasTo ?
-        refs:
-            1. platformCode
-            2. initialData
-            bits: 
-                1. marketAddress
-     */
     function onCodeUpgrade(
-        address owner, 
+        address _owner, 
         address _marketAddress, 
         mapping(address => address) _wallets, 
-        mapping(address => bool) _realTokensRoots, 
-        mapping(address => bool) _vTokenRoots, 
+        mapping(address => bool) _realTokenRoots, 
         mapping(uint32 => MarketTokenAddresses) _marketTIP3Info, 
-        TvmCell, 
+        TvmCell _updateParams, 
         uint32 _codeVersion
     ) private {
-        tvm.accept();
         tvm.resetStorage();
-        _owner = owner;
+        contractCodeVersion = _codeVersion;
+        owner = _owner;
         marketAddress = _marketAddress;
         wallets = _wallets;
-        realTokenRoots = _realTokensRoots;
-        vTokenRoots = _vTokenRoots;
+        realTokenRoots = _realTokenRoots;
         marketTIP3Info = _marketTIP3Info;
-        contractCodeVersion = _codeVersion;
     }
 
     /*********************************************************************************************************/

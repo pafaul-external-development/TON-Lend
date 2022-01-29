@@ -2,22 +2,16 @@ pragma ton-solidity >= 0.47.0;
 
 import './interfaces/IModule.sol';
 
-contract LiquidationModule is IRoles, IModule, IContractStateCache, IContractAddressSG, ILiquidationModule, IUpgradableContract {
+contract LiquidationModule is ACModule, ILiquidationModule, IUpgradableContract {
     using FPO for fraction;
     using UFO for uint256;
 
-    address marketAddress;
-    address userAccountManager;
-    uint32 public contractCodeVersion;
-
-    mapping (uint32 => MarketInfo) marketInfo;
-    mapping (address => fraction) tokenPrices;
-
-    event TokensLiquidated(uint32 marketId, mapping(uint32 => MarketDelta) marketDeltas, address liquidator, address targetUser, uint256 tokensLiquidated, uint256 vTokensSeized);
+    event TokensLiquidated(uint32 marketId, MarketDelta marketDelta1, uint32 marketToLiquidate, MarketDelta marketDelta2, address liquidator, address targetUser, uint256 tokensLiquidated, uint256 vTokensSeized);
 
     constructor(address _newOwner) public {
         tvm.accept();
-        _owner = _newOwner;
+        owner = _owner;
+        actionId = OperationCodes.LIQUIDATE_TOKENS;
     }
 
     function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) external override canUpgrade {
@@ -52,36 +46,6 @@ contract LiquidationModule is IRoles, IModule, IContractStateCache, IContractAdd
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;
         contractCodeVersion = _codeVersion;
-    }
-
-    function sendActionId() external override view responsible returns(uint8) {
-        return {flag: MsgFlag.REMAINING_GAS} OperationCodes.LIQUIDATE_TOKENS;
-    }
-
-    function getModuleState() external override view returns(mapping(uint32 => MarketInfo), mapping(address => fraction)) {
-        return(marketInfo, tokenPrices);
-    }
-
-    function setMarketAddress(address _marketAddress) external override canChangeParams {
-        tvm.rawReserve(msg.value, 2);
-        marketAddress = _marketAddress;
-        address(_owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
-    }
-
-    function setUserAccountManager(address _userAccountManager) external override canChangeParams {
-        tvm.rawReserve(msg.value, 2);
-        userAccountManager = _userAccountManager;
-        address(_owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
-    }
-
-    function getContractAddresses() external override view responsible returns(address _owner, address _marketAddress, address _userAccountManager) {
-        return {flag: MsgFlag.REMAINING_GAS} (_owner, marketAddress, userAccountManager);
-    }
-
-    function updateCache(address tonWallet, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
-        marketInfo = _marketInfo;
-        tokenPrices = _tokenPrices;
-        tonWallet.transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     function performAction(uint32 marketId, TvmCell args, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
@@ -224,22 +188,5 @@ contract LiquidationModule is IRoles, IModule, IContractStateCache, IContractAdd
         IUAMUserAccount(userAccountManager).seizeTokens{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, targetUser, tip3UserWallet, marketId, marketToLiquidate, tokensToSeize, tokensToReturn, tokensFromReserve, borrowInfo);
-    }
-
-    function _createUpdatedIndexes() internal view returns(mapping(uint32 => fraction) updatedIndexes) {
-        for ((uint32 marketId, MarketInfo mi): marketInfo) {
-            updatedIndexes[marketId] = mi.index;
-        }
-    }
-
-    modifier onlyUserAccountManager() {
-        require(msg.sender == userAccountManager);
-        _;
-    }
-
-    modifier onlyMarket() {
-        require(msg.sender == marketAddress);
-        tvm.rawReserve(msg.value, 2);
-        _;
     }
 }

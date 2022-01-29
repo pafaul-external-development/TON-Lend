@@ -30,6 +30,77 @@ interface IContractStateCache {
     function updateCache(address tonWallet, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external;
 }
 
+abstract contract ACModule is IModule, IContractAddressSG, IContractStateCache {
+    address owner;
+    address marketAddress;
+    address userAccountManager;
+    uint32 public contractCodeVersion;
+    uint8 internal actionId;
+
+    mapping (uint32 => MarketInfo) marketInfo;
+    mapping (address => fraction) tokenPrices;
+
+    function sendActionId() external view virtual responsible returns(uint8) {
+        return {flag: MsgFlag.REMAINING_GAS} actionId;
+    }
+
+    function getModuleState() 
+        external 
+        view 
+        virtual 
+        return (
+            mapping (uint32 => MarketInfo) _marketInfo, 
+            mapping (address => fraction) _tokenPrices
+        ) 
+    {
+        return (marketInfo, tokenPrices);
+    }
+
+    function setMarketAddress(address _marketAddress) external override onlyOwner {
+        tvm.rawReserve(msg.value, 2);
+        marketAddress = _marketAddress;
+        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+    }
+
+    function setUserAccountManager(address _userAccountManager) external override onlyOwner {
+        tvm.rawReserve(msg.value, 2);
+        userAccountManager = _userAccountManager;
+        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+    }
+
+    function getContractAddresses() external override view responsible returns(address _owner, address _marketAddress, address _userAccountManager) {
+        return {flag: MsgFlag.REMAINING_GAS} (owner, marketAddress, userAccountManager);
+    }
+
+    function updateCache(address tonWallet, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
+        marketInfo = _marketInfo;
+        tokenPrices = _tokenPrices;
+        tonWallet.transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+    }
+
+    function _createUpdatedIndexes() internal view returns(mapping(uint32 => fraction) updatedIndexes) {
+        for ((uint32 marketId, MarketInfo mi): marketInfo) {
+            updatedIndexes[marketId] = mi.index;
+        }
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner);
+        _;
+    }
+
+    modifier onlyUserAccountManager() {
+        require(msg.sender == userAccountManager);
+        _;
+    }
+
+    modifier onlyMarket() {
+        require(msg.sender == marketAddress);
+        tvm.rawReserve(msg.value, 2);
+        _;
+    }
+}
+
 interface IContractStateCacheRoot {
     function receiveCacheDelta(mapping(uint32 => MarketDelta) marketsDelta, TvmCell args) external;
 }

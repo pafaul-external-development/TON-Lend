@@ -4,22 +4,16 @@ import './interfaces/IModule.sol';
 
 import '../utils/libraries/MsgFlag.sol';
 
-contract WithdrawModule is IRoles, IModule, IContractStateCache, IContractAddressSG, IWithdrawModule, IUpgradableContract {
+contract WithdrawModule is ACModule, IWithdrawModule, IUpgradableContract {
     using UFO for uint256;
     using FPO for fraction;
-
-    address marketAddress;
-    address userAccountManager;
-    uint32 public contractCodeVersion;
-
-    mapping (uint32 => MarketInfo) marketInfo;
-    mapping (address => fraction) tokenPrices;
 
     event TokenWithdraw(uint32 marketId, MarketDelta marketDelta, address tonWallet, uint256 vTokensWithdrawn, uint256 realTokensWithdrawn);
 
     constructor(address _newOwner) public {
         tvm.accept();
-        _owner = _newOwner;
+        owner = _owner;
+        actionId = OperationCodes.WITHDRAW_TOKENS;
     }
 
     function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) external override canUpgrade {
@@ -48,42 +42,13 @@ contract WithdrawModule is IRoles, IModule, IContractStateCache, IContractAddres
     ) private {
         tvm.accept();
         tvm.resetStorage();
-        _owner = owner;
+        actionId = OperationCodes.WITHDRAW_TOKENS;
+        owner = _owner;
         marketAddress = _marketAddress;
         userAccountManager = _userAccountManager;
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;
         contractCodeVersion = _codeVersion;
-    }
-
-    function sendActionId() external override view responsible returns(uint8) {
-        return {flag: MsgFlag.REMAINING_GAS} OperationCodes.WITHDRAW_TOKENS;
-    }
-
-    function getModuleState() external override view returns(mapping(uint32 => MarketInfo), mapping(address => fraction)) {
-        return(marketInfo, tokenPrices);
-    }
-
-    function setMarketAddress(address _marketAddress) external override canChangeParams {
-        tvm.rawReserve(msg.value, 2);
-        marketAddress = _marketAddress;
-        address(_owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
-    }
-
-    function setUserAccountManager(address _userAccountManager) external override canChangeParams {
-        tvm.rawReserve(msg.value, 2);
-        userAccountManager = _userAccountManager;
-        address(_owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
-    }
-
-    function getContractAddresses() external override view responsible returns(address _owner, address _marketAddress, address _userAccountManager) {
-        return {flag: MsgFlag.REMAINING_GAS} (_owner, marketAddress, userAccountManager);
-    }
-
-    function updateCache(address tonWallet, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
-        marketInfo = _marketInfo;
-        tokenPrices = _tokenPrices;
-        tonWallet.transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     function performAction(uint32 marketId, TvmCell args, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
@@ -95,12 +60,6 @@ contract WithdrawModule is IRoles, IModule, IContractStateCache, IContractAddres
         IUAMUserAccount(userAccountManager).requestWithdrawInfo{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, userTip3Wallet, tokensToWithdraw, marketId, updatedIndexes);
-    }
-
-    function _createUpdatedIndexes() internal view returns(mapping(uint32 => fraction) updatedIndexes) {
-        for ((uint32 marketId, MarketInfo mi): marketInfo) {
-            updatedIndexes[marketId] = mi.index;
-        }
     }
 
     function withdrawTokensFromMarket(
@@ -186,6 +145,8 @@ contract WithdrawModule is IRoles, IModule, IContractStateCache, IContractAddres
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, userTip3Wallet, marketId, tokensToWithdraw, tokensToSend);
     }
+<<<<<<< HEAD
+=======
 
     modifier onlyMarket() {
         require(msg.sender == marketAddress);
@@ -197,4 +158,5 @@ contract WithdrawModule is IRoles, IModule, IContractStateCache, IContractAddres
         require(msg.sender == userAccountManager);
         _;
     }
+>>>>>>> e67d432a8271c38b768fc116501f6aef5ab7d2ad
 }
