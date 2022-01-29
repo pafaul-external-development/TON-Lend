@@ -112,7 +112,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         emit AccountCreated(tonWallet, userAccount);
 
         IUserAccountManager(this).updateUserAccount{
-            flag: MsgFlag.REMAINING_GAS - UserAccountCostConstants.useForUADeploy - 0.3 ton
+            value: msg.value - UserAccountCostConstants.useForUADeploy - 0.3 ton
         }(tonWallet);
     }
 

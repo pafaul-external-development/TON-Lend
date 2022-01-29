@@ -9,12 +9,12 @@ async function main() {
     });
 
     let payload = await contracts.userAccountManager.disableUserAccountLock({
-        tonWallet: "0:d4668ff0e7151d274626bb3ac242ccc825212abeac86614f408ab30c8a90b032" // contracts.msigWallet.address
+        tonWallet: "0:b2475c0716d754fba88eb28e12b45e6f636729f96270aebb859730af86182cf4" // contracts.msigWallet.address
     });
 
     await contracts.msigWallet.transfer({
         destination: contracts.userAccountManager.address,
-        value: convertCrystal(1, 'nano'),
+        value: convertCrystal(0.5, 'nano'),
         payload
     });
 }

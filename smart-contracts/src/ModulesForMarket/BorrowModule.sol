@@ -157,7 +157,9 @@ contract BorrowModule is IRoles, IModule, IContractStateCache, IContractAddressS
                 }(tonWallet, userTip3Wallet, 0, marketId, marketInfo[marketId].index);
             }
         } else {
-            address(tonWallet).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+            IUAMUserAccount(userAccountManager).writeBorrowInformation{
+                flag: MsgFlag.REMAINING_GAS
+            }(tonWallet, userTip3Wallet, 0, marketId, marketInfo[marketId].index);
         }
     }
 
