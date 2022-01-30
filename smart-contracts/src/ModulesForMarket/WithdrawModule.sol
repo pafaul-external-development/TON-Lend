@@ -145,18 +145,4 @@ contract WithdrawModule is ACModule, IWithdrawModule, IUpgradableContract {
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, userTip3Wallet, marketId, tokensToWithdraw, tokensToSend);
     }
-<<<<<<< HEAD
-=======
-
-    modifier onlyMarket() {
-        require(msg.sender == marketAddress);
-        tvm.rawReserve(msg.value, 2);
-        _;
-    }
-
-    modifier onlyUserAccountManager() {
-        require(msg.sender == userAccountManager);
-        _;
-    }
->>>>>>> e67d432a8271c38b768fc116501f6aef5ab7d2ad
 }

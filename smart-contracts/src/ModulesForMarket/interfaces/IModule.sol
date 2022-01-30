@@ -48,7 +48,7 @@ abstract contract ACModule is IModule, IContractAddressSG, IContractStateCache {
         external 
         view 
         virtual 
-        return (
+        returns (
             mapping (uint32 => MarketInfo) _marketInfo, 
             mapping (address => fraction) _tokenPrices
         ) 

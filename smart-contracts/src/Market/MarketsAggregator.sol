@@ -36,20 +36,15 @@ contract MarketAggregator is IRoles, IUpgradableContract, IMarketOracle, IMarket
     /*********************************************************************************************************/
     // Base functions - for deploying and upgrading contract
     // We are using Platform so constructor is not available
-<<<<<<< HEAD
     /**
      * @notice Create contract and set it's owner
-     * @param _owner Address of owner
+     * @param _newOwner Address of owner
      */
-    constructor(address _owner) public {
-=======
     constructor(address _newOwner) public {
->>>>>>> e67d432a8271c38b768fc116501f6aef5ab7d2ad
         tvm.accept();
         _owner = _newOwner;
     }
 
-<<<<<<< HEAD
     /**
      * @notice Upgrade contract code
      * @param code New code of contract
@@ -57,9 +52,6 @@ contract MarketAggregator is IRoles, IUpgradableContract, IMarketOracle, IMarket
      * @param codeVersion New version of contract
      */
     function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) override external onlyOwner {
-=======
-    function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) override external canUpgrade {
->>>>>>> e67d432a8271c38b768fc116501f6aef5ab7d2ad
         tvm.accept();
 
         tvm.setcode(code);
@@ -403,16 +395,12 @@ contract MarketAggregator is IRoles, IUpgradableContract, IMarketOracle, IMarket
     /*********************************************************************************************************/
     // Operations with modules
 
-<<<<<<< HEAD
     /**
      * @notice Add module to system
      * @param operationId Id of module operation
      * @param module Address of module
      */
     function addModule(uint8 operationId, address module) external onlyOwner {
-=======
-    function addModule(uint8 operationId, address module) external canChangeParams {
->>>>>>> e67d432a8271c38b768fc116501f6aef5ab7d2ad
         tvm.rawReserve(msg.value, 2);
         modules[operationId] = module;
         isModule[module] = true;
@@ -422,15 +410,11 @@ contract MarketAggregator is IRoles, IUpgradableContract, IMarketOracle, IMarket
         }(_owner, markets, tokenPrices);
     }
 
-<<<<<<< HEAD
     /**
      * @notice THIS OPERATION REMOVES MODULE. OPERATION WILL NOT BE AVAILABLE
      * @param operationId Operation id of module
      */
     function removeModule(uint8 operationId) external onlyOwner {
-=======
-    function removeModule(uint8 operationId) external canChangeParams {
->>>>>>> e67d432a8271c38b768fc116501f6aef5ab7d2ad
         tvm.rawReserve(msg.value, 2);
         delete isModule[modules[operationId]];
         delete modules[operationId];
@@ -480,7 +464,6 @@ contract MarketAggregator is IRoles, IUpgradableContract, IMarketOracle, IMarket
         }
     }
 
-<<<<<<< HEAD
     /**
      * @notice Calculate user account health
      * @param tonWallet Address of owner's wallet
@@ -490,15 +473,6 @@ contract MarketAggregator is IRoles, IUpgradableContract, IMarketOracle, IMarket
      * @param dataToTransfer Data that is transferred from user account
      */
     function calculateUserAccountHealth(address tonWallet, address gasTo, mapping(uint32 => uint256) supplyInfo, mapping(uint32 => BorrowInfo) borrowInfo, TvmCell dataToTransfer) external override onlyUserAccountManager {
-=======
-    function calculateUserAccountHealth(
-        address tonWallet, 
-        address gasTo, 
-        mapping(uint32 => uint256) supplyInfo, 
-        mapping(uint32 => BorrowInfo) borrowInfo, 
-        TvmCell dataToTransfer
-    ) external override onlyUserAccountManager {
->>>>>>> e67d432a8271c38b768fc116501f6aef5ab7d2ad
         tvm.rawReserve(msg.value, 2);
 
         _updateAllMarkets();
@@ -521,7 +495,6 @@ contract MarketAggregator is IRoles, IUpgradableContract, IMarketOracle, IMarket
         }
     }
 
-<<<<<<< HEAD
     /**
      * @notice calculate borrow info
      * @param borrowInfo Borrow information of user
@@ -545,8 +518,6 @@ contract MarketAggregator is IRoles, IUpgradableContract, IMarketOracle, IMarket
      * @param marketId Id of market that is performing oeration
      * @param args Arguments of operation
      */
-=======
->>>>>>> e67d432a8271c38b768fc116501f6aef5ab7d2ad
     function _createOperationUpdatePayload(uint8 operationId, uint32 marketId, TvmCell args) internal pure returns (TvmCell payload) {
         TvmBuilder tb;
         tb.store(operationId);

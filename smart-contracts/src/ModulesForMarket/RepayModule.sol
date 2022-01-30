@@ -4,34 +4,16 @@ import './interfaces/IModule.sol';
 
 import '../utils/libraries/MsgFlag.sol';
 
-<<<<<<< HEAD
 contract RepayModule is ACModule, IRepayModule, IUpgradableContract {
     using UFO for uint256;
     using FPO for fraction;
 
-=======
-contract RepayModule is IRoles, IModule, IContractStateCache, IContractAddressSG, IRepayModule, IUpgradableContract {
-    using UFO for uint256;
-    using FPO for fraction;
-
-    address marketAddress;
-    address userAccountManager;
-    uint32 public contractCodeVersion;
-
-    mapping (uint32 => MarketInfo) marketInfo;
-    mapping (address => fraction) tokenPrices;
-
->>>>>>> e67d432a8271c38b768fc116501f6aef5ab7d2ad
     event RepayBorrow(uint32 marketId, MarketDelta marketDelta, address tonWallet, uint256 tokenDelta);
 
     constructor(address _newOwner) public {
         tvm.accept();
-<<<<<<< HEAD
         owner = _owner;
         actionId = OperationCodes.REPAY_TOKENS;
-=======
-        _owner = _newOwner;
->>>>>>> e67d432a8271c38b768fc116501f6aef5ab7d2ad
     }
 
     function upgradeContractCode(TvmCell code, TvmCell updateParams, uint32 codeVersion) external override canUpgrade {

@@ -39,15 +39,9 @@ interface IUserAccountData {
     function requestWithdrawInfo(address userTip3Wallet, uint32 marketId, uint256 tokensToWithdraw, mapping(uint32 => fraction) updatedIndexes) external;
 
     function requestLiquidationInformation(address tonWallet, address tip3UserWallet, uint32 marketId, uint32 marketToLiquidate, uint256 tokensProvided, mapping(uint32 => fraction) updatedIndexes) external;
-<<<<<<< HEAD
-    function liquidateVTokens(address tonWallet, address tip3UserWallet, uint32 marketId, uint32 marketToLiquidate, uint256 tokensToSeize, uint256 tokensToReturn, BorrowInfo borrowInfo) external;
-    function grantVTokens(address targetUser, address tip3UserWallet, uint32 marketId, uint256 tokensToSeize, uint256 tokensToReturn) external;
-    function abortLiquidation(address tonWallet, address tip3UserWallet, uint32 marketId, uint256 tokensToReturn) external;
-=======
     function liquidateVTokens(address tonWallet, address tip3UserWallet, uint32 marketId, uint32 marketToLiquidate, uint256 tokensToSeize, uint256 tokensToReturn, uint256 tokensFromReserve, BorrowInfo borrowInfo) external;
     function grantVTokens(address tip3UserWallet, uint32 marketId, uint32 marketToLiquidate, uint256 tokensToSeize, uint256 tokensToReturn, uint256 tokensFromReserve) external;
     function abortLiquidation(address tonWallet, address tip3UserWallet, uint32 marketId, uint256 tokensProvided) external;
->>>>>>> e67d432a8271c38b768fc116501f6aef5ab7d2ad
 
     function checkUserAccountHealth(address gasTo) external;
     function updateUserAccountHealth(address gasTo, fraction _accountHealth, mapping(uint32 => fraction) updatedIndexes, TvmCell dataToTransfer) external;

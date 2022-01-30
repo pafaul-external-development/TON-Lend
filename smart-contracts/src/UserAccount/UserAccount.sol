@@ -329,14 +329,6 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
         }
     }
 
-    function abortLiquidation(address tonWallet, address tip3UserWallet, uint32 marketId, uint256 tokensProvided) external override onlyUserAccountManager {
-        if (tokensProvided != 0) { 
-            _checkUserAccountHealth(owner, _createTokenPayoutPayload(tonWallet, tip3UserWallet, marketId, tokensProvided));
-        } else {
-            _checkUserAccountHealth(owner, _createNoOpPayload());
-        }
-    }
-
     function abortLiquidation(address tonWallet, address tip3UserWallet, uint32 marketId, uint256 tokensToReturn) external override onlyUserAccountManager {
         if (tokensToReturn != 0) { 
             _checkUserAccountHealth(owner, _createTokenPayoutPayload(tonWallet, tip3UserWallet, marketId, tokensToReturn));
