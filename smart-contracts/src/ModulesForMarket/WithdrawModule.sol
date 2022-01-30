@@ -12,7 +12,7 @@ contract WithdrawModule is ACModule, IWithdrawModule, IUpgradableContract {
 
     constructor(address _newOwner) public {
         tvm.accept();
-        owner = _owner;
+        _owner = _newOwner;
         actionId = OperationCodes.WITHDRAW_TOKENS;
     }
 
@@ -43,7 +43,7 @@ contract WithdrawModule is ACModule, IWithdrawModule, IUpgradableContract {
         tvm.accept();
         tvm.resetStorage();
         actionId = OperationCodes.WITHDRAW_TOKENS;
-        owner = _owner;
+        _owner = owner;
         marketAddress = _marketAddress;
         userAccountManager = _userAccountManager;
         marketInfo = _marketInfo;
@@ -51,15 +51,25 @@ contract WithdrawModule is ACModule, IWithdrawModule, IUpgradableContract {
         contractCodeVersion = _codeVersion;
     }
 
+    function unlock(address, TvmCell) external override onlyOwner {}
+
+    // Locking module in order to prevent attacks or mistakes that causes market to raise underflow error
     function performAction(uint32 marketId, TvmCell args, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
         TvmSlice ts = args.toSlice();
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;
         (address tonWallet, address userTip3Wallet, uint256 tokensToWithdraw) = ts.decode(address, address, uint256);
-        mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
-        IUAMUserAccount(userAccountManager).requestWithdrawInfo{
-            flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, userTip3Wallet, tokensToWithdraw, marketId, updatedIndexes);
+        if (!_isLocked()) {
+            _generalLock(true);
+            mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
+            IUAMUserAccount(userAccountManager).requestWithdrawInfo{
+                flag: MsgFlag.REMAINING_GAS
+            }(tonWallet, userTip3Wallet, tokensToWithdraw, marketId, updatedIndexes);
+        } else {
+            IUAMUserAccount(userAccountManager).requestUserAccountHealthCalculation{
+                flag: MsgFlag.REMAINING_GAS
+            }(tonWallet);
+        }
     }
 
     function withdrawTokensFromMarket(
@@ -94,17 +104,22 @@ contract WithdrawModule is ACModule, IWithdrawModule, IUpgradableContract {
             (accountHealth.nom > accountHealth.denom) &&
             (supplyInfo[marketId] >= tokensToWithdraw)
         ) {
+            uint256 tokensToSend = fTokensToSend.toNum();
             if (
                 accountHealth.nom - accountHealth.denom >= fTokensToSendUSD.toNum() &&
-                fTokensToSend.toNum() <= mi.realTokenBalance - mi.totalReserve
+                tokensToSend <= mi.realTokenBalance
             ) {
-                // TODO: add parameter totalCash = realTokenBalance - totalReserves
-                uint256 tokensToSend = fTokensToSend.toNum();
-
-                marketDelta.realTokenBalance.delta = tokensToSend;
-                marketDelta.realTokenBalance.positive = false;
                 marketDelta.vTokenBalance.delta = tokensToWithdraw;
                 marketDelta.vTokenBalance.positive = false;
+                if (tokensToSend < mi.totalCash) {
+                    marketDelta.realTokenBalance.delta = tokensToSend;
+                    marketDelta.realTokenBalance.positive = false;
+                } else {
+                    marketDelta.realTokenBalance.delta = tokensToSend;
+                    marketDelta.realTokenBalance.positive = false;
+                    marketDelta.totalReserve.delta = tokensToSend - mi.totalCash;
+                    marketDelta.totalReserve.positive = false;
+                }
 
                 marketsDelta[marketId] = marketDelta;
 
@@ -136,8 +151,7 @@ contract WithdrawModule is ACModule, IWithdrawModule, IUpgradableContract {
 
     function resumeOperation(TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
         tvm.rawReserve(msg.value, 2);
-        marketInfo = _marketInfo;
-        tokenPrices = _tokenPrices;
+        _generalLock(false);
         TvmSlice ts = args.toSlice();
         (uint32 marketId, address tonWallet, address userTip3Wallet) = ts.decode(uint32, address, address);
         TvmSlice values = ts.loadRefAsSlice();

@@ -1,6 +1,6 @@
 pragma ton-solidity >= 0.47.0;
 
-import { ACLockable } from './ILockable.sol';
+import { ILockable, ACLockable } from './ILockable.sol';
 
 import '../../Market/MarketInfo.sol';
 import '../../Market/libraries/MarketOperations.sol';
@@ -32,7 +32,7 @@ interface IContractStateCache {
     function updateCache(address tonWallet, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external;
 }
 
-abstract contract ACModule is ACLockable, IModule, IContractAddressSG, IContractStateCache {
+abstract contract ACModule is ACLockable, IModule, IContractAddressSG, IContractStateCache, IRoles {
     address marketAddress;
     address userAccountManager;
     uint32 public contractCodeVersion;
@@ -41,14 +41,14 @@ abstract contract ACModule is ACLockable, IModule, IContractAddressSG, IContract
     mapping (uint32 => MarketInfo) marketInfo;
     mapping (address => fraction) tokenPrices;
 
-    function sendActionId() external view virtual responsible returns(uint8) {
+    function sendActionId() external view override responsible returns(uint8) {
         return {flag: MsgFlag.REMAINING_GAS} actionId;
     }
 
     function getModuleState() 
         external 
         view 
-        virtual 
+        override 
         returns (
             mapping (uint32 => MarketInfo) _marketInfo, 
             mapping (address => fraction) _tokenPrices
@@ -60,17 +60,17 @@ abstract contract ACModule is ACLockable, IModule, IContractAddressSG, IContract
     function setMarketAddress(address _marketAddress) external override onlyOwner {
         tvm.rawReserve(msg.value, 2);
         marketAddress = _marketAddress;
-        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        address(_owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     function setUserAccountManager(address _userAccountManager) external override onlyOwner {
         tvm.rawReserve(msg.value, 2);
         userAccountManager = _userAccountManager;
-        address(owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+        address(_owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
     function getContractAddresses() external override view responsible returns(address _owner, address _marketAddress, address _userAccountManager) {
-        return {flag: MsgFlag.REMAINING_GAS} (owner, marketAddress, userAccountManager);
+        return {flag: MsgFlag.REMAINING_GAS} (_owner, marketAddress, userAccountManager);
     }
 
     function updateCache(address tonWallet, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
@@ -84,8 +84,6 @@ abstract contract ACModule is ACLockable, IModule, IContractAddressSG, IContract
             updatedIndexes[marketId] = mi.index;
         }
     }
-
-    function unlock(address, TvmCell) external virtual onlyUserAccountManager {}
 
     function ownerGeneralUnlock(bool _locked) external onlyOwner {
         tvm.rawReserve(msg.value, 2);
@@ -103,11 +101,6 @@ abstract contract ACModule is ACLockable, IModule, IContractAddressSG, IContract
             value: 0,
             flag: MsgFlag.REMAINING_GAS
         });
-    }
-
-    modifier onlyOwner() {
-        require(msg.sender == _owner);
-        _;
     }
 
     modifier onlyUserAccountManager() {

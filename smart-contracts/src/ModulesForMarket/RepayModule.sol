@@ -12,7 +12,7 @@ contract RepayModule is ACModule, IRepayModule, IUpgradableContract {
 
     constructor(address _newOwner) public {
         tvm.accept();
-        owner = _owner;
+        _owner = _newOwner;
         actionId = OperationCodes.REPAY_TOKENS;
     }
 
@@ -43,7 +43,7 @@ contract RepayModule is ACModule, IRepayModule, IUpgradableContract {
         tvm.accept();
         tvm.resetStorage();
         actionId = OperationCodes.REPAY_TOKENS;
-        owner = _owner;
+        _owner = owner;
         marketAddress = _marketAddress;
         userAccountManager = _userAccountManager;
         marketInfo = _marketInfo;
@@ -51,6 +51,10 @@ contract RepayModule is ACModule, IRepayModule, IUpgradableContract {
         contractCodeVersion = _codeVersion;
     }
 
+    function unlock(address, TvmCell) external override onlyOwner {}
+
+    // Ok without locking, as no tokens are leaving contract, can only deposit
+    // Coefficients will be rebalanced in MarketsAggregator
     function performAction(uint32 marketId, TvmCell args, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
         tvm.rawReserve(msg.value, 2);
         marketInfo = _marketInfo;
@@ -71,7 +75,7 @@ contract RepayModule is ACModule, IRepayModule, IUpgradableContract {
         uint32 marketId,
         BorrowInfo borrowInfo
     ) external override onlyUserAccountManager {
-        tvm.rawReserve(msg.value, 0);
+        tvm.rawReserve(msg.value, 2);
         mapping(uint32 => MarketDelta) marketsDelta;
         MarketDelta marketDelta;
 
@@ -120,8 +124,6 @@ contract RepayModule is ACModule, IRepayModule, IUpgradableContract {
 
     function resumeOperation(TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
         tvm.rawReserve(msg.value, 2);
-        marketInfo = _marketInfo;
-        tokenPrices = _tokenPrices;
         TvmSlice ts = args.toSlice();
         (uint32 marketId, address tonWallet, address userTip3Wallet, uint256 tokensToReturn) = ts.decode(uint32, address, address, uint256);
         TvmSlice borrowInfoStorage = ts.loadRefAsSlice();

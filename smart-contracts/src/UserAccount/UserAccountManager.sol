@@ -350,14 +350,13 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         uint32 marketId,
         uint32 marketToLiquidate,
         uint256 tokensToSeize, 
-        uint256 tokensToReturn, 
-        uint256 tokensFromReserve,
+        uint256 tokensToReturn,
         BorrowInfo borrowInfo
     ) external override view onlyModule(OperationCodes.LIQUIDATE_TOKENS) {
         address userAccount = _calculateUserAccountAddress(targetUser);
         IUserAccountData(userAccount).liquidateVTokens{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, tip3UserWallet, marketId, marketToLiquidate, tokensToSeize, tokensToReturn, tokensFromReserve, borrowInfo);
+        }(tonWallet, tip3UserWallet, marketId, marketToLiquidate, tokensToSeize, tokensToReturn, borrowInfo);
     }
 
     function grantVTokens(
@@ -367,8 +366,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         uint32 marketId, 
         uint32 marketToLiquidate,
         uint256 vTokensToGrant, 
-        uint256 tokensToReturn,
-        uint256 tokensFromReserve
+        uint256 tokensToReturn
     ) external override view onlyValidUserAccountNoReserve(targetUser) {
         tvm.rawReserve(msg.value - UserAccountCostConstants.updateHealthCost, 2);
         
@@ -380,7 +378,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).grantVTokens{
             flag: MsgFlag.REMAINING_GAS
-        }(tip3UserWallet, marketId, marketToLiquidate, vTokensToGrant, tokensToReturn, tokensFromReserve);
+        }(targetUser, tip3UserWallet, marketId, marketToLiquidate, vTokensToGrant, tokensToReturn);
     }
 
     function abortLiquidation(
@@ -399,37 +397,26 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
     function returnAndSupply(
         address tonWallet,
         address tip3UserWallet,
+        address userToUnlock,
         uint32 marketId,
-        uint32 marketToLiquidate,
-        uint256 tokensToReturn,
-        uint256 tokensFromReserve
+        uint256 tokensToReturn
     ) external override view onlyValidUserAccountNoReserve(tonWallet) {
         if (tokensToReturn != 0) {
             uint128 tonsToUse = msg.value / 4;
             tvm.rawReserve(tonsToUse, 2);
 
-            TvmBuilder tb;
-            tb.store(tonWallet);
-            tb.store(tokensFromReserve);
-
-            IMarketOperations(marketAddress).performOperationUserAccountManager{
-                value: msg.value - tonsToUse
-            }(OperationCodes.SUPPLY_TOKENS, marketToLiquidate, tb.toCell());
-
             IMarketOperations(marketAddress).requestTokenPayout{
-                flag: MsgFlag.REMAINING_GAS
+                value: tonsToUse * 3
             }(tonWallet, tip3UserWallet, marketId, tokensToReturn);
         } else {
             tvm.rawReserve(msg.value, 2);
-
-            TvmBuilder tb;
-            tb.store(tonWallet);
-            tb.store(tokensFromReserve);
-
-            IMarketOperations(marketAddress).performOperationUserAccountManager{
-                flag: MsgFlag.REMAINING_GAS
-            }(OperationCodes.SUPPLY_TOKENS, marketToLiquidate, tb.toCell());
         }
+
+        TvmBuilder tb;
+        tb.store(tonWallet);
+        ILockable(modules[OperationCodes.LIQUIDATE_TOKENS]).unlock{
+            flag: MsgFlag.REMAINING_GAS
+        }(userToUnlock, tb.toCell());
     }
 
     /*********************************************************************************************************/

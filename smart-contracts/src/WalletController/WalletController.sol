@@ -40,7 +40,7 @@ contract WalletController is IRoles, IWCMInteractions, IWalletControllerMarketMa
     // Functions for deployment and upgrade
     constructor(address _newOwner) public { 
         tvm.accept();
-        owner = _owner;
+        _owner = _newOwner;
     }
 
     /**
@@ -66,7 +66,7 @@ contract WalletController is IRoles, IWCMInteractions, IWalletControllerMarketMa
     }
 
     function onCodeUpgrade(
-        address _owner, 
+        address owner, 
         address _marketAddress, 
         mapping(address => address) _wallets, 
         mapping(address => bool) _realTokenRoots, 
@@ -76,7 +76,7 @@ contract WalletController is IRoles, IWCMInteractions, IWalletControllerMarketMa
     ) private {
         tvm.resetStorage();
         contractCodeVersion = _codeVersion;
-        owner = _owner;
+        _owner = owner;
         marketAddress = _marketAddress;
         wallets = _wallets;
         realTokenRoots = _realTokenRoots;

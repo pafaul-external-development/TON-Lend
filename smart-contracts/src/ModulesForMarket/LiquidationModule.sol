@@ -10,7 +10,7 @@ contract LiquidationModule is ACModule, ILiquidationModule, IUpgradableContract 
 
     constructor(address _newOwner) public {
         tvm.accept();
-        owner = _owner;
+        _owner = _newOwner;
         actionId = OperationCodes.LIQUIDATE_TOKENS;
     }
 
@@ -48,22 +48,28 @@ contract LiquidationModule is ACModule, ILiquidationModule, IUpgradableContract 
         contractCodeVersion = _codeVersion;
     }
 
+    // Locking module for USER instead of global lock so no one can mess with double spending from target userAccount
+    // It must be unlocked using callback after operation is finished (tokens are seized and transferred to liquidator)
     function performAction(uint32 marketId, TvmCell args, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
         tvm.rawReserve(msg.value, 2);
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;
         TvmSlice ts = args.toSlice();
         (address tonWallet, address targetUser, address tip3UserWallet) = ts.decode(address, address, address);
+        TvmSlice amountTS = ts.loadRefAsSlice();
+        (uint32 marketToLiquidate, uint256 tokenAmount) = amountTS.decode(uint32, uint256);
         if (!_isUserLocked(targetUser)) {
             _lockUser(targetUser, true);
-            TvmSlice amountTS = ts.loadRefAsSlice();
-            (uint32 marketToLiquidate, uint256 tokenAmount) = amountTS.decode(uint32, uint256);
             mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
             IUAMUserAccount(userAccountManager).requestLiquidationInformation{
                 flag: MsgFlag.REMAINING_GAS
             }(tonWallet, targetUser, tip3UserWallet, marketId, marketToLiquidate, tokenAmount, updatedIndexes);
         } else {
-            // TODO: request token payout
+            IUAMUserAccount(userAccountManager).requestTokenPayout{
+                flag: MsgFlag.REMAINING_GAS
+            }(
+                tonWallet, tip3UserWallet, marketId, tokenAmount
+            );
         }
     }
 
@@ -87,8 +93,12 @@ contract LiquidationModule is ACModule, ILiquidationModule, IUpgradableContract 
         // - User will not exceed tokens that are available for liquidation (borrowLimit)
         // - User will not exceed vToken balance of user that is liquidated (vTokenLimit)
 
-        // TODO: change operation:
-        // 1. Do not use reserves
+        // New Liquidation:
+        // Instead of using reserves -> use only user's cash to pay for liquidation
+        // Explanation:
+        // In previous version it was more profitable for liquidators to wait until user's debt become too high
+        // To get tokens that are stored in reserves
+        // Now they need to liquidate user as soon as possible in other scenario they will not get anything
 
         fraction health = Utilities.calculateSupplyBorrow(supplyInfo, borrowInfo, marketInfo, tokenPrices);
         if (health.nom <= health.denom) {
@@ -107,13 +117,13 @@ contract LiquidationModule is ACModule, ILiquidationModule, IUpgradableContract 
 
             uint256 tokensToSeize;
             uint256 tokensToReturn;
-            uint256 tokensFromReserve;
 
             // Calculating how much of collateral tokens to seize
             fraction fvTokensCollateral = fvTokensCollateralUSD.getMin(ftokensToLiquidateUSD);
             fraction ftokensToSeize = fvTokensCollateral.fMul(tokenPrices[marketInfo[marketToLiquidate].token]);
             ftokensToSeize = ftokensToSeize.fDiv(marketInfo[marketToLiquidate].exchangeRate);
             tokensToSeize = ftokensToSeize.toNum();
+            tokensToSeize = math.min(tokensToSeize, supplyInfo[marketToLiquidate]);
 
             tokensToReturn = tokensProvided - tokensToLiquidate;
             mapping(uint32 => MarketDelta) marketDeltas;
@@ -125,31 +135,10 @@ contract LiquidationModule is ACModule, ILiquidationModule, IUpgradableContract 
             liquidationMarketDelta.realTokenBalance.delta = tokensToLiquidate;
             liquidationMarketDelta.realTokenBalance.positive = true;
 
-            if (fvTokensCollateralUSD.lessThan(ftokensToLiquidateUSD)) {
-                // Using reserves from market to compensate liquidity absence
-                fraction freservesUsageUSD = ftokensToLiquidateUSD.fSub(fvTokensCollateralUSD);
-                freservesUsageUSD = freservesUsageUSD.simplify();
-                fraction freservesUsageTokens = freservesUsageUSD.fMul(tokenPrices[marketInfo[marketToLiquidate].token]);
-                uint256 reservesUsageTokens = freservesUsageTokens.toNum();
-                if (reservesUsageTokens < marketInfo[marketId].totalReserve) {
-                    tokensFromReserve = reservesUsageTokens;
-                    collateralMarketDelta.totalReserve.delta = tokensFromReserve;
-                    collateralMarketDelta.totalReserve.positive = false;
-                } else {
-                    // abort liquidation
-                    IUAMUserAccount(userAccountManager).requestTokenPayout{
-                        flag: MsgFlag.REMAINING_GAS
-                    }(
-                        tonWallet, tip3UserWallet, marketId, tokensProvided
-                    );
-                    tvm.exit();
-                }
-            }
-
             marketDeltas[marketId] = liquidationMarketDelta;
             marketDeltas[marketToLiquidate] = collateralMarketDelta;
 
-            emit TokensLiquidated(marketId, marketDeltas, tonWallet, targetUser, tokensToLiquidate, tokensToSeize);
+            emit TokensLiquidated(marketId, liquidationMarketDelta, marketToLiquidate, collateralMarketDelta, tonWallet, targetUser, tokensToLiquidate, tokensToSeize);
 
             BorrowInfo userBorrowInfo = BorrowInfo(borrowInfo[marketId].tokensBorrowed - tokensToLiquidate, marketInfo[marketId].index);
 
@@ -163,7 +152,6 @@ contract LiquidationModule is ACModule, ILiquidationModule, IUpgradableContract 
             valueStorage.store(marketToLiquidate);
             valueStorage.store(tokensToSeize);
             valueStorage.store(tokensToReturn);
-            valueStorage.store(tokensFromReserve);
             TvmBuilder borrowInfoStorage;
             borrowInfoStorage.store(userBorrowInfo);
             tb.store(addressStorage.toCell());
@@ -184,19 +172,24 @@ contract LiquidationModule is ACModule, ILiquidationModule, IUpgradableContract 
 
     function resumeOperation(TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
         tvm.rawReserve(msg.value, 2);
-        marketInfo = _marketInfo;
-        tokenPrices = _tokenPrices;
         TvmSlice ts = args.toSlice();
         TvmSlice addressStorage = ts.loadRefAsSlice();
         (address tonWallet, address targetUser, address tip3UserWallet) = addressStorage.decode(address, address, address);
         TvmSlice valueStorage = ts.loadRefAsSlice();
-        (uint32 marketId, uint32 marketToLiquidate, uint256 tokensToSeize, uint256 tokensToReturn, uint256 tokensFromReserve) = valueStorage.decode(uint32, uint32, uint256, uint256, uint256);
+        (uint32 marketId, uint32 marketToLiquidate, uint256 tokensToSeize, uint256 tokensToReturn) = valueStorage.decode(uint32, uint32, uint256, uint256);
         TvmSlice borrowInfoStorage = ts.loadRefAsSlice();
         (BorrowInfo borrowInfo) = borrowInfoStorage.decode(BorrowInfo);
         IUAMUserAccount(userAccountManager).seizeTokens{
             flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, targetUser, tip3UserWallet, marketId, marketToLiquidate, tokensToSeize, tokensToReturn, tokensFromReserve, borrowInfo);
+        }(tonWallet, targetUser, tip3UserWallet, marketId, marketToLiquidate, tokensToSeize, tokensToReturn, borrowInfo);
     }
 
+    function unlock(address addressToUnlock, TvmCell args) external override onlyUserAccountManager {
+        tvm.rawReserve(msg.value, 2);
+        _lockUser(addressToUnlock, false);
+        TvmSlice ts = args.toSlice();
+        (address returnTonTo) = ts.decode(address);
+        address(returnTonTo).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+    }
     // TODO: add callback for unlocking user after performing operation
 }

@@ -16,6 +16,10 @@ abstract contract ACLockable is ILockable {
         _lock = _locked;
     }
 
+    function _isLocked() internal returns (bool) {
+        return _lock;
+    }
+
     function _isUserLocked(address _user) internal returns (bool) {
         return _userLocks[_user];
     }

@@ -12,7 +12,7 @@ contract SupplyModule is ACModule, IUpgradableContract {
 
     constructor(address _newOwner) public {
         tvm.accept();
-        owner = _owner;
+        _owner = _newOwner;
         actionId = OperationCodes.SUPPLY_TOKENS;
     }
 
@@ -43,7 +43,7 @@ contract SupplyModule is ACModule, IUpgradableContract {
         tvm.accept();
         tvm.resetStorage();
         actionId = OperationCodes.SUPPLY_TOKENS;
-        owner = _owner;
+        _owner = owner;
         marketAddress = _marketAddress;
         userAccountManager = _userAccountManager;
         marketInfo = _marketInfo;
@@ -51,6 +51,9 @@ contract SupplyModule is ACModule, IUpgradableContract {
         contractCodeVersion = _codeVersion;
     }
 
+    function unlock(address, TvmCell) external override onlyOwner {}
+
+    // Do not locking module, because exchange rate will be rebalanced automatically
     function performAction(uint32 marketId, TvmCell args, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
         tvm.rawReserve(msg.value, 2);
         marketInfo = _marketInfo;
@@ -84,8 +87,6 @@ contract SupplyModule is ACModule, IUpgradableContract {
 
     function resumeOperation(TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
         tvm.rawReserve(msg.value, 2);
-        marketInfo = _marketInfo;
-        tokenPrices = _tokenPrices;
 
         TvmSlice ts = args.toSlice();
         (uint32 marketId, address tonWallet, uint256 vTokensToProvide) = ts.decode(uint32, address, uint256);
