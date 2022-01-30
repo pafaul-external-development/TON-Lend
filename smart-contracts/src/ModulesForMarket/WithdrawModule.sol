@@ -98,6 +98,7 @@ contract WithdrawModule is ACModule, IWithdrawModule, IUpgradableContract {
                 accountHealth.nom - accountHealth.denom >= fTokensToSendUSD.toNum() &&
                 fTokensToSend.toNum() <= mi.realTokenBalance - mi.totalReserve
             ) {
+                // TODO: add parameter totalCash = realTokenBalance - totalReserves
                 uint256 tokensToSend = fTokensToSend.toNum();
 
                 marketDelta.realTokenBalance.delta = tokensToSend;

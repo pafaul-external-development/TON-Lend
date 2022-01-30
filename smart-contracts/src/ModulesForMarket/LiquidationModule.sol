@@ -54,12 +54,17 @@ contract LiquidationModule is ACModule, ILiquidationModule, IUpgradableContract 
         tokenPrices = _tokenPrices;
         TvmSlice ts = args.toSlice();
         (address tonWallet, address targetUser, address tip3UserWallet) = ts.decode(address, address, address);
-        TvmSlice amountTS = ts.loadRefAsSlice();
-        (uint32 marketToLiquidate, uint256 tokenAmount) = amountTS.decode(uint32, uint256);
-        mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
-        IUAMUserAccount(userAccountManager).requestLiquidationInformation{
-            flag: MsgFlag.REMAINING_GAS
-        }(tonWallet, targetUser, tip3UserWallet, marketId, marketToLiquidate, tokenAmount, updatedIndexes);
+        if (!_isUserLocked(targetUser)) {
+            _lockUser(targetUser, true);
+            TvmSlice amountTS = ts.loadRefAsSlice();
+            (uint32 marketToLiquidate, uint256 tokenAmount) = amountTS.decode(uint32, uint256);
+            mapping(uint32 => fraction) updatedIndexes = _createUpdatedIndexes();
+            IUAMUserAccount(userAccountManager).requestLiquidationInformation{
+                flag: MsgFlag.REMAINING_GAS
+            }(tonWallet, targetUser, tip3UserWallet, marketId, marketToLiquidate, tokenAmount, updatedIndexes);
+        } else {
+            // TODO: request token payout
+        }
     }
 
     function liquidate(
@@ -81,6 +86,9 @@ contract LiquidationModule is ACModule, ILiquidationModule, IUpgradableContract 
         // - User will not exceed tokens that he provided for liquidation (providingLimit)
         // - User will not exceed tokens that are available for liquidation (borrowLimit)
         // - User will not exceed vToken balance of user that is liquidated (vTokenLimit)
+
+        // TODO: change operation:
+        // 1. Do not use reserves
 
         fraction health = Utilities.calculateSupplyBorrow(supplyInfo, borrowInfo, marketInfo, tokenPrices);
         if (health.nom <= health.denom) {
@@ -189,4 +197,6 @@ contract LiquidationModule is ACModule, ILiquidationModule, IUpgradableContract 
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, targetUser, tip3UserWallet, marketId, marketToLiquidate, tokensToSeize, tokensToReturn, tokensFromReserve, borrowInfo);
     }
+
+    // TODO: add callback for unlocking user after performing operation
 }

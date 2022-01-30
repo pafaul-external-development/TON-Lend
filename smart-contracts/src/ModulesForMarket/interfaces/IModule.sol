@@ -1,5 +1,7 @@
 pragma ton-solidity >= 0.47.0;
 
+import { ACLockable } from './ILockable.sol';
+
 import '../../Market/MarketInfo.sol';
 import '../../Market/libraries/MarketOperations.sol';
 
@@ -30,8 +32,7 @@ interface IContractStateCache {
     function updateCache(address tonWallet, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external;
 }
 
-abstract contract ACModule is IModule, IContractAddressSG, IContractStateCache {
-    address owner;
+abstract contract ACModule is ACLockable, IModule, IContractAddressSG, IContractStateCache {
     address marketAddress;
     address userAccountManager;
     uint32 public contractCodeVersion;
@@ -84,8 +85,28 @@ abstract contract ACModule is IModule, IContractAddressSG, IContractStateCache {
         }
     }
 
+    function unlock(address, TvmCell) external virtual onlyUserAccountManager {}
+
+    function ownerGeneralUnlock(bool _locked) external onlyOwner {
+        tvm.rawReserve(msg.value, 2);
+        _generalLock(_locked);
+        address(_owner).transfer({
+            value: 0,
+            flag: MsgFlag.REMAINING_GAS
+        });
+    }
+
+    function ownerUserUnlock(address _user, bool _locked) external onlyOwner {
+        tvm.rawReserve(msg.value, 2);
+        _lockUser(_user, _locked);
+        address(_owner).transfer({
+            value: 0,
+            flag: MsgFlag.REMAINING_GAS
+        });
+    }
+
     modifier onlyOwner() {
-        require(msg.sender == owner);
+        require(msg.sender == _owner);
         _;
     }
 
