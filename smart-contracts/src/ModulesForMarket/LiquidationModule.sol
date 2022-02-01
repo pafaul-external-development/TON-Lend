@@ -40,6 +40,7 @@ contract LiquidationModule is ACModule, ILiquidationModule, IUpgradableContract 
     ) private {
         tvm.accept();
         tvm.resetStorage();
+        actionId = OperationCodes.LIQUIDATE_TOKENS;
         _owner = owner;
         marketAddress = _marketAddress;
         userAccountManager = _userAccountManager;

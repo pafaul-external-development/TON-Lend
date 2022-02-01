@@ -119,16 +119,19 @@ contract BorrowModule is ACModule, IBorrowModule, IUpgradableContract {
                         flag: MsgFlag.REMAINING_GAS
                     }(marketsDelta, tb.toCell());
                 } else {
+                    _generalLock(false);
                     IUAMUserAccount(userAccountManager).writeBorrowInformation{
                         flag: MsgFlag.REMAINING_GAS
                     }(tonWallet, userTip3Wallet, 0, marketId, mi.index);
                 }
             } else {
+                _generalLock(false);
                 IUAMUserAccount(userAccountManager).writeBorrowInformation{
                     flag: MsgFlag.REMAINING_GAS
                 }(tonWallet, userTip3Wallet, 0, marketId, mi.index);
             }
         } else {
+            _generalLock(false);
             IUAMUserAccount(userAccountManager).writeBorrowInformation{
                 flag: MsgFlag.REMAINING_GAS
             }(tonWallet, userTip3Wallet, 0, marketId, mi.index);

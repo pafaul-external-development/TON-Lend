@@ -138,11 +138,13 @@ contract WithdrawModule is ACModule, IWithdrawModule, IUpgradableContract {
                     flag: MsgFlag.REMAINING_GAS
                 }(marketsDelta, tb.toCell());
             } else {
+                _generalLock(false);
                 IUAMUserAccount(userAccountManager).requestUserAccountHealthCalculation{
                     flag: MsgFlag.REMAINING_GAS
                 }(tonWallet);
             }
         } else {
+            _generalLock(false);
             IUAMUserAccount(userAccountManager).requestUserAccountHealthCalculation{
                 flag: MsgFlag.REMAINING_GAS
             }(tonWallet);

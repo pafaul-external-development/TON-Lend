@@ -20,8 +20,8 @@ async function main() {
         console.log(`Module state: ${pp(await module.getModuleState())}`);
         console.log(`Contract code version: ${await module.contractCodeVersion()}`);
         console.log(`Owner address: ${await module.getOwner()}`);
+        console.log(`ActionId: ${await module.sendActionId()}`);
     }
-
 }
 
 main().then(

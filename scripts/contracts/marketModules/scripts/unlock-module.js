@@ -1,18 +1,25 @@
 const { convertCrystal } = require("locklift/locklift/utils");
 const { loadEssentialContracts } = require("../../../utils/contracts");
+const { Module } = require("../modules/moduleWrapper");
 
 async function main() {
     let contracts = await loadEssentialContracts({
-        wallet: true,
-        market: true
+        marketModules: true,
+        wallet: true
     });
 
-    let payload = await contracts.marketsAggregator.updateModulesCache();
+    /**
+     * @type {Module}
+     */
+    let module = contracts.modules.withdraw;
+    let payload = await module.ownerGeneralUnlock({
+        _locked: false
+    });
 
     await contracts.msigWallet.transfer({
-        destination: contracts.marketsAggregator.address,
-        value: convertCrystal(1, 'nano'),
-        payload: payload
+        destination: module.address,
+        value: convertCrystal(0.3, 'nano'),
+        payload
     });
 }
 

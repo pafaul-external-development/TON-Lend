@@ -69,7 +69,7 @@ abstract contract ACModule is ACLockable, IModule, IContractAddressSG, IContract
         address(_owner).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
     }
 
-    function getContractAddresses() external override view responsible returns(address _owner, address _marketAddress, address _userAccountManager) {
+    function getContractAddresses() external override view responsible returns(address owner, address _marketAddress, address _userAccountManager) {
         return {flag: MsgFlag.REMAINING_GAS} (_owner, marketAddress, userAccountManager);
     }
 
@@ -83,6 +83,18 @@ abstract contract ACModule is ACLockable, IModule, IContractAddressSG, IContract
         for ((uint32 marketId, MarketInfo mi): marketInfo) {
             updatedIndexes[marketId] = mi.index;
         }
+    }
+
+    function getGeneralLock() external returns(bool) {
+        return _isLocked();
+    }
+
+    function userLock(address user) external return(bool) {
+        return _isUserLocked(user);
+    }
+
+    function usersLock() external returns(mapping(address => bool)) {
+        return _userLocks;
     }
 
     function ownerGeneralUnlock(bool _locked) external onlyOwner {

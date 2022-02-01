@@ -102,7 +102,7 @@
 				{"name":"_answer_id","type":"uint32"}
 			],
 			"outputs": [
-				{"name":"_owner","type":"address"},
+				{"name":"owner","type":"address"},
 				{"name":"_marketAddress","type":"address"},
 				{"name":"_userAccountManager","type":"address"}
 			]
