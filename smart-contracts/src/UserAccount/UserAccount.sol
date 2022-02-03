@@ -270,6 +270,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
     }
 
     function updateUserAccountHealth(address gasTo, fraction _accountHealth, mapping(uint32 => fraction) updatedIndexes, TvmCell dataToTransfer) external override onlyUserAccountManager {
+        tvm.rawReserve(msg.value, 2);
         accountHealth = _accountHealth;
         liquidationLock = accountHealth.denom > accountHealth.nom;
         _updateIndexes(updatedIndexes);
@@ -280,7 +281,7 @@ contract UserAccount is IUserAccount, IUserAccountData, IUpgradableContract, IUs
             IUAMUserAccount(userAccountManager).requestTokenPayout{
                 flag: MsgFlag.REMAINING_GAS
             }(tonWallet, userTip3Wallet, marketId, tokensToPayout);
-        } if (operation == OperationCodes.RETURN_AND_UNLOCK) {
+        } else if (operation == OperationCodes.RETURN_AND_UNLOCK) {
             (address tonWallet, address userTip3Wallet, uint32 marketId, uint256 tokensToReturn) = ts.decode(address, address, uint32, uint256);
             TvmSlice addition = ts.loadRefAsSlice();
             (address userToUnlock) = addition.decode(address);

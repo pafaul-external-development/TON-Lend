@@ -112,7 +112,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         emit AccountCreated(tonWallet, userAccount);
 
         IUserAccountManager(this).updateUserAccount{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }(tonWallet);
     }
 
@@ -415,7 +415,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         TvmBuilder tb;
         tb.store(tonWallet);
         ILockable(modules[OperationCodes.LIQUIDATE_TOKENS]).unlock{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }(userToUnlock, tb.toCell());
     }
 
@@ -437,7 +437,6 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         mapping(uint32 => BorrowInfo) borrowInfo,
         TvmCell dataToTransfer
     ) external override view onlyValidUserAccount(tonWallet) {
-        tvm.rawReserve(msg.value, 2);
         IMarketOperations(marketAddress).calculateUserAccountHealth{
             flag: MsgFlag.REMAINING_GAS
         }(tonWallet, gasTo, supplyInfo, borrowInfo, dataToTransfer);
@@ -450,7 +449,6 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         mapping(uint32 => fraction) updatedIndexes,
         TvmCell dataToTransfer
     ) external override view onlyMarket {
-        tvm.rawReserve(msg.value, 2);
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).updateUserAccountHealth{
             flag: MsgFlag.REMAINING_GAS

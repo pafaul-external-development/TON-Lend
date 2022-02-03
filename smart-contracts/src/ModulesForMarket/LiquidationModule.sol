@@ -52,7 +52,6 @@ contract LiquidationModule is ACModule, ILiquidationModule, IUpgradableContract 
     // Locking module for USER instead of global lock so no one can mess with double spending from target userAccount
     // It must be unlocked using callback after operation is finished (tokens are seized and transferred to liquidator)
     function performAction(uint32 marketId, TvmCell args, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
-        tvm.rawReserve(msg.value, 2);
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;
         TvmSlice ts = args.toSlice();
@@ -172,7 +171,6 @@ contract LiquidationModule is ACModule, ILiquidationModule, IUpgradableContract 
     }
 
     function resumeOperation(TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
-        tvm.rawReserve(msg.value, 2);
         TvmSlice ts = args.toSlice();
         TvmSlice addressStorage = ts.loadRefAsSlice();
         (address tonWallet, address targetUser, address tip3UserWallet) = addressStorage.decode(address, address, address);

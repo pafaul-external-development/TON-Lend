@@ -152,7 +152,6 @@ contract WithdrawModule is ACModule, IWithdrawModule, IUpgradableContract {
     }
 
     function resumeOperation(TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
-        tvm.rawReserve(msg.value, 2);
         _generalLock(false);
         TvmSlice ts = args.toSlice();
         (uint32 marketId, address tonWallet, address userTip3Wallet) = ts.decode(uint32, address, address);

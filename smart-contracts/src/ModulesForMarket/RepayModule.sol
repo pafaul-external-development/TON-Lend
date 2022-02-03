@@ -56,7 +56,6 @@ contract RepayModule is ACModule, IRepayModule, IUpgradableContract {
     // Ok without locking, as no tokens are leaving contract, can only deposit
     // Coefficients will be rebalanced in MarketsAggregator
     function performAction(uint32 marketId, TvmCell args, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
-        tvm.rawReserve(msg.value, 2);
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;
         TvmSlice ts = args.toSlice();
@@ -123,7 +122,6 @@ contract RepayModule is ACModule, IRepayModule, IUpgradableContract {
     }
 
     function resumeOperation(TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
-        tvm.rawReserve(msg.value, 2);
         TvmSlice ts = args.toSlice();
         (uint32 marketId, address tonWallet, address userTip3Wallet, uint256 tokensToReturn) = ts.decode(uint32, address, address, uint256);
         TvmSlice borrowInfoStorage = ts.loadRefAsSlice();

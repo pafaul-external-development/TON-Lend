@@ -203,7 +203,10 @@ contract MarketAggregator is IRoles, IUpgradableContract, IMarketOracle, IMarket
         ) {
             mi.totalBorrowed += marketDelta.totalBorrowed.delta;
         } else {
-            mi.totalBorrowed -= marketDelta.totalBorrowed.delta;
+            if (marketDelta.totalBorrowed.delta > mi.totalBorrowed)
+                mi.totalBorrowed = 0;
+            else
+                mi.totalBorrowed -= marketDelta.totalBorrowed.delta;
         }
 
         if (

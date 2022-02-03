@@ -53,7 +53,6 @@ contract BorrowModule is ACModule, IBorrowModule, IUpgradableContract {
 
     // This module will lock itself in order not to mess with market parameters and to prevent some attacks
     function performAction(uint32 marketId, TvmCell args, mapping (uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
-        tvm.rawReserve(msg.value, 2);
         marketInfo = _marketInfo;
         tokenPrices = _tokenPrices;
         TvmSlice ts = args.toSlice();
@@ -139,7 +138,6 @@ contract BorrowModule is ACModule, IBorrowModule, IUpgradableContract {
     }
 
     function resumeOperation(TvmCell args, mapping(uint32 => MarketInfo) _marketInfo, mapping (address => fraction) _tokenPrices) external override onlyMarket {
-        tvm.rawReserve(msg.value, 2);
         // Unlock module
         _generalLock(false);
         TvmSlice ts = args.toSlice();

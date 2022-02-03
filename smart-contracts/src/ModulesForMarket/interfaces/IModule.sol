@@ -89,7 +89,7 @@ abstract contract ACModule is ACLockable, IModule, IContractAddressSG, IContract
         return _isLocked();
     }
 
-    function userLock(address user) external return(bool) {
+    function userLock(address user) external returns(bool) {
         return _isUserLocked(user);
     }
 
