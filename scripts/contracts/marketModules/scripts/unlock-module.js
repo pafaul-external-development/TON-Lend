@@ -11,10 +11,13 @@ async function main() {
     /**
      * @type {Module}
      */
-    let module = contracts.modules.withdraw;
-    let payload = await module.ownerGeneralUnlock({
+    let module = contracts.modules.liquidation;
+    let payload = await module.ownerUserUnlock({
+        _user: '0:7028282fa0363d7e58fa1917071aa723931f033e4e421e15bde636ef570d1255',
         _locked: false
     });
+
+    // let payload = await module.ow
 
     await contracts.msigWallet.transfer({
         destination: module.address,

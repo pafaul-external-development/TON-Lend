@@ -75,6 +75,35 @@ class Module extends ContractTemplate {
         });
     }
 
+    async ownerUserUnlock({_user, _locked}) {
+        return await encodeMessageBody({
+            contract: this,
+            functionName: 'ownerUserUnlock',
+            input: {
+                _user,
+                _locked
+            }
+        });
+    }
+
+    async getGeneralLock() {
+        return await this.call({
+            method: 'getGeneralLock',
+            params: {},
+            keyPair: this.keyPair
+        });
+    }
+
+    async userLock({user}) {
+        return await this.call({
+            method: 'userLock',
+            params: {
+                user
+            },
+            keyPair: this.keyPair
+        })
+    }
+
     /**
      * 
      * @param {Object} param0 

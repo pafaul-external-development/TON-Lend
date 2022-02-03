@@ -95,8 +95,6 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
      * @param tonWallet Address of user's ton wallet
      */
     function createUserAccount(address tonWallet) external override view {
-        tvm.rawReserve(msg.value - UserAccountCostConstants.useForUADeploy, 2);
-
         TvmSlice ts = userAccountCodes[0].toSlice();
         require(!ts.empty());
 
@@ -111,9 +109,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
 
         emit AccountCreated(tonWallet, userAccount);
 
-        IUserAccountManager(this).updateUserAccount{
-            flag: MsgFlag.ALL_NOT_RESERVED
-        }(tonWallet);
+        _updateUserAccount(tonWallet);
     }
 
     // address calculation functions
@@ -121,7 +117,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
      * @param tonWallet Address of user's ton wallet
      */
     function calculateUserAccountAddress(address tonWallet) external override responsible view returns (address) {
-        return { value: 0, bounce: false, flag: MsgFlag.REMAINING_GAS } _calculateUserAccountAddress(tonWallet);
+        return { value: 0, bounce: false, flag: MsgFlag.ALL_NOT_RESERVED } _calculateUserAccountAddress(tonWallet);
     }
 
     /**
@@ -156,7 +152,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
     ) external override view onlyModule(OperationCodes.SUPPLY_TOKENS) {
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).writeSupplyInfo{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }(marketId, tokensToSupply, index);
     }
 
@@ -174,7 +170,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         tb.store(userTip3Wallet);
         tb.store(tokensToWithdraw);
         IMarketOperations(marketAddress).performOperationUserAccountManager{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }(OperationCodes.WITHDRAW_TOKENS, marketId, tb.toCell());
     }
 
@@ -187,7 +183,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
     ) external override view onlyModule(OperationCodes.WITHDRAW_TOKENS) {
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).requestWithdrawInfo{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }(userTip3Wallet, marketId, tokensToWithdraw, updatedIndexes);
     }
 
@@ -200,7 +196,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         mapping(uint32 => BorrowInfo) borrowInfo
     ) external override view onlyValidUserAccount(tonWallet) {
         IWithdrawModule(modules[OperationCodes.WITHDRAW_TOKENS]).withdrawTokensFromMarket{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }(tonWallet, userTip3Wallet, tokensToWithdraw, marketId, supplyInfo, borrowInfo);
     }
 
@@ -213,7 +209,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
     ) external override view onlyModule(OperationCodes.WITHDRAW_TOKENS) {
         address userAccount = _calculateUserAccountAddress(tonWallet); 
         IUserAccountData(userAccount).writeWithdrawInfo{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }(userTip3Wallet, marketId, tokensToWithdraw, tokensToSend);
     }
 
@@ -226,7 +222,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         TvmCell args
     ) external override view onlyValidUserAccount(tonWallet) {
         IMarketOperations(marketAddress).performOperationUserAccountManager{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }(OperationCodes.BORROW_TOKENS, marketId, args);
     }
 
@@ -239,7 +235,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
     ) external override view onlyModule(OperationCodes.BORROW_TOKENS) {
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).borrowUpdateIndexes{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }(marketId, updatedIndexes, userTip3Wallet, tokensToBorrow);
     }
 
@@ -252,7 +248,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         mapping(uint32 => BorrowInfo) borrowInfo
     ) external override view onlyValidUserAccount(tonWallet) {
         IBorrowModule(modules[OperationCodes.BORROW_TOKENS]).borrowTokensFromMarket{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }(tonWallet, userTip3Wallet, tokensToBorrow, marketId, supplyInfo, borrowInfo);
     }
 
@@ -265,7 +261,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
     ) external override view onlyModule(OperationCodes.BORROW_TOKENS) {
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).writeBorrowInformation{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }(marketId, tokensToBorrow, userTip3Wallet, index);
     }
 
@@ -281,7 +277,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
     ) external override view onlyModule(OperationCodes.REPAY_TOKENS) {
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).sendRepayInfo{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }(userTip3Wallet, marketId, tokensForRepay, updatedIndexes);
     }
 
@@ -293,7 +289,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         BorrowInfo borrowInfo
     ) external override view onlyValidUserAccount(tonWallet) {
         IRepayModule(modules[OperationCodes.REPAY_TOKENS]).repayLoan{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }(tonWallet, userTip3Wallet, tokensForRepay, marketId, borrowInfo);
     }
 
@@ -306,7 +302,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
     ) external override view onlyModule(OperationCodes.REPAY_TOKENS) {
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).writeRepayInformation{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }(userTip3Wallet, marketId, tokensToReturn, bi);
     }
 
@@ -324,7 +320,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
     ) external override view onlyModule(OperationCodes.LIQUIDATE_TOKENS) {
         address userAccount = _calculateUserAccountAddress(targetUser);
         IUserAccountData(userAccount).requestLiquidationInformation{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }(tonWallet, tip3UserWallet, marketId, marketToLiquidate, tokensProvided, updatedIndexes);
     }
 
@@ -339,7 +335,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         mapping(uint32 => BorrowInfo) borrowInfo
     ) external override view onlyValidUserAccount(targetUser) {
         ILiquidationModule(modules[OperationCodes.LIQUIDATE_TOKENS]).liquidate{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }(tonWallet, targetUser, tip3UserWallet, marketId, marketToLiquidate, tokensProvided, supplyInfo, borrowInfo);
     }
 
@@ -355,7 +351,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
     ) external override view onlyModule(OperationCodes.LIQUIDATE_TOKENS) {
         address userAccount = _calculateUserAccountAddress(targetUser);
         IUserAccountData(userAccount).liquidateVTokens{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }(tonWallet, tip3UserWallet, marketId, marketToLiquidate, tokensToSeize, tokensToReturn, borrowInfo);
     }
 
@@ -368,7 +364,6 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         uint256 vTokensToGrant, 
         uint256 tokensToReturn
     ) external override view onlyValidUserAccountNoReserve(targetUser) {
-        tvm.rawReserve(msg.value - UserAccountCostConstants.updateHealthCost, 2);
         
         address targetAccount = _calculateUserAccountAddress(targetUser);
         IUserAccountData(targetAccount).checkUserAccountHealth{
@@ -377,7 +372,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
 
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).grantVTokens{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }(targetUser, tip3UserWallet, marketId, marketToLiquidate, vTokensToGrant, tokensToReturn);
     }
 
@@ -390,7 +385,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
     ) external override view onlyModule(OperationCodes.LIQUIDATE_TOKENS) {
         address userAccount = _calculateUserAccountAddress(targetUser);
         IUserAccountData(userAccount).abortLiquidation{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }(tonWallet, tip3UserWallet, marketId, tokensToReturn);
     }
 
@@ -403,13 +398,10 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
     ) external override view onlyValidUserAccountNoReserve(tonWallet) {
         if (tokensToReturn != 0) {
             uint128 tonsToUse = msg.value / 4;
-            tvm.rawReserve(tonsToUse, 2);
 
             IMarketOperations(marketAddress).requestTokenPayout{
                 value: tonsToUse * 3
             }(tonWallet, tip3UserWallet, marketId, tokensToReturn);
-        } else {
-            tvm.rawReserve(msg.value, 2);
         }
 
         TvmBuilder tb;
@@ -423,10 +415,9 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
     // Account health calculation
 
     function requestUserAccountHealthCalculation(address tonWallet) external override view executor {
-        tvm.rawReserve(msg.value, 2);
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).checkUserAccountHealth{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }(tonWallet);
     }
 
@@ -438,7 +429,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
         TvmCell dataToTransfer
     ) external override view onlyValidUserAccount(tonWallet) {
         IMarketOperations(marketAddress).calculateUserAccountHealth{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }(tonWallet, gasTo, supplyInfo, borrowInfo, dataToTransfer);
     }
 
@@ -451,7 +442,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
     ) external override view onlyMarket {
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).updateUserAccountHealth{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }(gasTo, accountHealth, updatedIndexes, dataToTransfer);
     }
 
@@ -460,13 +451,13 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
 
     function requestTokenPayout(address tonWallet, address userTip3Wallet, uint32 marketId, uint256 toPayout) external override view onlySelectedExecutors(OperationCodes.LIQUIDATE_TOKENS, tonWallet) {
         IMarketOperations(marketAddress).requestTokenPayout{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }(tonWallet, userTip3Wallet, marketId, toPayout);
     }
 
     function withdrawExtraTons(address tonWallet) external onlyOwner {
         tvm.accept();
-        address(tonWallet).transfer({value: 0, flag: 160});
+        address(tonWallet).transfer({value: 0, flag: MsgFlag.ALL_NOT_RESERVED});
     }
 
     /*********************************************************************************************************/
@@ -478,6 +469,7 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
     function setMarketAddress(address _market) external override canChangeParams {
         tvm.accept();
         marketAddress = _market;
+        address(_owner).transfer({value: 0, flag: MsgFlag.ALL_NOT_RESERVED});
     }
 
     /*********************************************************************************************************/
@@ -485,41 +477,42 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
     function uploadUserAccountCode(uint32 version, TvmCell code) external override canChangeParams {
         userAccountCodes[version] = code;
         
-        address(msg.sender).transfer({flag: MsgFlag.REMAINING_GAS, value: 0});
+        address(msg.sender).transfer({flag: MsgFlag.ALL_NOT_RESERVED, value: 0});
     }
 
-    function updateUserAccount(address tonWallet) external override {
-        tvm.rawReserve(msg.value, 2);
+    function _updateUserAccount(address tonWallet) internal view {
         address userAccount = _calculateUserAccountAddress(tonWallet);
         optional(uint32, TvmCell) latestVersion = userAccountCodes.max();
         if (latestVersion.hasValue()) {
             TvmCell empty;
             (uint32 codeVersion, TvmCell code) = latestVersion.get();
             IUpgradableContract(userAccount).upgradeContractCode{
-                flag: MsgFlag.REMAINING_GAS
+                flag: MsgFlag.ALL_NOT_RESERVED
             }(code, empty, codeVersion);
         } else {
-            address(userAccount).transfer({value: 0, flag: MsgFlag.REMAINING_GAS});
+            address(userAccount).transfer({value: 0, flag: MsgFlag.ALL_NOT_RESERVED});
         }
     }
 
+    function updateUserAccount(address tonWallet) external override {
+        _updateUserAccount(tonWallet);
+    }
+
     function getUserAccountCode(uint32 version) external override view responsible returns(TvmCell) {
-        return {flag: MsgFlag.REMAINING_GAS} userAccountCodes[version];
+        return {flag: MsgFlag.ALL_NOT_RESERVED} userAccountCodes[version];
     }
 
     function disableUserAccountLock(address tonWallet) external view onlyOwner {
-        tvm.rawReserve(msg.value, 2);
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).disableBorrowLock{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }();
     }
 
     function removeMarket(address tonWallet, uint32 marketId) external view canChangeParams {
-        tvm.rawReserve(msg.value, 2);
         address userAccount = _calculateUserAccountAddress(tonWallet);
         IUserAccountData(userAccount).removeMarket{
-            flag: MsgFlag.REMAINING_GAS
+            flag: MsgFlag.ALL_NOT_RESERVED
         }(marketId);
     }
 
@@ -544,7 +537,6 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
             msg.sender == marketAddress,
             UserAccountErrorCodes.ERROR_NOT_MARKET
         );
-        tvm.rawReserve(msg.value, 2);
         _;
     }
 
@@ -581,7 +573,6 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
             msg.sender == modules[operationId],
             UserAccountErrorCodes.ERROR_INVALID_MODULE
         );
-        tvm.rawReserve(msg.value, 2);
         _;
     }
 
@@ -602,7 +593,6 @@ contract UserAccountManager is IRoles, IUpgradableContract, IUserAccountManager,
             msg.sender == _calculateUserAccountAddress(tonWallet),
             UserAccountErrorCodes.INVALID_USER_ACCOUNT
         );
-        tvm.rawReserve(msg.value, 2);
         _;
     }
 
