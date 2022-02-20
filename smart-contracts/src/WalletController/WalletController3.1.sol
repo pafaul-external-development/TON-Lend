@@ -17,16 +17,16 @@ import "./libraries/OperationCodes.sol";
 import "../Market/MarketsAggregator.sol";
 
 import "../utils/interfaces/IUpgradableContract.sol";
-import "../utils/TIP3/interfaces/ITokensReceivedCallback.sol";
+import "../utils/TIP3.1/interfaces/IAcceptTokensTransferCallback.sol";
 
-import "../utils/TIP3/interfaces/IRootTokenContract.sol";
-import "../utils/TIP3/interfaces/ITONTokenWallet.sol";
+import "../utils/TIP3.1/interfaces/ITokenRoot.sol";
+import "../utils/TIP3.1/interfaces/ITokenWallet.sol";
 
 import "../utils/libraries/MsgFlag.sol";
 
 import { IRoles } from '../utils/interfaces/IRoles.sol';
 
-contract WalletController is IRoles, IWCMInteractions, IWalletControllerMarketManagement, IWalletControllerGetters, IUpgradableContract, ITokensReceivedCallback {
+contract WalletController31 is IRoles, IWCMInteractions, IWalletControllerMarketManagement, IWalletControllerGetters, IUpgradableContract, IAcceptTokensTransferCallback {
     // Information for update
     uint32 public contractCodeVersion;
 
@@ -130,12 +130,11 @@ contract WalletController is IRoles, IWCMInteractions, IWalletControllerMarketMa
     }
 
     function _transferTokensToWallet(address tonWallet, address tokenRoot, address userTip3Wallet, uint128 toTransfer, TvmCell payload) internal view {
-        ITONTokenWallet(wallets[tokenRoot]).transfer{
+        ITokenWallet(wallets[tokenRoot]).transferToWallet{
             flag: MsgFlag.REMAINING_GAS
         }(
-            userTip3Wallet,
             toTransfer,
-            0,
+            userTip3Wallet,
             tonWallet,
             true,
             payload
@@ -148,21 +147,13 @@ contract WalletController is IRoles, IWCMInteractions, IWalletControllerMarketMa
      * @param tokenRoot Address of token root to request wallet deploy
      */
     function addWallet(address tokenRoot) private pure {
-        IRootTokenContract(tokenRoot).deployEmptyWallet{
-            value: WCCostConstants.WALLET_DEPLOY_COST
-        }(
-            WCCostConstants.WALLET_DEPLOY_GRAMS,
-            0,
-            address(this),
-            address(this)
-        );
-
-        IRootTokenContract(tokenRoot).getWalletAddress{
-            value: WCCostConstants.GET_WALLET_ADDRESS,
+        ITokenRoot(tokenRoot).deployWallet
+        {
+            flag: MsgFlag.REMAINING_GAS,
             callback: this.receiveTIP3WalletAddress
         }(
-            0,
-            address(this)
+            address(this),
+            WCCostConstants.WALLET_DEPLOY_GRAMS
         );
     }
 
@@ -175,32 +166,26 @@ contract WalletController is IRoles, IWCMInteractions, IWalletControllerMarketMa
         wallets[msg.sender] = _wallet;
         uint32 marketId = tokensToMarkets[msg.sender];
         marketTIP3Info[marketId].realTokenWallet = _wallet;
-        this.setReceiveCallback(_wallet);
     }
 
-    function setReceiveCallback(address _wallet) external {
-        require(msg.sender == address(this));
-        tvm.accept();
-
-        ITONTokenWallet(_wallet).setReceiveCallback{
-            value: WCCostConstants.SET_RECEIVE_CALLBACK
-        }(
-            address(this),
-            true
-        );
-    }
-
-    function tokensReceivedCallback(
-        address token_wallet,
-        address token_root,
+    /*
+        @notice Callback from TokenWallet on receive tokens transfer
+        @param tokenWallet TokenWallet for which tokens were received
+        @param tokenRoot TokenRoot of received tokens
+        @param amount Received tokens amount
+        @param sender Sender TokenWallet owner address
+        @param senderWallet Sender TokenWallet address
+        @param remainingGasTo Address specified for receive remaining gas
+        @param payload Additional data attached to transfer by sender
+    */
+    function onAcceptTokensTransfer(
+        address tokenRoot,
         uint128 amount,
-        uint256, // sender_public_key,
-        address sender_address,
-        address sender_wallet,
-        address, // original_gas_to,
-        uint128, // updated_balance,
+        address sender,
+        address senderWallet,
+        address remainingGasTo,
         TvmCell payload
-    ) external override onlyOwnWallet(token_root, msg.sender) 
+    ) external override onlyOwnWallet(tokenRoot, msg.sender) 
     {
         tvm.rawReserve(msg.value, 2);
             TvmSlice ts = payload.toSlice();
@@ -212,37 +197,37 @@ contract WalletController is IRoles, IWCMInteractions, IWalletControllerMarketMa
             TvmSlice args = ts.loadRefAsSlice();
             if (operation == OperationCodes.SUPPLY_TOKENS) {
                 TvmBuilder tb;
-                tb.store(sender_address);
+                tb.store(sender);
                 tb.store(uint256(amount));
                 MarketAggregator(marketAddress).performOperationWalletController{
                     flag: MsgFlag.REMAINING_GAS
-                }(operation, token_root, tb.toCell());
+                }(operation, tokenRoot, tb.toCell());
             } else if (operation == OperationCodes.REPAY_TOKENS) {
                 TvmBuilder tb;
-                tb.store(sender_address);
-                tb.store(sender_wallet);
+                tb.store(sender);
+                tb.store(senderWallet);
                 tb.store(uint256(amount));
                 MarketAggregator(marketAddress).performOperationWalletController{
                     flag: MsgFlag.REMAINING_GAS
-                }(operation, token_root, tb.toCell());
+                }(operation, tokenRoot, tb.toCell());
             } else if (operation == OperationCodes.LIQUIDATE_TOKENS) {
                 (address targetUser, uint32 marketToLiquidate) = args.decode(address, uint32);
                 TvmBuilder tb;
                 TvmBuilder amountStorage;
-                tb.store(sender_address);
+                tb.store(sender);
                 tb.store(targetUser);
-                tb.store(sender_wallet);
+                tb.store(senderWallet);
                 amountStorage.store(marketToLiquidate);
                 amountStorage.store(uint256(amount));
                 tb.store(amountStorage.toCell());
                 MarketAggregator(marketAddress).performOperationWalletController{
                     flag: MsgFlag.REMAINING_GAS
-                }(operation, token_root, tb.toCell());
+                }(operation, tokenRoot, tb.toCell());
             } else {
-                _transferTokensToWallet(sender_address, token_root, sender_wallet, amount, payload);
+                _transferTokensToWallet(sender, tokenRoot, senderWallet, amount, payload);
             }
         } else {
-            _transferTokensToWallet(sender_address, token_root, sender_wallet, amount, payload);
+            _transferTokensToWallet(sender, tokenRoot, senderWallet, amount, payload);
         }
     }
     

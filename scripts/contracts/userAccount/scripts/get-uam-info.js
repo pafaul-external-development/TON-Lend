@@ -21,7 +21,7 @@ async function main() {
 
     console.log(`Contract codes available: ${pp(await contracts.userAccountManager.userAccountCodes())}`);
 
-    console.log(`User account address: ${await contracts.userAccountManager.calculateUserAccoutAddress({tonWallet: '0:50281349fbacc4aa32a033a1881f207fb783e132cd7d905b644e857f94a78aae'})}`);
+    console.log(`User account address: ${await contracts.userAccountManager.calculateUserAccoutAddress({tonWallet: '0:d4668ff0e7151d274626bb3ac242ccc825212abeac86614f408ab30c8a90b032'})}`);
 }
 
 main().then(
