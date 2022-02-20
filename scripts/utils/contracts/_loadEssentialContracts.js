@@ -8,7 +8,7 @@ const initializeLocklift = require("../initializeLocklift");
 const { loadContractData } = require("../migration/_manageContractData");
 const { Locklift } = require('locklift/locklift');
 const { WalletController } = require("../../contracts/walletController/modules/walletControllerWrapper");
-const { Module } = require("../../contracts/marketModules/modules/moduleWrapper");
+const { Module, ConversionModule } = require("../../contracts/marketModules/modules/moduleWrapper");
 const { TIP3Deployer } = require("../../contracts/tip3Deployer/modules/tip3DeployerWrapper");
 const { encodeMessageBody } = require("../common");
 const Contract = require("locklift/locklift/contract");
@@ -20,6 +20,7 @@ const Contract = require("locklift/locklift/contract");
  * @property {Module} borrow
  * @property {Module} repay
  * @property {Module} liquidation
+ * @property {ConversionModule} conversion
  */
 
 /**
@@ -121,6 +122,7 @@ const Contract = require("locklift/locklift/contract");
         modules.borrow = new Module(await loadContractData(locklift, 'BorrowModule'));
         modules.repay = new Module(await loadContractData(locklift, 'RepayModule'));
         modules.liquidation = new Module(await loadContractData(locklift, 'LiquidationModule'));
+        modules.conversion = new ConversionModule(await loadContractData(locklift, 'ConversionModule'));
     }
 
     /**

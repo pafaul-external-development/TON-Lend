@@ -18,12 +18,12 @@ contract ConversionModule is ACModule, IConversionModule, IUpgradableContract, I
     using UFO for uint256;
     using FPO for fraction;
 
-    mapping (uint32 => address) _marketIdToTokenRoot;
-    mapping (uint32 => address) _marketToWallet;
-    mapping (address => uint32) _tokenRootToMarketId;
-    mapping (address => address) _tokenToWallet;
-    mapping (address => bool) _knownTokenRoots;
-    mapping (address => bool) _knownWallets;
+    mapping (uint32 => address) public _marketIdToTokenRoot;
+    mapping (uint32 => address) public _marketToWallet;
+    mapping (address => uint32) public _tokenRootToMarketId;
+    mapping (address => address) public _tokenToWallet;
+    mapping (address => bool) public _knownTokenRoots;
+    mapping (address => bool) public _knownWallets;
 
     event TokenWithdraw(uint32 marketId, MarketDelta marketDelta, address tonWallet, uint256 vTokensWithdrawn, uint256 realTokensWithdrawn);
 
