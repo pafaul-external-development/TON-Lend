@@ -10,7 +10,6 @@ const { Locklift } = require('locklift/locklift');
 const { WalletController } = require("../../contracts/walletController/modules/walletControllerWrapper");
 const { Module, ConversionModule } = require("../../contracts/marketModules/modules/moduleWrapper");
 const { TIP3Deployer } = require("../../contracts/tip3Deployer/modules/tip3DeployerWrapper");
-const { encodeMessageBody } = require("../common");
 const Contract = require("locklift/locklift/contract");
 
 /**
@@ -46,6 +45,7 @@ const Contract = require("locklift/locklift/contract");
  * @param {Boolean} p.userAM
  * @param {Boolean} p.user
  * @param {Boolean} p.walletC
+ * @param {Number}  p.walletCVersion
  * @param {Boolean} p.marketModules
  * @param {Boolean} p.deployer
  * @param {Boolean} p.testSP
@@ -57,7 +57,8 @@ const Contract = require("locklift/locklift/contract");
         oracle = false, 
         userAM = false, 
         user = false, 
-        walletC = false, 
+        walletC = false,
+        walletCVersion = 2,
         marketModules = false, 
         deployer = false,
         testSP = false
@@ -109,7 +110,7 @@ const Contract = require("locklift/locklift/contract");
      */
     let walletController = undefined;
     if (walletC) {
-        walletController = new WalletController(await loadContractData(locklift, 'WalletController'));
+        walletController = new WalletController(await loadContractData(locklift, walletCVersion == 1 ? 'WalletController':'WalletController3.1'));
     }
 
     /**
